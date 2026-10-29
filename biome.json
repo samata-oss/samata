@@ -40,6 +40,22 @@
       "react": "recommended"
     }
   },
+  "overrides": [
+    {
+      "includes": [
+        "control-plane/src/components/ui/**",
+        "control-plane/src/hooks/**"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": "off",
+          "correctness": { "useExhaustiveDependencies": "off" },
+          "style": { "useImportType": "off", "noNonNullAssertion": "off" },
+          "suspicious": { "noDocumentCookie": "off" }
+        }
+      }
+    }
+  ],
   "assist": {
     "actions": {
       "source": {

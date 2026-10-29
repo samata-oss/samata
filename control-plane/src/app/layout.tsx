@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   title: "Samata",
@@ -12,8 +19,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="antialiased">
-      <body className="bg-neutral-950 text-neutral-100">{children}</body>
+    <html
+      lang="en"
+      className={cn("dark antialiased", geist.variable, geistMono.variable)}
+    >
+      <body>
+        <TooltipProvider>{children}</TooltipProvider>
+        <Toaster theme="dark" />
+      </body>
     </html>
   );
 }

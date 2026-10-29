@@ -1,20 +1,12 @@
-import { randomUUID } from "node:crypto";
 import { desc, eq, or } from "drizzle-orm";
 import { Hono } from "hono";
-import {
-  AccessToken,
-  RoomAgentDispatch,
-  RoomConfiguration,
-} from "livekit-server-sdk";
 import { z } from "zod";
 import { db } from "@/db";
 import { agent } from "@/db/schema";
 import { agentConfigSchema } from "@/lib/agent-config";
-import { agentView } from "@/server/agents";
+import { agentView, isUniqueViolation, uniqueSlug } from "@/server/agents";
 import { requireApiKey } from "@/server/api-auth";
-
-/** Must match AGENT_NAME in the worker. */
-const WORKER_AGENT_NAME = process.env.SAMATA_WORKER_AGENT_NAME ?? "samata";
+import { mintTestToken } from "@/server/test-token";
 
 const agentBody = z.object({
   slug: z.string().regex(/^[a-z0-9-]{1,64}$/),
@@ -26,6 +18,23 @@ const agentBody = z.object({
   config: agentConfigSchema,
 });
 
+/** POST body: like `agentBody`, but `slug` is optional (derived from `name`). */
+const createBody = agentBody.extend({
+  slug: agentBody.shape.slug.optional(),
+});
+
+/**
+ * PATCH body: every field optional. `config` is a partial config whose
+ * top-level keys replace the stored ones (e.g. send `{ "model": {...} }` to
+ * change only the model). The merged result is re-validated in full.
+ */
+const patchBody = z.object({
+  slug: agentBody.shape.slug.optional(),
+  name: agentBody.shape.name.optional(),
+  phoneNumber: agentBody.shape.phoneNumber,
+  config: z.record(z.string(), z.unknown()).optional(),
+});
+
 const byRef = (ref: string) => or(eq(agent.id, ref), eq(agent.slug, ref));
 
 export const agentRoutes = new Hono()
@@ -33,6 +42,81 @@ export const agentRoutes = new Hono()
   .get("/", async (c) => {
     const rows = await db.select().from(agent).orderBy(desc(agent.createdAt));
     return c.json({ agents: rows.map(agentView) });
+  })
+
+  /**
+   * Create an agent from its config. Returns 201 with the agent (including
+   * its `id`), or 409 if the slug or phone number is already taken. Use PUT
+   * to create-or-replace by slug, PATCH to change an existing agent.
+   */
+  .post("/", async (c) => {
+    const parsed = createBody.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c.json({ error: z.prettifyError(parsed.error) }, 400);
+    }
+    const { name, phoneNumber, config } = parsed.data;
+    const slug = parsed.data.slug ?? (await uniqueSlug(name));
+    try {
+      const [row] = await db
+        .insert(agent)
+        .values({ slug, name, phoneNumber: phoneNumber ?? null, config })
+        .returning();
+      return c.json(agentView(row), 201);
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        return c.json(
+          { error: "An agent with this slug or phone number already exists" },
+          409,
+        );
+      }
+      throw err;
+    }
+  })
+
+  /** Partial update. See `patchBody` for how `config` is merged. */
+  .patch("/:ref", async (c) => {
+    const parsed = patchBody.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c.json({ error: z.prettifyError(parsed.error) }, 400);
+    }
+    const [existing] = await db
+      .select()
+      .from(agent)
+      .where(byRef(c.req.param("ref")));
+    if (!existing) return c.json({ error: "Not found" }, 404);
+
+    const { slug, name, phoneNumber, config } = parsed.data;
+    const merged = config
+      ? agentConfigSchema.safeParse({
+          ...agentConfigSchema.parse(existing.config),
+          ...config,
+        })
+      : null;
+    if (merged && !merged.success) {
+      return c.json({ error: z.prettifyError(merged.error) }, 400);
+    }
+
+    try {
+      const [row] = await db
+        .update(agent)
+        .set({
+          ...(slug !== undefined && { slug }),
+          ...(name !== undefined && { name }),
+          ...(phoneNumber !== undefined && { phoneNumber }),
+          ...(merged?.success && { config: merged.data }),
+        })
+        .where(eq(agent.id, existing.id))
+        .returning();
+      return c.json(agentView(row));
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        return c.json(
+          { error: "An agent with this slug or phone number already exists" },
+          409,
+        );
+      }
+      throw err;
+    }
   })
 
   .get("/:ref", async (c) => {
@@ -83,24 +167,5 @@ export const agentRoutes = new Hono()
       .where(byRef(c.req.param("ref")));
     if (!row) return c.json({ error: "Not found" }, 404);
 
-    const roomName = `web-${randomUUID().slice(0, 8)}`;
-    const token = new AccessToken(
-      process.env.LIVEKIT_API_KEY,
-      process.env.LIVEKIT_API_SECRET,
-      { identity: `tester-${randomUUID().slice(0, 6)}`, ttl: "15m" },
-    );
-    token.addGrant({ roomJoin: true, room: roomName });
-    token.roomConfig = new RoomConfiguration({
-      agents: [
-        new RoomAgentDispatch({
-          agentName: WORKER_AGENT_NAME,
-          metadata: JSON.stringify({ agentId: row.id }),
-        }),
-      ],
-    });
-    return c.json({
-      url: process.env.LIVEKIT_URL,
-      roomName,
-      token: await token.toJwt(),
-    });
+    return c.json(await mintTestToken(row.id));
   });

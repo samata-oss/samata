@@ -100,6 +100,26 @@ docker build -t samata-worker ./worker
 docker compose --profile worker up -d worker
 ```
 
+## Dashboard
+
+The control plane serves a dashboard at `/` (built on the shadcn `sidebar-07`
+block), modeled on Vapi's:
+
+| Page                | What it shows                                                                         |
+| ------------------- | ------------------------------------------------------------------------------------- |
+| Assistants          | Edit an agent's model, voice, transcriber, prompt, tools, VAD and analysis plan. Talk to it from the browser. |
+| Tools               | Every tool across assistants, and which assistants use it.                            |
+| Phone Numbers       | Assign an inbound number to an assistant.                                             |
+| Logs                | Every call, with transcript, summary, structured data and latency.                    |
+| Structured Outputs  | Data extracted by each assistant's analysis plan.                                     |
+| Metrics             | Call volume and the latency breakdown (end of turn, STT, LLM, TTS).                   |
+| API Keys            | Which keys are configured, and the management API and webhook endpoints.              |
+
+In production the dashboard asks for HTTP Basic credentials: any username, and
+`SAMATA_API_KEY` as the password. In development it is open. Webhook secrets
+stored on an agent are never sent to the browser; leave a secret field empty to
+keep the stored value.
+
 ## Call lifecycle
 
 The worker talks to the control plane with Vapi-style `{ "message": { "type", ... } }`
@@ -123,11 +143,20 @@ are published on the Redis channel `samata:events` and streamed as SSE from
 ## Agent config
 
 Agents are declarative JSON. The schema is `control-plane/src/lib/agent-config.ts`,
-and the worker mirrors it in `worker/samata_worker/config.py`. To create or replace
-an agent by slug:
+and the worker mirrors it in `worker/samata_worker/config.py`.
+
+| Endpoint                  | Does                                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------- |
+| `POST /api/agents`        | Create. `201` with the agent and its `id`; `409` if the slug or phone number is taken. `slug` is optional and defaults to one derived from `name`. |
+| `PATCH /api/agents/:ref`  | Partial update. Top-level keys of `config` you send replace the stored ones; the rest are kept.   |
+| `PUT /api/agents`         | Create or replace by slug (idempotent, good for config-as-code).                                  |
+| `GET /api/agents[/:ref]`  | List / fetch. `:ref` is an id or slug.                                                            |
+| `DELETE /api/agents/:ref` | Delete.                                                                                           |
+
+To create an agent:
 
 ```bash
-curl -X PUT localhost:3000/api/agents \
+curl -X POST localhost:3000/api/agents \
   -H "authorization: Bearer dev-api-key-change-me" -H "content-type: application/json" \
   -d '{
     "slug": "support", "name": "Support", "phoneNumber": "+14155550100",
@@ -147,6 +176,14 @@ curl -X PUT localhost:3000/api/agents \
       "server": { "url": "https://example.com/samata-events" }
     }
   }'
+```
+
+To change one part of it later:
+
+```bash
+curl -X PATCH localhost:3000/api/agents/support \
+  -H "authorization: Bearer dev-api-key-change-me" -H "content-type: application/json" \
+  -d '{ "config": { "firstMessage": "Thanks for calling Support!" } }'
 ```
 
 Any field you leave out gets a default. Barge-in is on by default; the
