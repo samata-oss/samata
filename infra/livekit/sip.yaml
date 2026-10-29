@@ -1,0 +1,13 @@
+# LiveKit SIP bridge (PSTN <-> WebRTC). Shares LiveKit's Redis for its
+# control bus. Create inbound trunks + dispatch rules with `lk sip ...` so
+# calls land in rooms that the Samata worker is dispatched to.
+api_key: devkey
+api_secret: samata_dev_secret_change_me_0123456789
+ws_url: ws://livekit:7880
+redis:
+  address: redis:6379
+sip_port: 5060
+rtp_port: 10000-10100
+use_external_ip: true
+logging:
+  level: info

@@ -1,0 +1,113 @@
+import { randomUUID } from "node:crypto";
+import { relations } from "drizzle-orm";
+import {
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  real,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
+import type { AgentConfig } from "@/lib/agent-config";
+
+/**
+ * A declarative voice agent. Everything about how a call behaves lives in
+ * `config` (validated by `agentConfigSchema`), so the worker stays stateless.
+ */
+export const agent = pgTable("agent", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => randomUUID()),
+  /** Human-friendly id, usable in room metadata / dispatch instead of `id`. */
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  /**
+   * E.164 number that routes inbound SIP calls to this agent (matched against
+   * the `sip.trunkPhoneNumber` participant attribute). Null for web-only agents.
+   */
+  phoneNumber: text("phone_number").unique(),
+  config: jsonb("config").$type<AgentConfig>().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+export const CALL_STATUSES = ["in-progress", "ended", "failed"] as const;
+export type CallStatus = (typeof CALL_STATUSES)[number];
+
+/** One transcript entry, as reported by the worker. */
+export type CallMessage = {
+  role: "system" | "user" | "assistant" | "tool";
+  content: string;
+  /** Seconds since epoch. */
+  time?: number;
+  interrupted?: boolean;
+  toolName?: string;
+};
+
+/** Per-turn latencies (seconds) as averaged by the worker. */
+export type CallLatency = {
+  turns: number;
+  /** End of user speech -> end-of-turn decision. */
+  endOfTurnDelayAvg?: number;
+  transcriptionDelayAvg?: number;
+  llmTtftAvg?: number;
+  ttsTtfbAvg?: number;
+  /** Rough voice-to-voice: end-of-turn + LLM TTFT + TTS TTFB. */
+  voiceToVoiceAvg?: number;
+  voiceToVoiceP95?: number;
+};
+
+/**
+ * One row per call. Created on assistant-request (status `in-progress`) and
+ * completed by the end-of-call-report.
+ */
+export const callLog = pgTable(
+  "call_log",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    agentId: text("agent_id").references(() => agent.id, {
+      onDelete: "set null",
+    }),
+    roomName: text("room_name").notNull(),
+    /** "inbound" | "outbound" | "web" */
+    type: text("type").notNull().default("web"),
+    customerNumber: text("customer_number"),
+    status: text("status").$type<CallStatus>().notNull().default("in-progress"),
+    endedReason: text("ended_reason"),
+    startedAt: timestamp("started_at").defaultNow().notNull(),
+    endedAt: timestamp("ended_at"),
+    durationSeconds: real("duration_seconds"),
+    transcript: text("transcript"),
+    messages: jsonb("messages").$type<CallMessage[]>(),
+    latency: jsonb("latency").$type<CallLatency>(),
+    /** Raw model usage from livekit-agents (tokens, characters, audio secs). */
+    usage: jsonb("usage").$type<Record<string, unknown>[]>(),
+    summary: text("summary"),
+    structuredData: jsonb("structured_data").$type<Record<string, unknown>>(),
+    analysisError: text("analysis_error"),
+    toolCallCount: integer("tool_call_count").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("call_log_agent_idx").on(table.agentId),
+    index("call_log_started_at_idx").on(table.startedAt),
+  ],
+);
+
+export const agentRelations = relations(agent, ({ many }) => ({
+  calls: many(callLog),
+}));
+
+export const callLogRelations = relations(callLog, ({ one }) => ({
+  agent: one(agent, { fields: [callLog.agentId], references: [agent.id] }),
+}));

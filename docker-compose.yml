@@ -1,0 +1,86 @@
+# Samata local stack.
+#
+#   docker compose up -d livekit redis postgres   # infra only (default dev loop)
+#   docker compose --profile sip up -d            # + SIP bridge for phone calls
+#   docker compose --profile worker up -d worker  # + containerised Python worker
+#
+# The control plane (Next.js) runs on the host with `pnpm dev`; the worker
+# reaches it via host.docker.internal.
+
+services:
+  livekit:
+    image: livekit/livekit-server:v1.13
+    command: --config /etc/livekit.yaml
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "7880:7880" # HTTP / WebSocket signalling
+      - "7881:7881" # WebRTC over TCP
+      - "50000-50100:50000-50100/udp" # WebRTC media
+    volumes:
+      - ./infra/livekit/livekit.yaml:/etc/livekit.yaml:ro
+
+  sip:
+    image: livekit/sip:v1.22
+    profiles: ["sip"]
+    restart: unless-stopped
+    depends_on:
+      - livekit
+      - redis
+    environment:
+      SIP_CONFIG_FILE: /etc/sip.yaml
+    ports:
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      - "10000-10100:10000-10100/udp"
+    volumes:
+      - ./infra/livekit/sip.yaml:/etc/sip.yaml:ro
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - redis-data:/data
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: samata
+      POSTGRES_PASSWORD: samata
+      POSTGRES_DB: samata
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U samata -d samata"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  worker:
+    build: ./worker
+    profiles: ["worker"]
+    restart: unless-stopped
+    depends_on:
+      - livekit
+    env_file: ./worker/.env
+    environment:
+      LIVEKIT_URL: ws://livekit:7880
+      SAMATA_CONTROL_PLANE_URL: http://host.docker.internal:3000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  redis-data:
+  postgres-data:

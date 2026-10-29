@@ -1,0 +1,7 @@
+livekit-agents==1.8.10
+livekit-plugins-openai==1.8.10
+livekit-plugins-deepgram==1.8.10
+livekit-plugins-cartesia==1.8.10
+livekit-plugins-silero==1.8.10
+aiohttp==3.14.5
+python-dotenv==1.2.1

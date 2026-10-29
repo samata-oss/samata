@@ -1,0 +1,21 @@
+{
+  "name": "samata",
+  "private": true,
+  "scripts": {
+    "infra:up": "docker compose up -d livekit redis postgres",
+    "infra:down": "docker compose down",
+    "dev": "pnpm --filter control-plane dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "biome check",
+    "format": "biome format --write",
+    "db:generate": "pnpm --filter control-plane db:generate",
+    "db:migrate": "pnpm --filter control-plane db:migrate",
+    "db:studio": "pnpm --filter control-plane db:studio",
+    "db:seed": "pnpm --filter control-plane db:seed",
+    "simulate:call": "pnpm --filter control-plane simulate:call"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.11"
+  }
+}

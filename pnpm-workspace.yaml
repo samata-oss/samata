@@ -1,0 +1,5 @@
+packages:
+  - control-plane
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver
