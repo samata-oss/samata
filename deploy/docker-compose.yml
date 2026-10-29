@@ -1,0 +1,160 @@
+# Samata production stack: prebuilt images only, nothing to clone or build.
+#
+#   curl -O https://raw.githubusercontent.com/<org>/samata/main/deploy/docker-compose.yml
+#   curl -o .env https://raw.githubusercontent.com/<org>/samata/main/deploy/.env.example
+#   $EDITOR .env
+#   docker compose up -d
+#   docker compose --profile sip up -d        # + phone calls via LiveKit SIP
+#
+# Using LiveKit Cloud instead? Delete the livekit + sip services and point
+# LIVEKIT_URL / LIVEKIT_PUBLIC_URL / keys in .env at your project.
+
+x-samata-image: &samata-version ${SAMATA_VERSION:-latest}
+
+services:
+  # TLS for both public hostnames. Browsers require wss:// for WebRTC
+  # signalling and your tool/webhook servers should only talk https.
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      CADDYFILE: |
+        ${SAMATA_DOMAIN:?set SAMATA_DOMAIN} {
+          reverse_proxy control-plane:3000
+        }
+        ${LIVEKIT_DOMAIN:?set LIVEKIT_DOMAIN} {
+          reverse_proxy livekit:7880
+        }
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - printf '%s' "$$CADDYFILE" > /etc/caddy/Caddyfile && exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+
+  control-plane:
+    image: ${SAMATA_IMAGE_PREFIX:?set SAMATA_IMAGE_PREFIX}/samata-control-plane:${SAMATA_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://samata:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/samata
+      REDIS_URL: redis://redis:6379
+      SAMATA_WEBHOOK_SECRET: ${SAMATA_WEBHOOK_SECRET:?set SAMATA_WEBHOOK_SECRET}
+      SAMATA_API_KEY: ${SAMATA_API_KEY:?set SAMATA_API_KEY}
+      SAMATA_DEFAULT_AGENT: ${SAMATA_DEFAULT_AGENT:-}
+      # Handed to browsers in test tokens, so it's the public URL.
+      LIVEKIT_URL: ${LIVEKIT_PUBLIC_URL:-wss://${LIVEKIT_DOMAIN}}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:?set LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?set LIVEKIT_API_SECRET}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SAMATA_ANALYSIS_MODEL: ${SAMATA_ANALYSIS_MODEL:-gpt-4.1-mini}
+
+  worker:
+    image: ${SAMATA_IMAGE_PREFIX}/samata-worker:${SAMATA_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      - livekit
+      - control-plane
+    # Stateless: scale with `docker compose up -d --scale worker=4`.
+    deploy:
+      replicas: ${SAMATA_WORKER_REPLICAS:-1}
+    environment:
+      LIVEKIT_URL: ${LIVEKIT_URL:-ws://livekit:7880}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+      SAMATA_CONTROL_PLANE_URL: http://control-plane:3000
+      SAMATA_WEBHOOK_SECRET: ${SAMATA_WEBHOOK_SECRET}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?set OPENAI_API_KEY}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:?set DEEPGRAM_API_KEY}
+      CARTESIA_API_KEY: ${CARTESIA_API_KEY:?set CARTESIA_API_KEY}
+
+  livekit:
+    image: livekit/livekit-server:v1.13
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    # Media goes straight to the host, not through Caddy. Single-port UDP
+    # mode keeps the firewall rule (and docker port mapping) to one port.
+    ports:
+      - "7881:7881" # WebRTC over TCP (fallback)
+      - "7882:7882/udp" # WebRTC over UDP
+    environment:
+      LIVEKIT_CONFIG: |
+        port: 7880
+        rtc:
+          tcp_port: 7881
+          udp_port: 7882
+          use_external_ip: true
+        redis:
+          address: redis:6379
+        keys:
+          ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+        room:
+          empty_timeout: 30
+          departure_timeout: 10
+        logging:
+          level: info
+
+  sip:
+    image: livekit/sip:v1.22
+    profiles: ["sip"]
+    restart: unless-stopped
+    depends_on:
+      - livekit
+    ports:
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      - "10000-10100:10000-10100/udp"
+    environment:
+      SIP_CONFIG_BODY: |
+        api_key: ${LIVEKIT_API_KEY}
+        api_secret: ${LIVEKIT_API_SECRET}
+        ws_url: ws://livekit:7880
+        redis:
+          address: redis:6379
+        sip_port: 5060
+        rtp_port: 10000-10100
+        use_external_ip: true
+        logging:
+          level: info
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - redis-data:/data
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: samata
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: samata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U samata -d samata"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  caddy-data:
+  caddy-config:
+  redis-data:
+  postgres-data:
