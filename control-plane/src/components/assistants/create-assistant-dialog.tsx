@@ -40,7 +40,14 @@ export function CreateAssistantDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button className="w-full" />}>
+      <DialogTrigger
+        render={
+          <Button
+            variant="outline"
+            className="w-full border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
+          />
+        }
+      >
         <PlusIcon />
         Create Assistant
       </DialogTrigger>

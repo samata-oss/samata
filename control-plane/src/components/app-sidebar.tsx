@@ -9,10 +9,7 @@ import {
   ScrollTextIcon,
   WrenchIcon,
 } from "lucide-react";
-import { desc } from "drizzle-orm";
 import type * as React from "react";
-import { db } from "@/db";
-import { agent } from "@/db/schema";
 import { type NavGroup, NavMain } from "@/components/nav-main";
 import {
   Sidebar,
@@ -34,13 +31,7 @@ function livekitHost() {
   }
 }
 
-export async function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
-  const agents = await db
-    .select({ slug: agent.slug, name: agent.name })
-    .from(agent)
-    .orderBy(desc(agent.updatedAt))
-    .limit(6);
-
+export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const groups: NavGroup[] = [
     {
       label: "Build",
@@ -49,10 +40,6 @@ export async function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           title: "Assistants",
           url: "/assistants",
           icon: <BotIcon />,
-          items: agents.map((a) => ({
-            title: a.name,
-            url: `/assistants/${a.slug}`,
-          })),
         },
         { title: "Tools", url: "/tools", icon: <WrenchIcon /> },
         { title: "Phone Numbers", url: "/phone-numbers", icon: <PhoneIcon /> },

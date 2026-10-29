@@ -24,18 +24,24 @@ export function AssistantList({ items }: { items: AssistantListItem[] }) {
     : items;
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col gap-3 border-r p-3 md:flex">
-      <CreateAssistantDialog />
-      <div className="relative">
-        <SearchIcon className="pointer-events-none absolute top-2 left-2.5 size-4 text-muted-foreground" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search Assistants"
-          className="pl-8"
-        />
+    <aside className="hidden w-72 shrink-0 flex-col border-r md:flex">
+      <div className="flex h-12 items-center gap-2 border-b px-4">
+        <h2 className="text-sm font-semibold">Assistants</h2>
+        <span className="text-sm text-muted-foreground">{items.length}</span>
       </div>
-      <nav className="-mx-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-1">
+      <div className="flex flex-col gap-3 border-b p-3">
+        <CreateAssistantDialog />
+        <div className="relative">
+          <SearchIcon className="pointer-events-none absolute top-2 left-2.5 size-4 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search Assistants"
+            className="border-transparent bg-muted pl-8"
+          />
+        </div>
+      </div>
+      <nav className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-3">
         {shown.map((item) => {
           const active = pathname === `/assistants/${item.slug}`;
           return (
@@ -43,10 +49,13 @@ export function AssistantList({ items }: { items: AssistantListItem[] }) {
               key={item.slug}
               href={`/assistants/${item.slug}`}
               className={cn(
-                "rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent",
-                active && "bg-accent",
+                "relative rounded-lg border border-transparent px-3 py-2.5 text-sm transition-colors hover:bg-accent",
+                active && "border-primary/30 bg-primary/10 hover:bg-primary/10",
               )}
             >
+              {active && (
+                <span className="absolute inset-y-0 -left-px w-0.5 rounded-full bg-primary" />
+              )}
               <div className="truncate font-medium">{item.name}</div>
               <div className="truncate text-xs text-muted-foreground">
                 {item.subtitle}
@@ -55,7 +64,7 @@ export function AssistantList({ items }: { items: AssistantListItem[] }) {
           );
         })}
         {shown.length === 0 && (
-          <p className="px-3 py-2 text-sm text-muted-foreground">
+          <p className="px-1 py-2 text-sm text-muted-foreground">
             {items.length === 0 ? "No assistants yet." : "No matches."}
           </p>
         )}
