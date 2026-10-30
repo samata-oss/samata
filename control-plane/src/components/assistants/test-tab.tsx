@@ -4,7 +4,6 @@ import { type RemoteTrack, Room, RoomEvent, Track } from "livekit-client";
 import { MicIcon, MicOffIcon, PhoneIcon, PhoneOffIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { createTestTokenAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -16,9 +15,9 @@ const TRANSCRIPTION_TOPIC = "lk.transcription";
 const SEGMENT_ATTR = "lk.segment_id";
 
 /**
- * Talk to the saved assistant from the browser: mint a short-lived token,
- * join the LiveKit room (which dispatches the worker), publish the mic, play
- * the assistant's audio and show live transcripts.
+ * Talk to the saved assistant from the browser: ask the control plane to
+ * start a session (room + worker dispatch + room-scoped token), join the
+ * room, publish the mic, play the assistant's audio and show live transcripts.
  */
 export function TestTab({
   agentId,
@@ -52,8 +51,19 @@ export function TestTab({
     setPhase("connecting");
     setLines([]);
     try {
-      const res = await createTestTokenAction(agentId);
-      if (!res.ok) throw new Error(res.error);
+      // The control plane creates the room, dispatches the worker and mints
+      // a token that can only join that room.
+      const res = await fetch("/api/session/start", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ assistantId: agentId }),
+      });
+      const session = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(
+          session?.error ?? `Could not start call (${res.status})`,
+        );
+      }
 
       const room = new Room();
       roomRef.current = room;
@@ -101,7 +111,7 @@ export function TestTab({
         },
       );
 
-      await room.connect(res.url, res.token);
+      await room.connect(session.url, session.token);
       await room.localParticipant.setMicrophoneEnabled(true);
       await room.startAudio();
       syncPhase();

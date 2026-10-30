@@ -84,12 +84,16 @@ cp .env.example .env
 .venv/bin/python main.py dev
 ```
 
-To talk to the agent from a browser, get a token and paste the URL and token into
-<https://agents-playground.livekit.io>:
+To talk to the agent from a browser, start a session. This creates the room,
+dispatches the worker into it, and returns a room-scoped token. Paste the url and
+token into <https://agents-playground.livekit.io>:
 
 ```bash
-curl -X POST -H "authorization: Bearer dev-api-key-change-me" \
-  localhost:3000/api/agents/receptionist/test-token
+curl -X POST localhost:3000/api/session/start \
+  -H "authorization: Bearer dev-api-key-change-me" \
+  -H "content-type: application/json" \
+  -d '{"assistantId": "receptionist"}'
+# -> { "url": "ws://localhost:7880", "token": "...", "roomName": "call_ab12cd34ef56" }
 ```
 
 To run the worker as a container instead (it doesn't need the rest of the stack
@@ -119,6 +123,24 @@ In production the dashboard asks for HTTP Basic credentials: any username, and
 `SAMATA_API_KEY` as the password. In development it is open. Webhook secrets
 stored on an agent are never sent to the browser; leave a secret field empty to
 keep the stored value.
+
+## Starting a browser call
+
+The browser never talks to LiveKit's API and never holds `LIVEKIT_API_SECRET`.
+
+```
+Browser ── POST /api/session/start { assistantId } ──► Control plane
+   ▲                                                     │ 1. load the assistant
+   │◄──────────── { url, token, roomName } ──────────────┤ 2. create room "call_…"
+   │                                                     │ 3. dispatch the worker (agentId in metadata)
+   │                                                     ▼ 4. mint a token for that room only
+   └── WebRTC (token) ──► LiveKit SFU ──job──► pre-warmed worker ──assistant-request──► Control plane
+```
+
+The worker process is already running and registered with the SFU, so a call
+costs a job assignment, not a container start. The dispatch is created
+server-side, so the browser can't change which agent runs. Inbound SIP calls
+use the same dispatch to the same worker; only the dispatch rule differs.
 
 ## Call lifecycle
 

@@ -6,7 +6,7 @@ import { agent } from "@/db/schema";
 import { agentConfigSchema } from "@/lib/agent-config";
 import { agentView, isUniqueViolation, uniqueSlug } from "@/server/agents";
 import { requireApiKey } from "@/server/api-auth";
-import { mintTestToken } from "@/server/test-token";
+import { SessionError, startSession } from "@/server/session";
 
 const agentBody = z.object({
   slug: z.string().regex(/^[a-z0-9-]{1,64}$/),
@@ -156,16 +156,16 @@ export const agentRoutes = new Hono()
   })
 
   /**
-   * A browser token for talking to an agent over WebRTC. Joining the room
-   * dispatches the Samata worker with `{ agentId }` as job metadata. Paste
-   * the url + token into https://agents-playground.livekit.io to try it.
+   * Same as `POST /api/session/start`, addressed by agent. Paste the url +
+   * token into https://agents-playground.livekit.io to try it.
    */
   .post("/:ref/test-token", async (c) => {
-    const [row] = await db
-      .select({ id: agent.id })
-      .from(agent)
-      .where(byRef(c.req.param("ref")));
-    if (!row) return c.json({ error: "Not found" }, 404);
-
-    return c.json(await mintTestToken(row.id));
+    try {
+      return c.json(await startSession(c.req.param("ref")));
+    } catch (err) {
+      if (err instanceof SessionError) {
+        return c.json({ error: err.message }, err.status);
+      }
+      throw err;
+    }
   });

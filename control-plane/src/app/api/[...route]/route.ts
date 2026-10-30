@@ -3,6 +3,7 @@ import { handle } from "hono/vercel";
 import { agentRoutes } from "@/server/routes/agents";
 import { callRoutes } from "@/server/routes/calls";
 import { exampleRoutes } from "@/server/routes/examples";
+import { sessionRoutes } from "@/server/routes/session";
 import { webhookRoutes } from "@/server/routes/webhooks";
 
 // pg + ioredis need the Node runtime; SSE streams shouldn't be cut short.
@@ -19,6 +20,9 @@ app.route("/webhooks", webhookRoutes);
 // Management API (bearer API key, enforced inside each router).
 app.route("/agents", agentRoutes);
 app.route("/calls", callRoutes);
+
+// Browser voice sessions (dashboard credentials or bearer API key).
+app.route("/session", sessionRoutes);
 
 app.route("/examples", exampleRoutes);
 

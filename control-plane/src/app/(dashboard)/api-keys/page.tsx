@@ -10,8 +10,13 @@ const ENDPOINTS = [
   ["DELETE", "/api/agents/:ref", "Delete an assistant"],
   [
     "POST",
+    "/api/session/start",
+    "Start a voice session: room, worker dispatch, browser token",
+  ],
+  [
+    "POST",
     "/api/agents/:ref/test-token",
-    "Browser token for a WebRTC test call",
+    "Same, addressed by assistant (for the LiveKit playground)",
   ],
   ["GET", "/api/calls", "List calls"],
   ["GET", "/api/calls/:id", "Fetch a call with transcript and analysis"],

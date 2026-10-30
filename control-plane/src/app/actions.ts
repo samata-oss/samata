@@ -7,7 +7,6 @@ import { db } from "@/db";
 import { agent } from "@/db/schema";
 import { agentConfigSchema } from "@/lib/agent-config";
 import { isUniqueViolation, restoreSecrets, uniqueSlug } from "@/server/agents";
-import { mintTestToken } from "@/server/test-token";
 
 /**
  * Server actions behind the dashboard. They mirror the management API
@@ -130,17 +129,4 @@ export async function setPhoneNumberAction(
   }
   refresh();
   return { ok: true };
-}
-
-export async function createTestTokenAction(
-  id: string,
-): Promise<ActionResult<{ url: string; token: string; roomName: string }>> {
-  const [row] = await db
-    .select({ id: agent.id })
-    .from(agent)
-    .where(eq(agent.id, id));
-  if (!row) return { ok: false, error: "Assistant not found." };
-  const { url, token, roomName } = await mintTestToken(row.id);
-  if (!url) return { ok: false, error: "LIVEKIT_URL is not set." };
-  return { ok: true, url, token, roomName };
 }
