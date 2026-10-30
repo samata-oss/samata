@@ -21,10 +21,14 @@ const RANGES = {
 type Range = keyof typeof RANGES;
 
 const STAGES = [
-  { key: "endOfTurnDelayAvg", label: "End of turn", color: "bg-orange-500" },
-  { key: "transcriptionDelayAvg", label: "Transcription", color: "bg-sky-500" },
-  { key: "llmTtftAvg", label: "LLM first token", color: "bg-fuchsia-500" },
-  { key: "ttsTtfbAvg", label: "TTS first byte", color: "bg-emerald-500" },
+  { key: "endOfTurnDelayAvg", label: "End of turn", color: "bg-primary" },
+  {
+    key: "transcriptionDelayAvg",
+    label: "Transcription",
+    color: "bg-amber-400",
+  },
+  { key: "llmTtftAvg", label: "LLM first token", color: "bg-sky-400" },
+  { key: "ttsTtfbAvg", label: "TTS first byte", color: "bg-neutral-300" },
 ] as const;
 
 export default async function MetricsPage({

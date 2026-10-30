@@ -12,6 +12,8 @@ function Switch({
 }) {
   return (
     <SwitchPrimitive.Root
+      // Same Base UI SSR quirk as Tabs: attributes settle right after mount.
+      suppressHydrationWarning
       data-slot="switch"
       data-size={size}
       className={cn(

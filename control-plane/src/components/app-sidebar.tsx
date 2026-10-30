@@ -73,7 +73,9 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                 <AudioLinesIcon className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">Samata</span>
+                <span className="truncate font-mono font-semibold tracking-[0.2em] uppercase">
+                  Samata
+                </span>
                 <span className="truncate text-xs">Self-hosted voice AI</span>
               </div>
             </SidebarMenuButton>

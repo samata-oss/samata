@@ -59,7 +59,9 @@ export function Stat({
 }) {
   return (
     <div className="rounded-lg border bg-card p-4">
-      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">
+        {label}
+      </div>
       <div className="mt-1 text-2xl font-semibold tabular-nums">{value}</div>
       {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
     </div>
