@@ -5,6 +5,7 @@ import {
   type AgentConfigInput,
   agentConfigSchema,
 } from "../src/lib/agent-config";
+import { DEFAULT_ORGANIZATION_ID } from "../src/lib/workspace";
 
 const baseUrl = process.env.SAMATA_PUBLIC_URL ?? "http://localhost:3000";
 
@@ -65,6 +66,7 @@ async function main() {
   await db
     .insert(agent)
     .values({
+      organizationId: DEFAULT_ORGANIZATION_ID,
       slug: "receptionist",
       name: "Acme Receptionist",
       phoneNumber: "+15555550100",
@@ -72,7 +74,7 @@ async function main() {
     })
     .onConflictDoUpdate({ target: agent.slug, set: { config: parsed } });
 
-  console.log("Seeded agent 'receptionist'.");
+  console.log("Seeded agent 'receptionist' in the default workspace.");
   process.exit(0);
 }
 

@@ -6,18 +6,20 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { requireWorkspaceSession } from "@/server/workspace";
 
 // Every page reads Postgres, so nothing here can be prerendered at build time.
 export const dynamic = "force-dynamic";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { user, workspaceName } = await requireWorkspaceSession();
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar user={user} workspaceName={workspaceName} />
       <SidebarInset className="h-svh overflow-hidden">
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />

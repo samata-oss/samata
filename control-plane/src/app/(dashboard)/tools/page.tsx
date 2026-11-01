@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { EmptyState, PageShell } from "@/components/page-shell";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import {
 import { db } from "@/db";
 import { agent } from "@/db/schema";
 import { agentConfigSchema } from "@/lib/agent-config";
+import { requireWorkspaceSession } from "@/server/workspace";
 
 type Usage = { slug: string; name: string };
 type ToolEntry = {
@@ -22,7 +24,12 @@ type ToolEntry = {
 };
 
 export default async function ToolsPage() {
-  const agents = await db.select().from(agent).orderBy(agent.name);
+  const { organizationId } = await requireWorkspaceSession();
+  const agents = await db
+    .select()
+    .from(agent)
+    .where(eq(agent.organizationId, organizationId))
+    .orderBy(agent.name);
 
   // The same tool name can be configured differently per assistant, so key by
   // name + server and list every assistant that uses that exact tool.

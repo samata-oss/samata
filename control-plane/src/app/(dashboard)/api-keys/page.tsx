@@ -62,15 +62,19 @@ export default async function ApiKeysPage() {
         <Status ok={Boolean(process.env.SAMATA_API_KEY)}>
           <code>SAMATA_API_KEY</code>
           <span className="text-muted-foreground">
-            Bearer key for the management API
-            {process.env.NODE_ENV === "production" &&
-              " and the password for this dashboard"}
+            Bearer key for the management API. It acts on the default workspace.
           </span>
         </Status>
         <Status ok={Boolean(process.env.SAMATA_WEBHOOK_SECRET)}>
           <code>SAMATA_WEBHOOK_SECRET</code>
           <span className="text-muted-foreground">
             Shared secret the worker sends on every webhook
+          </span>
+        </Status>
+        <Status ok={Boolean(process.env.BETTER_AUTH_SECRET)}>
+          <code>BETTER_AUTH_SECRET</code>
+          <span className="text-muted-foreground">
+            Signs dashboard sessions (required in production)
           </span>
         </Status>
         <Status

@@ -1,11 +1,16 @@
-import { desc, eq, or } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "@/db";
 import { agent } from "@/db/schema";
 import { agentConfigSchema } from "@/lib/agent-config";
-import { agentView, isUniqueViolation, uniqueSlug } from "@/server/agents";
-import { requireApiKey } from "@/server/api-auth";
+import {
+  agentView,
+  inWorkspace,
+  isUniqueViolation,
+  uniqueSlug,
+} from "@/server/agents";
+import { requireWorkspace, type WorkspaceEnv } from "@/server/api-auth";
 import { SessionError, startSession } from "@/server/session";
 
 const agentBody = z.object({
@@ -35,12 +40,14 @@ const patchBody = z.object({
   config: z.record(z.string(), z.unknown()).optional(),
 });
 
-const byRef = (ref: string) => or(eq(agent.id, ref), eq(agent.slug, ref));
-
-export const agentRoutes = new Hono()
-  .use(requireApiKey)
+export const agentRoutes = new Hono<WorkspaceEnv>()
+  .use(requireWorkspace)
   .get("/", async (c) => {
-    const rows = await db.select().from(agent).orderBy(desc(agent.createdAt));
+    const rows = await db
+      .select()
+      .from(agent)
+      .where(eq(agent.organizationId, c.get("organizationId")))
+      .orderBy(desc(agent.createdAt));
     return c.json({ agents: rows.map(agentView) });
   })
 
@@ -59,7 +66,13 @@ export const agentRoutes = new Hono()
     try {
       const [row] = await db
         .insert(agent)
-        .values({ slug, name, phoneNumber: phoneNumber ?? null, config })
+        .values({
+          organizationId: c.get("organizationId"),
+          slug,
+          name,
+          phoneNumber: phoneNumber ?? null,
+          config,
+        })
         .returning();
       return c.json(agentView(row), 201);
     } catch (err) {
@@ -82,7 +95,7 @@ export const agentRoutes = new Hono()
     const [existing] = await db
       .select()
       .from(agent)
-      .where(byRef(c.req.param("ref")));
+      .where(inWorkspace(c.get("organizationId"), c.req.param("ref")));
     if (!existing) return c.json({ error: "Not found" }, 404);
 
     const { slug, name, phoneNumber, config } = parsed.data;
@@ -105,7 +118,12 @@ export const agentRoutes = new Hono()
           ...(phoneNumber !== undefined && { phoneNumber }),
           ...(merged?.success && { config: merged.data }),
         })
-        .where(eq(agent.id, existing.id))
+        .where(
+          and(
+            eq(agent.id, existing.id),
+            eq(agent.organizationId, c.get("organizationId")),
+          ),
+        )
         .returning();
       return c.json(agentView(row));
     } catch (err) {
@@ -123,7 +141,7 @@ export const agentRoutes = new Hono()
     const [row] = await db
       .select()
       .from(agent)
-      .where(byRef(c.req.param("ref")));
+      .where(inWorkspace(c.get("organizationId"), c.req.param("ref")));
     return row ? c.json(agentView(row)) : c.json({ error: "Not found" }, 404);
   })
 
@@ -134,21 +152,44 @@ export const agentRoutes = new Hono()
       return c.json({ error: z.prettifyError(parsed.error) }, 400);
     }
     const { slug, name, phoneNumber, config } = parsed.data;
-    const [row] = await db
-      .insert(agent)
-      .values({ slug, name, phoneNumber: phoneNumber ?? null, config })
-      .onConflictDoUpdate({
-        target: agent.slug,
-        set: { name, phoneNumber: phoneNumber ?? null, config },
-      })
-      .returning();
-    return c.json(agentView(row));
+    const organizationId = c.get("organizationId");
+    try {
+      const [row] = await db
+        .insert(agent)
+        .values({
+          organizationId,
+          slug,
+          name,
+          phoneNumber: phoneNumber ?? null,
+          config,
+        })
+        .onConflictDoUpdate({
+          target: agent.slug,
+          set: { name, phoneNumber: phoneNumber ?? null, config },
+          // A slug is unique across the install, so it may belong to another
+          // workspace. Never overwrite that: report a conflict instead.
+          setWhere: eq(agent.organizationId, organizationId),
+        })
+        .returning();
+      if (!row) {
+        return c.json({ error: "An agent with this slug already exists" }, 409);
+      }
+      return c.json(agentView(row));
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        return c.json(
+          { error: "An agent with this slug or phone number already exists" },
+          409,
+        );
+      }
+      throw err;
+    }
   })
 
   .delete("/:ref", async (c) => {
     const rows = await db
       .delete(agent)
-      .where(byRef(c.req.param("ref")))
+      .where(inWorkspace(c.get("organizationId"), c.req.param("ref")))
       .returning({ id: agent.id });
     return rows.length
       ? c.json({ ok: true })
@@ -161,7 +202,9 @@ export const agentRoutes = new Hono()
    */
   .post("/:ref/test-token", async (c) => {
     try {
-      return c.json(await startSession(c.req.param("ref")));
+      return c.json(
+        await startSession(c.req.param("ref"), c.get("organizationId")),
+      );
     } catch (err) {
       if (err instanceof SessionError) {
         return c.json({ error: err.message }, err.status);

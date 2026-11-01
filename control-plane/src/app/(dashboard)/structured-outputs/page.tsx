@@ -1,4 +1,4 @@
-import { and, desc, isNotNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
 import Link from "next/link";
 import { EmptyState, PageShell } from "@/components/page-shell";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import { db } from "@/db";
 import { agent, callLog } from "@/db/schema";
 import { agentConfigSchema } from "@/lib/agent-config";
 import { fmtDateTime } from "@/lib/format";
+import { requireWorkspaceSession } from "@/server/workspace";
 
 function cell(value: unknown) {
   if (value === null || value === undefined) return "—";
@@ -21,8 +22,13 @@ function cell(value: unknown) {
 }
 
 export default async function StructuredOutputsPage() {
+  const { organizationId } = await requireWorkspaceSession();
   const [agents, results] = await Promise.all([
-    db.select().from(agent).orderBy(agent.name),
+    db
+      .select()
+      .from(agent)
+      .where(eq(agent.organizationId, organizationId))
+      .orderBy(agent.name),
     db
       .select({
         id: callLog.id,
@@ -31,7 +37,13 @@ export default async function StructuredOutputsPage() {
         data: callLog.structuredData,
       })
       .from(callLog)
-      .where(and(isNotNull(callLog.structuredData), isNotNull(callLog.agentId)))
+      .where(
+        and(
+          eq(callLog.organizationId, organizationId),
+          isNotNull(callLog.structuredData),
+          isNotNull(callLog.agentId),
+        ),
+      )
       .orderBy(desc(callLog.startedAt))
       .limit(500),
   ]);

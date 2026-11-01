@@ -7,10 +7,12 @@ import {
   PhoneIcon,
   RadioIcon,
   ScrollTextIcon,
+  UsersIcon,
   WrenchIcon,
 } from "lucide-react";
 import type * as React from "react";
 import { type NavGroup, NavMain } from "@/components/nav-main";
+import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -31,7 +33,14 @@ function livekitHost() {
   }
 }
 
-export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  user,
+  workspaceName,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  user: { name: string; email: string };
+  workspaceName: string;
+}) {
   const groups: NavGroup[] = [
     {
       label: "Build",
@@ -60,6 +69,10 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     {
       label: "Integrations",
       items: [{ title: "API Keys", url: "/api-keys", icon: <KeyRoundIcon /> }],
+    },
+    {
+      label: "Workspace",
+      items: [{ title: "Team", url: "/team", icon: <UsersIcon /> }],
     },
   ];
 
@@ -103,6 +116,11 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <NavUser
+          name={user.name}
+          email={user.email}
+          workspaceName={workspaceName}
+        />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

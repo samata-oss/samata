@@ -17,11 +17,12 @@ app.get("/health", (c) => c.json({ ok: true }));
 // Worker -> control plane (shared secret).
 app.route("/webhooks", webhookRoutes);
 
-// Management API (bearer API key, enforced inside each router).
+// Management API (bearer API key or a signed-in session, enforced inside
+// each router). Better Auth's own endpoints live at /api/auth/*.
 app.route("/agents", agentRoutes);
 app.route("/calls", callRoutes);
 
-// Browser voice sessions (dashboard credentials or bearer API key).
+// Browser voice sessions (signed-in session or bearer API key).
 app.route("/session", sessionRoutes);
 
 app.route("/examples", exampleRoutes);

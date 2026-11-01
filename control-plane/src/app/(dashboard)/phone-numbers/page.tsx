@@ -1,9 +1,12 @@
+import { eq } from "drizzle-orm";
 import { PhoneNumbersManager } from "@/components/phone-numbers-manager";
 import { PageShell } from "@/components/page-shell";
 import { db } from "@/db";
 import { agent } from "@/db/schema";
+import { requireWorkspaceSession } from "@/server/workspace";
 
 export default async function PhoneNumbersPage() {
+  const { organizationId } = await requireWorkspaceSession();
   const agents = await db
     .select({
       id: agent.id,
@@ -12,6 +15,7 @@ export default async function PhoneNumbersPage() {
       phoneNumber: agent.phoneNumber,
     })
     .from(agent)
+    .where(eq(agent.organizationId, organizationId))
     .orderBy(agent.name);
 
   return (

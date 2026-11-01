@@ -20,6 +20,7 @@ const LABELS: Record<string, string> = {
   "structured-outputs": "Structured Outputs",
   metrics: "Metrics",
   "api-keys": "API Keys",
+  team: "Team",
 };
 
 function label(segment: string) {

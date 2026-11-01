@@ -42,13 +42,16 @@ function stringify(value: unknown) {
   return typeof value === "string" ? value : JSON.stringify(value);
 }
 
-/** Run every tool call in a batch concurrently. Never throws. */
+/**
+ * Run every tool call in a batch concurrently. Never throws. Also returns the
+ * call's workspace, for the event that announces the batch.
+ */
 export async function runToolCalls(
   callId: string,
   calls: ToolCall[],
-): Promise<ToolResult[] | null> {
+): Promise<{ results: ToolResult[]; organizationId: string } | null> {
   const [row] = await db
-    .select({ config: agent.config })
+    .select({ config: agent.config, organizationId: callLog.organizationId })
     .from(callLog)
     .innerJoin(agent, eq(agent.id, callLog.agentId))
     .where(eq(callLog.id, callId))
@@ -58,7 +61,10 @@ export async function runToolCalls(
   const tools = new Map(
     agentConfigSchema.parse(row.config).tools.map((t) => [t.name, t]),
   );
-  return Promise.all(calls.map((tc) => runOne(callId, tc, tools.get(tc.name))));
+  const results = await Promise.all(
+    calls.map((tc) => runOne(callId, tc, tools.get(tc.name))),
+  );
+  return { results, organizationId: row.organizationId };
 }
 
 async function runOne(

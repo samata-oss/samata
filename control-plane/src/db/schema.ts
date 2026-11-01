@@ -10,30 +10,48 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import type { AgentConfig } from "@/lib/agent-config";
+import { organization } from "./auth-schema";
+
+// Better Auth's tables (user, session, organization, member, ...). The
+// drizzle adapter reads them from this module.
+export * from "./auth-schema";
 
 /**
  * A declarative voice agent. Everything about how a call behaves lives in
  * `config` (validated by `agentConfigSchema`), so the worker stays stateless.
  */
-export const agent = pgTable("agent", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => randomUUID()),
-  /** Human-friendly id, usable in room metadata / dispatch instead of `id`. */
-  slug: text("slug").notNull().unique(),
-  name: text("name").notNull(),
-  /**
-   * E.164 number that routes inbound SIP calls to this agent (matched against
-   * the `sip.trunkPhoneNumber` participant attribute). Null for web-only agents.
-   */
-  phoneNumber: text("phone_number").unique(),
-  config: jsonb("config").$type<AgentConfig>().notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-});
+export const agent = pgTable(
+  "agent",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    /** The workspace that owns this agent. Every query is scoped by it. */
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    /**
+     * Human-friendly id, usable in room metadata / dispatch instead of `id`.
+     * Unique across the install, because the worker resolves it without
+     * knowing the workspace. Dispatch by `id` where that could be ambiguous.
+     */
+    slug: text("slug").notNull().unique(),
+    name: text("name").notNull(),
+    /**
+     * E.164 number that routes inbound SIP calls to this agent (matched against
+     * the `sip.trunkPhoneNumber` participant attribute). Null for web-only agents.
+     * Unique across the install: a dialed number maps to exactly one agent.
+     */
+    phoneNumber: text("phone_number").unique(),
+    config: jsonb("config").$type<AgentConfig>().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("agent_organization_idx").on(table.organizationId)],
+);
 
 export const CALL_STATUSES = ["in-progress", "ended", "failed"] as const;
 export type CallStatus = (typeof CALL_STATUSES)[number];
@@ -71,6 +89,14 @@ export const callLog = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => randomUUID()),
+    /**
+     * Copied from the agent when the call starts. It outlives the agent
+     * (`agentId` is set null when an agent is deleted), so a deleted agent's
+     * calls stay in the right workspace instead of becoming visible to all.
+     */
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
     agentId: text("agent_id").references(() => agent.id, {
       onDelete: "set null",
     }),
@@ -101,6 +127,10 @@ export const callLog = pgTable(
   (table) => [
     index("call_log_agent_idx").on(table.agentId),
     index("call_log_started_at_idx").on(table.startedAt),
+    index("call_log_organization_started_idx").on(
+      table.organizationId,
+      table.startedAt,
+    ),
   ],
 );
 

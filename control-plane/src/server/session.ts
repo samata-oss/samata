@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { eq, or } from "drizzle-orm";
 import {
   AccessToken,
   AgentDispatchClient,
@@ -7,6 +6,7 @@ import {
 } from "livekit-server-sdk";
 import { db } from "@/db";
 import { agent } from "@/db/schema";
+import { inWorkspace } from "@/server/agents";
 
 /** Must match AGENT_NAME in the worker. */
 const WORKER_AGENT_NAME = process.env.SAMATA_WORKER_AGENT_NAME ?? "samata";
@@ -49,9 +49,9 @@ function livekit() {
 }
 
 /**
- * Start a browser voice session for an assistant (id or slug).
+ * Start a browser voice session for an assistant (id or slug) in a workspace.
  *
- *   1. Load the assistant (404 if it doesn't exist).
+ *   1. Load the assistant (404 if it doesn't exist in that workspace).
  *   2. Create a uniquely named room on the SFU.
  *   3. Explicitly dispatch the Samata worker into it, server-side, with the
  *      assistant id as job metadata. The browser never sees or influences it.
@@ -63,11 +63,12 @@ function livekit() {
  */
 export async function startSession(
   assistantRef: string,
+  organizationId: string,
 ): Promise<StartedSession> {
   const [row] = await db
     .select({ id: agent.id })
     .from(agent)
-    .where(or(eq(agent.id, assistantRef), eq(agent.slug, assistantRef)));
+    .where(inWorkspace(organizationId, assistantRef));
   if (!row) throw new SessionError(404, "Assistant not found.");
 
   const { url, key, secret } = livekit();

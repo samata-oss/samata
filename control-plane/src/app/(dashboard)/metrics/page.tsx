@@ -1,4 +1,4 @@
-import { eq, gte } from "drizzle-orm";
+import { and, eq, gte } from "drizzle-orm";
 import { UrlSelect } from "@/components/filter-form";
 import { EmptyState, PageShell, Stat } from "@/components/page-shell";
 import {
@@ -17,6 +17,7 @@ import {
   TRANSCRIPTION_NOTE,
   TRANSCRIPTION_STAGE,
 } from "@/lib/latency-stages";
+import { requireWorkspaceSession } from "@/server/workspace";
 
 const RANGES = {
   "24h": { label: "Last 24 hours", ms: 24 * 3600_000, bucket: 3600_000 },
@@ -31,6 +32,7 @@ export default async function MetricsPage({
   searchParams: Promise<{ range?: string }>;
 }) {
   const { range: rangeParam } = await searchParams;
+  const { organizationId } = await requireWorkspaceSession();
   const range: Range =
     rangeParam && rangeParam in RANGES ? (rangeParam as Range) : "7d";
   const { ms, bucket } = RANGES[range];
@@ -49,7 +51,12 @@ export default async function MetricsPage({
     })
     .from(callLog)
     .leftJoin(agent, eq(agent.id, callLog.agentId))
-    .where(gte(callLog.startedAt, since))
+    .where(
+      and(
+        eq(callLog.organizationId, organizationId),
+        gte(callLog.startedAt, since),
+      ),
+    )
     .limit(10_000);
 
   const stageAvg = STAGES.map((s) => ({

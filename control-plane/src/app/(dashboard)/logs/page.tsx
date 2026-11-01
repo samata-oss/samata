@@ -5,6 +5,7 @@ import { UrlSelect } from "@/components/filter-form";
 import { EmptyState, PageShell } from "@/components/page-shell";
 import { db } from "@/db";
 import { agent, CALL_STATUSES, callLog } from "@/db/schema";
+import { requireWorkspaceSession } from "@/server/workspace";
 
 const PAGE_SIZE = 50;
 
@@ -14,10 +15,12 @@ export default async function LogsPage({
   searchParams: Promise<{ agent?: string; status?: string; limit?: string }>;
 }) {
   const sp = await searchParams;
+  const { organizationId } = await requireWorkspaceSession();
   const limit = Math.min(Number(sp.limit) || PAGE_SIZE, 500);
   const status = CALL_STATUSES.find((s) => s === sp.status);
 
   const where = and(
+    eq(callLog.organizationId, organizationId),
     sp.agent ? eq(callLog.agentId, sp.agent) : undefined,
     status ? eq(callLog.status, status) : undefined,
   );
@@ -26,6 +29,7 @@ export default async function LogsPage({
     db
       .select({ id: agent.id, name: agent.name })
       .from(agent)
+      .where(eq(agent.organizationId, organizationId))
       .orderBy(agent.name),
     db
       .select({

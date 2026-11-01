@@ -49,6 +49,7 @@ export const webhookRoutes = new Hono()
     const [call] = await db
       .insert(callLog)
       .values({
+        organizationId: row.organizationId,
         agentId: row.id,
         roomName: message.call.roomName,
         type: message.call.type,
@@ -58,6 +59,7 @@ export const webhookRoutes = new Hono()
 
     await publish({
       type: "call.started",
+      organizationId: row.organizationId,
       callId: call.id,
       agentId: row.id,
       roomName: message.call.roomName,
@@ -73,15 +75,16 @@ export const webhookRoutes = new Hono()
     }
     const { call, toolCallList } = parsed.data.message;
 
-    const results = await runToolCalls(call.id, toolCallList);
-    if (!results) return c.json({ error: "Unknown call." }, 404);
+    const ran = await runToolCalls(call.id, toolCallList);
+    if (!ran) return c.json({ error: "Unknown call." }, 404);
 
     await publish({
       type: "call.tool-calls",
+      organizationId: ran.organizationId,
       callId: call.id,
       tools: toolCallList.map((t) => t.name),
     });
-    return c.json({ results });
+    return c.json({ results: ran.results });
   })
 
   /**
@@ -110,21 +113,27 @@ export const webhookRoutes = new Hono()
         toolCallCount: report.toolCallCount,
       })
       .where(eq(callLog.id, report.call.id))
-      .returning({ id: callLog.id, agentId: callLog.agentId });
+      .returning({
+        id: callLog.id,
+        agentId: callLog.agentId,
+        organizationId: callLog.organizationId,
+      });
     if (!row) return c.json({ error: "Unknown call." }, 404);
 
     await publish({
       type: "call.ended",
+      organizationId: row.organizationId,
       callId: row.id,
       endedReason: report.endedReason,
     });
-    after(() => postProcess(row.id, row.agentId, report));
+    after(() => postProcess(row.id, row.agentId, row.organizationId, report));
     return c.json({ ok: true });
   });
 
 async function postProcess(
   callId: string,
   agentId: string | null,
+  organizationId: string,
   report: z.infer<typeof endOfCallReportSchema>["message"],
 ) {
   const [row] = agentId
@@ -138,7 +147,7 @@ async function postProcess(
     analysis = await analyzeCall(report.transcript, config.analysisPlan);
     if (analysis) {
       await db.update(callLog).set(analysis).where(eq(callLog.id, callId));
-      await publish({ type: "call.analyzed", callId });
+      await publish({ type: "call.analyzed", organizationId, callId });
     }
   } catch (e) {
     console.error("[end-of-call-report] analysis failed", callId, e);

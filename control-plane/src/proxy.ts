@@ -1,43 +1,32 @@
-import { timingSafeEqual } from "node:crypto";
+import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
 
+/** Reachable without a session. Invitations handle the signed-out case. */
+const PUBLIC_PATHS = ["/sign-in", "/accept-invitation"];
+
 /**
- * Gate for the dashboard (pages and the server actions that post to them).
- * `/api` is excluded: it has its own auth (bearer key / webhook secret).
+ * Optimistic gate for the dashboard: no session cookie, no pages. This only
+ * checks that a cookie exists, which is cheap but not proof of anything, so
+ * every page, server action and API route still validates the session itself
+ * (`requireWorkspaceSession`, `requireWorkspace`).
  *
- * In production the dashboard asks for HTTP Basic credentials: any username,
- * with `SAMATA_API_KEY` as the password. It fails closed when the key is
- * unset. In development it is open, like the rest of the dev stack.
+ * `/api` is excluded: it has its own auth (session or bearer key for the
+ * management API, shared secret for worker webhooks, Better Auth for sign-in).
  */
 export function proxy(request: NextRequest) {
-  if (process.env.NODE_ENV !== "production") return NextResponse.next();
+  const { pathname, search } = request.nextUrl;
 
-  const expected = process.env.SAMATA_API_KEY;
-  if (!expected) {
-    return new NextResponse("SAMATA_API_KEY is not set.", { status: 503 });
-  }
+  const isPublic = PUBLIC_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
+  if (isPublic || getSessionCookie(request)) return NextResponse.next();
 
-  const header = request.headers.get("authorization") ?? "";
-  const encoded = header.match(/^Basic\s+(.+)$/i)?.[1] ?? "";
-  let decoded = "";
-  try {
-    decoded = atob(encoded);
-  } catch {
-    // Malformed header: treated as no credentials.
-  }
-  const password = decoded.slice(decoded.indexOf(":") + 1);
-
-  const a = Buffer.from(password);
-  const b = Buffer.from(expected);
-  if (encoded && a.length === b.length && timingSafeEqual(a, b)) {
-    return NextResponse.next();
-  }
-  return new NextResponse("Authentication required.", {
-    status: 401,
-    headers: { "www-authenticate": 'Basic realm="Samata", charset="UTF-8"' },
-  });
+  const url = request.nextUrl.clone();
+  url.pathname = "/sign-in";
+  url.search = `?next=${encodeURIComponent(pathname + search)}`;
+  return NextResponse.redirect(url);
 }
 
 export const config = {
-  matcher: ["/((?!api/|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!api/|_next/static|_next/image|favicon.ico|icon.svg).*)"],
 };

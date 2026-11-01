@@ -109,20 +109,46 @@ docker compose --profile worker up -d worker
 The control plane serves a dashboard at `/` (built on the shadcn `sidebar-07`
 block), modeled on Vapi's:
 
-| Page                | What it shows                                                                         |
-| ------------------- | ------------------------------------------------------------------------------------- |
-| Assistants          | Edit an agent's model, voice, transcriber, prompt, tools, VAD and analysis plan. Talk to it from the browser. |
-| Tools               | Every tool across assistants, and which assistants use it.                            |
-| Phone Numbers       | Assign an inbound number to an assistant.                                             |
-| Logs                | Every call, with transcript, summary, structured data and latency.                    |
-| Structured Outputs  | Data extracted by each assistant's analysis plan.                                     |
-| Metrics             | Call volume and the latency breakdown (end of turn, STT, LLM, TTS).                   |
-| API Keys            | Which keys are configured, and the management API and webhook endpoints.              |
+| Page               | What it shows                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Assistants         | Edit an agent's model, voice, transcriber, prompt, tools, VAD and analysis plan. Talk to it from the browser. |
+| Tools              | Every tool across assistants, and which assistants use it.                                                    |
+| Phone Numbers      | Assign an inbound number to an assistant.                                                                     |
+| Logs               | Every call, with transcript, summary, structured data and latency.                                            |
+| Structured Outputs | Data extracted by each assistant's analysis plan.                                                             |
+| Metrics            | Call volume and the latency breakdown (end of turn, STT, LLM, TTS).                                           |
+| API Keys           | Which keys are configured, and the management API and webhook endpoints.                                      |
+| Team               | Who is in the workspace. Invite people, remove them.                                                          |
 
-In production the dashboard asks for HTTP Basic credentials: any username, and
-`SAMATA_API_KEY` as the password. In development it is open. Webhook secrets
-stored on an agent are never sent to the browser; leave a secret field empty to
-keep the stored value.
+Webhook secrets stored on an agent are never sent to the browser; leave a secret
+field empty to keep the stored value.
+
+### Accounts and workspaces
+
+The dashboard has real accounts (email and password, plus optional Google),
+built on [Better Auth](https://better-auth.com).
+
+- **The first account becomes the owner.** Sign up as soon as you deploy,
+  because whoever gets there first owns the install.
+- **After that, sign-up is invitation-only.** Samata spends your Deepgram,
+  OpenAI and Cartesia keys on every call, so open registration would let anyone
+  on the internet run up your bill. Invite people from **Team**. Samata doesn't
+  send email, so creating an invitation gives you a link to share; the link is
+  what lets them create their account.
+- **Everything belongs to a workspace.** Assistants and call logs carry an
+  `organization_id`, and every dashboard and API query is scoped to it. A fresh
+  install, or an upgrade, has a single `default` workspace holding all existing
+  data. Creating more workspaces and managing teams across them is intentionally
+  not in this repo (planned for `ee/`).
+
+Set `BETTER_AUTH_SECRET` (`openssl rand -hex 32`) and, in production,
+`BETTER_AUTH_URL` (the compose file derives it from `SAMATA_DOMAIN`). For Google
+sign-in set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, with the redirect URI
+`https://<your-domain>/api/auth/callback/google`.
+
+The management API (`/api/agents`, `/api/calls`, `/api/session/start`) takes
+`Authorization: Bearer $SAMATA_API_KEY`, which acts on the default workspace.
+The dashboard calls the same API with its session cookie.
 
 ## Starting a browser call
 
@@ -167,13 +193,13 @@ are published on the Redis channel `samata:events` and streamed as SSE from
 Agents are declarative JSON. The schema is `control-plane/src/lib/agent-config.ts`,
 and the worker mirrors it in `worker/samata_worker/config.py`.
 
-| Endpoint                  | Does                                                                                              |
-| ------------------------- | ------------------------------------------------------------------------------------------------- |
+| Endpoint                  | Does                                                                                                                                               |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `POST /api/agents`        | Create. `201` with the agent and its `id`; `409` if the slug or phone number is taken. `slug` is optional and defaults to one derived from `name`. |
-| `PATCH /api/agents/:ref`  | Partial update. Top-level keys of `config` you send replace the stored ones; the rest are kept.   |
-| `PUT /api/agents`         | Create or replace by slug (idempotent, good for config-as-code).                                  |
-| `GET /api/agents[/:ref]`  | List / fetch. `:ref` is an id or slug.                                                            |
-| `DELETE /api/agents/:ref` | Delete.                                                                                           |
+| `PATCH /api/agents/:ref`  | Partial update. Top-level keys of `config` you send replace the stored ones; the rest are kept.                                                    |
+| `PUT /api/agents`         | Create or replace by slug (idempotent, good for config-as-code).                                                                                   |
+| `GET /api/agents[/:ref]`  | List / fetch. `:ref` is an id or slug.                                                                                                             |
+| `DELETE /api/agents/:ref` | Delete.                                                                                                                                            |
 
 To create an agent:
 
@@ -236,3 +262,13 @@ worker/                   livekit-agents 1.8 worker, Dockerfile
 
 > The keys in `infra/livekit/*.yaml` and `.env.example` are development
 > placeholders. Rotate all of them before you expose anything.
+
+## License
+
+Copyright (c) 2026 Samata.
+
+Everything in this repository is licensed under the
+[GNU Affero General Public License v3.0](LICENSE), except the contents of
+[`ee/`](ee), which are licensed under the
+[Elastic License 2.0](ee/LICENSE). You can self-host both for free. If you run
+`ee/` in production, we'd love to hear about it.

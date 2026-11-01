@@ -1,9 +1,10 @@
-import { desc, eq, or } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { AssistantEditor } from "@/components/assistants/assistant-editor";
 import { db } from "@/db";
 import { agent, callLog } from "@/db/schema";
-import { editorView } from "@/server/agents";
+import { editorView, inWorkspace } from "@/server/agents";
+import { requireWorkspaceSession } from "@/server/workspace";
 
 export default async function AssistantPage({
   params,
@@ -11,10 +12,11 @@ export default async function AssistantPage({
   params: Promise<{ ref: string }>;
 }) {
   const { ref } = await params;
+  const { organizationId } = await requireWorkspaceSession();
   const [row] = await db
     .select()
     .from(agent)
-    .where(or(eq(agent.slug, ref), eq(agent.id, ref)))
+    .where(inWorkspace(organizationId, ref))
     .limit(1);
   if (!row) notFound();
 
@@ -32,7 +34,12 @@ export default async function AssistantPage({
       latency: callLog.latency,
     })
     .from(callLog)
-    .where(eq(callLog.agentId, row.id))
+    .where(
+      and(
+        eq(callLog.agentId, row.id),
+        eq(callLog.organizationId, organizationId),
+      ),
+    )
     .orderBy(desc(callLog.startedAt))
     .limit(100);
 

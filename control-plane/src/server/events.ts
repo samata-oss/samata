@@ -6,11 +6,16 @@ import Redis from "ioredis";
  */
 export const EVENTS_CHANNEL = "samata:events";
 
-export type SamataEvent =
+/**
+ * Every event names its workspace. The channel is shared by all of them, so
+ * subscribers (the SSE route) filter on `organizationId`.
+ */
+export type SamataEvent = { organizationId: string } & (
   | { type: "call.started"; callId: string; agentId: string; roomName: string }
   | { type: "call.tool-calls"; callId: string; tools: string[] }
   | { type: "call.ended"; callId: string; endedReason: string }
-  | { type: "call.analyzed"; callId: string };
+  | { type: "call.analyzed"; callId: string }
+);
 
 // One publisher per server instance (survives Next dev HMR via globalThis).
 const g = globalThis as unknown as { samataRedis?: Redis };

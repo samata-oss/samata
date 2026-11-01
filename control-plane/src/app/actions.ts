@@ -1,17 +1,19 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
 import { agent } from "@/db/schema";
 import { agentConfigSchema } from "@/lib/agent-config";
 import { isUniqueViolation, restoreSecrets, uniqueSlug } from "@/server/agents";
+import { requireWorkspaceSession } from "@/server/workspace";
 
 /**
  * Server actions behind the dashboard. They mirror the management API
- * (`/api/agents`) and share its validation, but are not bearer-key
- * authenticated: the dashboard itself is gated by `src/proxy.ts`.
+ * (`/api/agents`) and share its validation. Actions are public POST
+ * endpoints, so each one checks the session itself (`proxy.ts` only looks
+ * for a cookie) and scopes every query to the caller's workspace.
  */
 
 export type ActionResult<T = object> =
@@ -37,9 +39,14 @@ function refresh() {
   revalidatePath("/", "layout");
 }
 
+/** `WHERE` for one of this workspace's agents, by id. */
+const owned = (organizationId: string, id: string) =>
+  and(eq(agent.id, id), eq(agent.organizationId, organizationId));
+
 export async function createAgentAction(
   name: string,
 ): Promise<ActionResult<{ slug: string }>> {
+  const { organizationId } = await requireWorkspaceSession();
   const trimmed = name.trim();
   if (!trimmed || trimmed.length > 120) {
     return {
@@ -52,7 +59,9 @@ export async function createAgentAction(
     firstMessage: "Hello! How can I help you today?",
     model: { systemPrompt: "You are a helpful voice assistant." },
   });
-  await db.insert(agent).values({ slug, name: trimmed, config });
+  await db
+    .insert(agent)
+    .values({ organizationId, slug, name: trimmed, config });
   refresh();
   return { ok: true, slug };
 }
@@ -61,11 +70,15 @@ export async function updateAgentAction(
   id: string,
   input: z.input<typeof updateSchema>,
 ): Promise<ActionResult<{ slug: string }>> {
+  const { organizationId } = await requireWorkspaceSession();
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success)
     return { ok: false, error: z.prettifyError(parsed.error) };
 
-  const [existing] = await db.select().from(agent).where(eq(agent.id, id));
+  const [existing] = await db
+    .select()
+    .from(agent)
+    .where(owned(organizationId, id));
   if (!existing) return { ok: false, error: "Assistant not found." };
 
   const { name, slug, phoneNumber } = parsed.data;
@@ -82,7 +95,7 @@ export async function updateAgentAction(
     await db
       .update(agent)
       .set({ name, slug, phoneNumber, config: merged.data })
-      .where(eq(agent.id, id));
+      .where(owned(organizationId, id));
   } catch (err) {
     if (isUniqueViolation(err)) return { ok: false, error: CONFLICT };
     throw err;
@@ -92,9 +105,10 @@ export async function updateAgentAction(
 }
 
 export async function deleteAgentAction(id: string): Promise<ActionResult> {
+  const { organizationId } = await requireWorkspaceSession();
   const rows = await db
     .delete(agent)
-    .where(eq(agent.id, id))
+    .where(owned(organizationId, id))
     .returning({ id: agent.id });
   if (!rows.length) return { ok: false, error: "Assistant not found." };
   refresh();
@@ -105,6 +119,7 @@ export async function setPhoneNumberAction(
   id: string,
   phoneNumber: string | null,
 ): Promise<ActionResult> {
+  const { organizationId } = await requireWorkspaceSession();
   const value = phoneNumber?.trim() || null;
   if (value) {
     const parsed = phoneSchema.safeParse(value);
@@ -115,7 +130,7 @@ export async function setPhoneNumberAction(
     const rows = await db
       .update(agent)
       .set({ phoneNumber: value })
-      .where(eq(agent.id, id))
+      .where(owned(organizationId, id))
       .returning({ id: agent.id });
     if (!rows.length) return { ok: false, error: "Assistant not found." };
   } catch (err) {

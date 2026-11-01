@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { ArrowLeftIcon } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -10,6 +10,7 @@ import { db } from "@/db";
 import { agent, type CallMessage, callLog } from "@/db/schema";
 import { fmtDateTime, fmtDuration, fmtMs } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { requireWorkspaceSession } from "@/server/workspace";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -20,12 +21,13 @@ export default async function CallPage({
 }) {
   const { id } = await params;
   if (!UUID.test(id)) notFound();
+  const { organizationId } = await requireWorkspaceSession();
 
   const [row] = await db
     .select({ call: callLog, agentName: agent.name, agentSlug: agent.slug })
     .from(callLog)
     .leftJoin(agent, eq(agent.id, callLog.agentId))
-    .where(eq(callLog.id, id))
+    .where(and(eq(callLog.id, id), eq(callLog.organizationId, organizationId)))
     .limit(1);
   if (!row) notFound();
   const { call } = row;

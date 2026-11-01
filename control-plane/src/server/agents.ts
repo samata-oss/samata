@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq, or } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { db } from "@/db";
 import { agent } from "@/db/schema";
 import {
@@ -12,7 +12,20 @@ import type { AssistantRequest } from "@/lib/webhook-payloads";
 export type AgentRow = typeof agent.$inferSelect;
 
 /**
- * Pick the agent for an incoming call:
+ * `WHERE` for "the agent `ref` (an id or a slug) in this workspace". Use this
+ * everywhere a user or API client names an agent: a bare id/slug lookup would
+ * let one workspace read or change another's agents.
+ */
+export const inWorkspace = (organizationId: string, ref: string) =>
+  and(
+    eq(agent.organizationId, organizationId),
+    or(eq(agent.id, ref), eq(agent.slug, ref)),
+  );
+
+/**
+ * Pick the agent for an incoming call. This is the one place that looks
+ * across workspaces: the caller is the trusted worker, and a dialed number or
+ * slug is unique across the install.
  *   1. explicit agent id/slug (agent dispatch or room metadata), then
  *   2. the dialed number (inbound SIP), then
  *   3. SAMATA_DEFAULT_AGENT, if set.

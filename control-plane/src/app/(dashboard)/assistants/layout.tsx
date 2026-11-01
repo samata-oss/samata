@@ -1,15 +1,21 @@
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { agent } from "@/db/schema";
 import { AssistantList } from "@/components/assistants/assistant-list";
 import { agentConfigSchema } from "@/lib/agent-config";
+import { requireWorkspaceSession } from "@/server/workspace";
 
 export default async function AssistantsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const rows = await db.select().from(agent).orderBy(desc(agent.createdAt));
+  const { organizationId } = await requireWorkspaceSession();
+  const rows = await db
+    .select()
+    .from(agent)
+    .where(eq(agent.organizationId, organizationId))
+    .orderBy(desc(agent.createdAt));
   const items = rows.map((row) => {
     const config = agentConfigSchema.parse(row.config);
     return {
