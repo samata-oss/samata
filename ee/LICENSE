@@ -4,7 +4,11 @@ This license applies only to the contents of the "ee" directory of this reposito
 and its subdirectories. Everything outside "ee" is licensed under the GNU Affero
 General Public License v3.0, as set out in the LICENSE file at the repository root.
 
-----------------------------------------------------------------------------
+A request (not a condition of this license): if you run the code in "ee" in
+production, we would love to hear about it, and with your permission we may list
+you as an example. This request does not add to or change the terms below.
+
+---
 
 Elastic License 2.0
 
@@ -73,10 +77,10 @@ to terminate automatically and permanently.
 
 ## No Liability
 
-*As far as the law allows, the software comes as is, without any warranty or
+_As far as the law allows, the software comes as is, without any warranty or
 condition, and the licensor will not be liable to you for any damages arising
 out of these terms or the use or nature of the software, under any kind of
-legal claim.*
+legal claim._
 
 ## Definitions
 
