@@ -92,6 +92,18 @@ export const agentConfigSchema = z.object({
     })
     .prefault({}),
 
+  /**
+   * Start the LLM on the caller's final transcript before the turn is
+   * confirmed, hiding endpointing delay. `tts` additionally starts speech
+   * synthesis early: faster, but synthesizes replies that may be discarded.
+   */
+  preemptiveGeneration: z
+    .object({
+      enabled: z.boolean().default(true),
+      tts: z.boolean().default(false),
+    })
+    .prefault({}),
+
   tools: z.array(toolSchema).default([]),
   /** Let the LLM hang up when the caller is done. */
   endCallEnabled: z.boolean().default(true),

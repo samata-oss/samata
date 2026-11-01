@@ -114,12 +114,13 @@ class SamataAgent(Agent):
 
 
 def _build_session(ctx: JobContext, config: AssistantConfig) -> AgentSession:
-    m, v, t, i, e = (
+    m, v, t, i, e, p = (
         config.model,
         config.voice,
         config.transcriber,
         config.interruption,
         config.endpointing,
+        config.preemptive_generation,
     )
     llm_kwargs: dict[str, Any] = {"model": m.model}
     if m.temperature is not None:
@@ -147,6 +148,12 @@ def _build_session(ctx: JobContext, config: AssistantConfig) -> AgentSession:
                 "resume_false_interruption": i.resume_false_interruption,
             },
             "endpointing": {"min_delay": e.min_delay, "max_delay": e.max_delay},
+            # Start the LLM (and optionally TTS) on the final transcript,
+            # before the turn is confirmed, to hide the endpointing delay.
+            "preemptive_generation": {
+                "enabled": p.enabled,
+                "preemptive_tts": p.tts,
+            },
         },
     )
 

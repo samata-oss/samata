@@ -56,6 +56,12 @@ class EndpointingConfig:
 
 
 @dataclass(frozen=True)
+class PreemptiveGenerationConfig:
+    enabled: bool = True
+    tts: bool = False
+
+
+@dataclass(frozen=True)
 class ToolConfig:
     name: str
     description: str
@@ -73,6 +79,9 @@ class AssistantConfig:
     vad: VadConfig = field(default_factory=VadConfig)
     interruption: InterruptionConfig = field(default_factory=InterruptionConfig)
     endpointing: EndpointingConfig = field(default_factory=EndpointingConfig)
+    preemptive_generation: PreemptiveGenerationConfig = field(
+        default_factory=PreemptiveGenerationConfig
+    )
     tools: tuple[ToolConfig, ...] = ()
     first_message: str | None = None
     end_call_enabled: bool = True
@@ -86,6 +95,7 @@ class AssistantConfig:
         vad = d.get("vad") or {}
         i = d.get("interruption") or {}
         e = d.get("endpointing") or {}
+        p = d.get("preemptiveGeneration") or {}
         return cls(
             id=d["id"],
             name=d.get("name", d["id"]),
@@ -121,6 +131,10 @@ class AssistantConfig:
             endpointing=EndpointingConfig(
                 min_delay=e.get("minDelay", EndpointingConfig.min_delay),
                 max_delay=e.get("maxDelay", EndpointingConfig.max_delay),
+            ),
+            preemptive_generation=PreemptiveGenerationConfig(
+                enabled=p.get("enabled", PreemptiveGenerationConfig.enabled),
+                tts=p.get("tts", PreemptiveGenerationConfig.tts),
             ),
             tools=tuple(
                 ToolConfig(

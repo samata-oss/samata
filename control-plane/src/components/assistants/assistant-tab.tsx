@@ -10,18 +10,11 @@ import type {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { fmtDuration, fmtMs, mean } from "@/lib/format";
-
-/** Stage colours, shared by the latency bar and its legend. */
-const STAGES = [
-  { key: "endOfTurnDelayAvg", label: "End of turn", color: "bg-primary" },
-  {
-    key: "transcriptionDelayAvg",
-    label: "Transcription",
-    color: "bg-amber-400",
-  },
-  { key: "llmTtftAvg", label: "LLM first token", color: "bg-sky-400" },
-  { key: "ttsTtfbAvg", label: "TTS first byte", color: "bg-neutral-300" },
-] as const;
+import {
+  STACKED_STAGES as STAGES,
+  TRANSCRIPTION_NOTE,
+  TRANSCRIPTION_STAGE,
+} from "@/lib/latency-stages";
 
 export function AssistantTab({
   draft,
@@ -36,6 +29,9 @@ export function AssistantTab({
   const latency = Object.fromEntries(
     STAGES.map((s) => [s.key, mean(calls.map((c) => c.latency?.[s.key]))]),
   ) as Record<(typeof STAGES)[number]["key"], number | null>;
+  const transcription = mean(
+    calls.map((c) => c.latency?.[TRANSCRIPTION_STAGE.key]),
+  );
   const voiceToVoice = mean(calls.map((c) => c.latency?.voiceToVoiceAvg));
   const total = STAGES.reduce((sum, s) => sum + (latency[s.key] ?? 0), 0);
   const measured = calls.filter((c) => c.latency).length;
@@ -84,6 +80,14 @@ export function AssistantTab({
               {s.label} {fmtMs(latency[s.key])}
             </span>
           ))}
+          <span
+            className="inline-flex items-center gap-1.5"
+            title={TRANSCRIPTION_NOTE}
+          >
+            <span className="size-2 rounded-full border border-dashed border-amber-400" />
+            {TRANSCRIPTION_STAGE.label} {fmtMs(transcription)} (overlaps end of
+            turn)
+          </span>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
           {measured
@@ -97,7 +101,7 @@ export function AssistantTab({
           icon={<MicIcon className="size-3.5" />}
           label="Transcriber"
           provider="Deepgram"
-          measured={fmtMs(latency.transcriptionDelayAvg)}
+          measured={fmtMs(transcription)}
           measuredLabel="Transcription delay"
         >
           <Field label="Model" htmlFor="stt-model">

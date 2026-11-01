@@ -268,6 +268,48 @@ export function AdvancedTab({
       </Section>
 
       <Section
+        title="Preemptive generation"
+        description="Start replying on the final transcript before the turn is confirmed, so the endpointing delay overlaps with the LLM instead of adding to it."
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm">Start the LLM early</div>
+            <p className="text-xs text-muted-foreground">
+              The draft reply is discarded if the caller keeps talking.
+            </p>
+          </div>
+          <Switch
+            checked={config.preemptiveGeneration.enabled}
+            onCheckedChange={(enabled) =>
+              updateConfig((c) => ({
+                ...c,
+                preemptiveGeneration: { ...c.preemptiveGeneration, enabled },
+              }))
+            }
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm">Start speech synthesis early</div>
+            <p className="text-xs text-muted-foreground">
+              Lowest latency, but synthesizes audio that is thrown away when the
+              caller continues, which costs more TTS.
+            </p>
+          </div>
+          <Switch
+            checked={config.preemptiveGeneration.tts}
+            disabled={!config.preemptiveGeneration.enabled}
+            onCheckedChange={(tts) =>
+              updateConfig((c) => ({
+                ...c,
+                preemptiveGeneration: { ...c.preemptiveGeneration, tts },
+              }))
+            }
+          />
+        </div>
+      </Section>
+
+      <Section
         title="Analysis plan"
         description="Runs after each call. Needs OPENAI_API_KEY on the control plane."
       >

@@ -12,6 +12,11 @@ import {
 import { db } from "@/db";
 import { agent, callLog } from "@/db/schema";
 import { fmtDuration, fmtMs, mean } from "@/lib/format";
+import {
+  STACKED_STAGES as STAGES,
+  TRANSCRIPTION_NOTE,
+  TRANSCRIPTION_STAGE,
+} from "@/lib/latency-stages";
 
 const RANGES = {
   "24h": { label: "Last 24 hours", ms: 24 * 3600_000, bucket: 3600_000 },
@@ -19,17 +24,6 @@ const RANGES = {
   "30d": { label: "Last 30 days", ms: 30 * 86400_000, bucket: 86400_000 },
 } as const;
 type Range = keyof typeof RANGES;
-
-const STAGES = [
-  { key: "endOfTurnDelayAvg", label: "End of turn", color: "bg-primary" },
-  {
-    key: "transcriptionDelayAvg",
-    label: "Transcription",
-    color: "bg-amber-400",
-  },
-  { key: "llmTtftAvg", label: "LLM first token", color: "bg-sky-400" },
-  { key: "ttsTtfbAvg", label: "TTS first byte", color: "bg-neutral-300" },
-] as const;
 
 export default async function MetricsPage({
   searchParams,
@@ -62,6 +56,9 @@ export default async function MetricsPage({
     ...s,
     value: mean(calls.map((c) => c.latency?.[s.key])),
   }));
+  const transcription = mean(
+    calls.map((c) => c.latency?.[TRANSCRIPTION_STAGE.key]),
+  );
   const stageTotal = stageAvg.reduce((sum, s) => sum + (s.value ?? 0), 0);
   const voiceToVoice = mean(calls.map((c) => c.latency?.voiceToVoiceAvg));
   const failed = calls.filter((c) => c.status === "failed").length;
@@ -159,6 +156,18 @@ export default async function MetricsPage({
                   </div>
                 </div>
               ))}
+              <div title={TRANSCRIPTION_NOTE}>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="size-2 rounded-full border border-dashed border-amber-400" />
+                  {TRANSCRIPTION_STAGE.label}
+                </div>
+                <div className="text-lg font-medium tabular-nums">
+                  {fmtMs(transcription)}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Overlaps end of turn
+                </div>
+              </div>
             </div>
           </section>
 
