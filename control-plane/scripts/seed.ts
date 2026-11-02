@@ -7,7 +7,10 @@ import {
 } from "../src/lib/agent-config";
 import { DEFAULT_ORGANIZATION_ID } from "../src/lib/workspace";
 
-const baseUrl = process.env.SAMATA_PUBLIC_URL ?? "http://localhost:3000";
+// The example customer server: `pnpm example:webhooks`. Use
+// host.docker.internal instead of localhost if the control plane is in Docker.
+const exampleServer =
+  process.env.SAMATA_EXAMPLE_SERVER_URL ?? "http://localhost:4000";
 
 const config: AgentConfigInput = {
   firstMessage: "Hi, thanks for calling Acme. How can I help you today?",
@@ -25,6 +28,7 @@ const config: AgentConfigInput = {
   transcriber: { model: "nova-3", language: "en-US", keyterms: ["Acme"] },
   vad: { activationThreshold: 0.5, minSilenceDuration: 0.55 },
   interruption: { enabled: true, minDuration: 0.5 },
+  server: { url: `${exampleServer}/events`, timeoutSeconds: 10 },
   tools: [
     {
       name: "get_current_time",
@@ -45,7 +49,7 @@ const config: AgentConfigInput = {
         required: ["orderNumber"],
       },
       messageOnStart: "One moment while I look that up.",
-      server: { url: `${baseUrl}/api/examples/order-status` },
+      server: { url: `${exampleServer}/order-status`, timeoutSeconds: 10 },
     },
   ],
   analysisPlan: {

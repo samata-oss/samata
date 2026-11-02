@@ -1,5 +1,6 @@
 packages:
   - control-plane
+  - examples/*
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver

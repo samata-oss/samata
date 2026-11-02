@@ -2,7 +2,6 @@ import { Hono } from "hono";
 import { handle } from "hono/vercel";
 import { agentRoutes } from "@/server/routes/agents";
 import { callRoutes } from "@/server/routes/calls";
-import { exampleRoutes } from "@/server/routes/examples";
 import { sessionRoutes } from "@/server/routes/session";
 import { webhookRoutes } from "@/server/routes/webhooks";
 
@@ -24,8 +23,6 @@ app.route("/calls", callRoutes);
 
 // Browser voice sessions (signed-in session or bearer API key).
 app.route("/session", sessionRoutes);
-
-app.route("/examples", exampleRoutes);
 
 export const GET = handle(app);
 export const POST = handle(app);
