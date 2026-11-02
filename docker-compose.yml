@@ -1,11 +1,9 @@
 # Samata local stack.
 #
-#   docker compose up -d livekit redis postgres   # infra only (default dev loop)
-#   docker compose --profile sip up -d            # + SIP bridge for phone calls
-#   docker compose --profile worker up -d worker  # + containerised Python worker
+#   docker compose up -d                          # infra only (livekit redis postgres)
+#   docker compose --profile sip up -d            # infra + SIP bridge for phone calls
 #
-# The control plane (Next.js) runs on the host with `pnpm dev`; the worker
-# reaches it via host.docker.internal.
+# Recommended that control-plane, worker, and webhook-server run on the host
 
 services:
   livekit:
