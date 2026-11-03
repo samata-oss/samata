@@ -112,7 +112,7 @@ export function AdvancedTab({
 
       <Section
         title="Voice activity detection"
-        description="Silero VAD. Defaults match livekit-plugins-silero."
+        description="Silero VAD. Min silence defaults to 0.3 s (livekit-plugins-silero uses 0.55 s) to keep end-of-turn latency low."
       >
         <div className="grid gap-4 md:grid-cols-3">
           <Field label="Activation threshold (0–1)">
@@ -158,7 +158,7 @@ export function AdvancedTab({
                   ...c,
                   vad: {
                     ...c.vad,
-                    minSilenceDuration: minSilenceDuration ?? 0.55,
+                    minSilenceDuration: minSilenceDuration ?? 0.3,
                   },
                 }))
               }
@@ -246,7 +246,7 @@ export function AdvancedTab({
               onChange={(minDelay) =>
                 updateConfig((c) => ({
                   ...c,
-                  endpointing: { ...c.endpointing, minDelay: minDelay ?? 0.5 },
+                  endpointing: { ...c.endpointing, minDelay: minDelay ?? 0.3 },
                 }))
               }
             />

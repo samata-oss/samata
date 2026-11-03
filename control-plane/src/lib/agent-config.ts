@@ -66,12 +66,12 @@ export const agentConfigSchema = z.object({
     })
     .prefault({}),
 
-  /** Silero VAD. Defaults match livekit-plugins-silero. */
+  /** Silero VAD. Min silence is 0.3 s (the plugin default is 0.55 s) for lower latency. */
   vad: z
     .object({
       activationThreshold: z.number().min(0).max(1).default(0.5),
       minSpeechDuration: z.number().min(0).default(0.05),
-      minSilenceDuration: z.number().min(0).default(0.55),
+      minSilenceDuration: z.number().min(0).default(0.3),
     })
     .prefault({}),
 
@@ -87,7 +87,7 @@ export const agentConfigSchema = z.object({
 
   endpointing: z
     .object({
-      minDelay: z.number().min(0).default(0.5),
+      minDelay: z.number().min(0).default(0.3),
       maxDelay: z.number().min(0).default(3),
     })
     .prefault({}),

@@ -38,7 +38,7 @@ class TranscriberConfig:
 class VadConfig:
     activation_threshold: float = 0.5
     min_speech_duration: float = 0.05
-    min_silence_duration: float = 0.55
+    min_silence_duration: float = 0.3
 
 
 @dataclass(frozen=True)
@@ -51,7 +51,7 @@ class InterruptionConfig:
 
 @dataclass(frozen=True)
 class EndpointingConfig:
-    min_delay: float = 0.5
+    min_delay: float = 0.3
     max_delay: float = 3.0
 
 

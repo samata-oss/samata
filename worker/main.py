@@ -52,7 +52,7 @@ AGENT_NAME = os.environ.get("SAMATA_AGENT_NAME", "samata")
 def prewarm(proc: JobProcess) -> None:
     # Loading Silero takes a moment, so do it once per process. Agents with
     # non-default VAD settings get their own instance per call.
-    proc.userdata["vad"] = silero.VAD.load()
+    proc.userdata["vad"] = _load_vad(VadConfig())
 
 
 server = AgentServer(setup_fnc=prewarm)
@@ -66,14 +66,18 @@ def _json(raw: str | None) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
-def _vad_for(ctx: JobContext, cfg: VadConfig):
-    if cfg == VadConfig():
-        return ctx.proc.userdata["vad"]
+def _load_vad(cfg: VadConfig):
     return silero.VAD.load(
         activation_threshold=cfg.activation_threshold,
         min_speech_duration=cfg.min_speech_duration,
         min_silence_duration=cfg.min_silence_duration,
     )
+
+
+def _vad_for(ctx: JobContext, cfg: VadConfig):
+    if cfg == VadConfig():
+        return ctx.proc.userdata["vad"]
+    return _load_vad(cfg)
 
 
 def _remote_tool(spec: ToolConfig, cp: ControlPlane, call_id: str):

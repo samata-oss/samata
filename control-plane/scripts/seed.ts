@@ -26,7 +26,7 @@ const config: AgentConfigInput = {
   },
   voice: { voiceId: "f786b574-daa5-4673-aa0c-cbe3e8534c02", model: "sonic-3" },
   transcriber: { model: "nova-3", language: "en-US", keyterms: ["Acme"] },
-  vad: { activationThreshold: 0.5, minSilenceDuration: 0.55 },
+  vad: { activationThreshold: 0.5, minSilenceDuration: 0.3 },
   interruption: { enabled: true, minDuration: 0.5 },
   server: { url: `${exampleServer}/events`, timeoutSeconds: 10 },
   tools: [
