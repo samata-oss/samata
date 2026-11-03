@@ -1,7 +1,6 @@
 # Samata local stack.
 #
-#   docker compose up -d                          # infra only (livekit redis postgres)
-#   docker compose --profile sip up -d            # infra + SIP bridge for phone calls
+#   docker compose up -d                          # infra only (livekit (SFU) + postgres)
 #
 # Recommended that control-plane, worker, and webhook-server run on the host
 
@@ -37,6 +36,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    profiles: ["redis"]
     restart: unless-stopped
     ports:
       - "6379:6379"
