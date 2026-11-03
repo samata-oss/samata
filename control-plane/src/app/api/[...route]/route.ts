@@ -5,7 +5,7 @@ import { callRoutes } from "@/server/routes/calls";
 import { sessionRoutes } from "@/server/routes/session";
 import { webhookRoutes } from "@/server/routes/webhooks";
 
-// pg + ioredis need the Node runtime; SSE streams shouldn't be cut short.
+// pg needs the Node runtime; analysis and webhooks run after the response.
 export const runtime = "nodejs";
 export const maxDuration = 300;
 

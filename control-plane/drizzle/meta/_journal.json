@@ -15,6 +15,20 @@
       "when": 1793555840033,
       "tag": "0001_auth_and_workspaces",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793656127887,
+      "tag": "0002_phone_numbers",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793656813171,
+      "tag": "0003_phone_number_routing",
+      "breakpoints": true
     }
   ]
 }

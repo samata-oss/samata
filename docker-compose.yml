@@ -27,14 +27,13 @@ services:
     depends_on:
       - livekit
       - redis
-    environment:
-      SIP_CONFIG_FILE: /etc/sip.yaml
     ports:
       - "5060:5060/udp"
       - "5060:5060/tcp"
       - "10000-10100:10000-10100/udp"
     volumes:
-      - ./infra/livekit/sip.yaml:/etc/sip.yaml:ro
+      # The image's entrypoint reads /sip/config.yaml (it ignores SIP_CONFIG_FILE).
+      - ./infra/livekit/sip.yaml:/sip/config.yaml:ro
 
   redis:
     image: redis:7-alpine

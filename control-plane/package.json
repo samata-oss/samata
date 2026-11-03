@@ -23,7 +23,6 @@
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
     "hono": "^4.11.4",
-    "ioredis": "^5.8.2",
     "livekit-client": "^2.23.0",
     "livekit-server-sdk": "^2.14.0",
     "lucide-react": "^1.64.0",

@@ -23,6 +23,15 @@ export const inWorkspace = (organizationId: string, ref: string) =>
   );
 
 /**
+ * Carriers differ on whether the dialed number carries its "+"; numbers are
+ * stored as E.164, so add it back. (The SIP trunk matches both forms.)
+ */
+function normalizeDialed(number: string | undefined) {
+  const trimmed = number?.trim();
+  return trimmed && /^\d{7,15}$/.test(trimmed) ? `+${trimmed}` : trimmed;
+}
+
+/**
  * Pick the agent for an incoming call. This is the one place that looks
  * across workspaces: the caller is the trusted worker, and a dialed number or
  * slug is unique across the install.
@@ -36,7 +45,7 @@ export async function resolveAgent(
   if (message.call.agentId) {
     return (await findByRef(message.call.agentId)) ?? null;
   }
-  const dialed = message.phoneNumber?.number;
+  const dialed = normalizeDialed(message.phoneNumber?.number);
   if (dialed) {
     const [row] = await db
       .select()

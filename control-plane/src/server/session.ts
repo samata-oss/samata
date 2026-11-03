@@ -9,7 +9,8 @@ import { agent } from "@/db/schema";
 import { inWorkspace } from "@/server/agents";
 
 /** Must match AGENT_NAME in the worker. */
-const WORKER_AGENT_NAME = process.env.SAMATA_WORKER_AGENT_NAME ?? "samata";
+export const WORKER_AGENT_NAME =
+  process.env.SAMATA_WORKER_AGENT_NAME ?? "samata";
 
 /** How long the browser has to use its token before it expires. */
 const TOKEN_TTL = "10m";

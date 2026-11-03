@@ -3,8 +3,7 @@
 #   curl -O https://raw.githubusercontent.com/<org>/samata/main/deploy/docker-compose.yml
 #   curl -o .env https://raw.githubusercontent.com/<org>/samata/main/deploy/.env.example
 #   $EDITOR .env
-#   docker compose up -d
-#   docker compose --profile sip up -d        # + phone calls via LiveKit SIP
+#   docker compose up -d                      # includes the SIP server for phone calls
 #
 # Using LiveKit Cloud instead? Delete the livekit + sip services and point
 # LIVEKIT_URL / LIVEKIT_PUBLIC_URL / keys in .env at your project.
@@ -42,11 +41,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     environment:
       DATABASE_URL: postgres://samata:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/samata
-      REDIS_URL: redis://redis:6379
       SAMATA_WEBHOOK_SECRET: ${SAMATA_WEBHOOK_SECRET:?set SAMATA_WEBHOOK_SECRET}
       SAMATA_API_KEY: ${SAMATA_API_KEY:?set SAMATA_API_KEY}
       # Signs dashboard sessions. Changing it signs everyone out.
@@ -62,6 +58,10 @@ services:
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?set LIVEKIT_API_SECRET}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       SAMATA_ANALYSIS_MODEL: ${SAMATA_ANALYSIS_MODEL:-gpt-4.1-mini}
+      # Where phone providers send calls: this server's SIP port (5060). Any
+      # hostname/IP that reaches this machine works; LIVEKIT_DOMAIN already does.
+      SAMATA_SIP_HOST: ${SAMATA_SIP_HOST:-${LIVEKIT_DOMAIN}}
+      SAMATA_SIP_ALLOWED_ADDRESSES: ${SAMATA_SIP_ALLOWED_ADDRESSES:-}
 
   worker:
     image: ${SAMATA_IMAGE_PREFIX}/samata-worker:${SAMATA_VERSION:-latest}
@@ -112,7 +112,6 @@ services:
 
   sip:
     image: livekit/sip:v1.22
-    profiles: ["sip"]
     restart: unless-stopped
     depends_on:
       - livekit

@@ -53,6 +53,62 @@ export const agent = pgTable(
   (table) => [index("agent_organization_idx").on(table.organizationId)],
 );
 
+export const PHONE_PROVIDERS = ["telnyx"] as const;
+export type PhoneProvider = (typeof PHONE_PROVIDERS)[number];
+
+/**
+ * What was created so that calls to an imported number reach Samata, kept so
+ * it can be torn down again. Null until the number is connected.
+ */
+export type NumberRouting = {
+  /** `SAMATA_SIP_HOST` when connected. A different value means it is stale. */
+  host: string;
+  livekit: { trunkId: string; dispatchRuleId: string };
+  telnyx: {
+    /** The Telnyx SIP connection that delivers the number's calls to `host`. */
+    connectionId: string;
+    kind: "fqdn" | "ip";
+    /** The FQDN or IP entry on that connection. */
+    endpointId: string;
+    /** What the number pointed at before; restored on disconnect. */
+    previousConnectionId: string | null;
+  };
+};
+
+/**
+ * A number a workspace has imported from a telephony provider. This is the
+ * inventory only: which assistant answers it is `agent.phoneNumber`, the
+ * column inbound routing already reads, so there is one source of truth for
+ * assignment.
+ */
+export const importedNumber = pgTable(
+  "phone_number",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    provider: text("provider").$type<PhoneProvider>().notNull(),
+    /**
+     * E.164. Unique across the install, like `agent.phoneNumber`: a dialed
+     * number belongs to exactly one workspace.
+     */
+    number: text("number").notNull().unique(),
+    /** The provider's id for this number (Telnyx phone number id). */
+    providerNumberId: text("provider_number_id"),
+    /**
+     * The provider API key, encrypted (`server/secrets.ts`). Never sent to the
+     * browser.
+     */
+    encryptedApiKey: text("encrypted_api_key").notNull(),
+    routing: jsonb("routing").$type<NumberRouting>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("phone_number_organization_idx").on(table.organizationId)],
+);
+
 export const CALL_STATUSES = ["in-progress", "ended", "failed"] as const;
 export type CallStatus = (typeof CALL_STATUSES)[number];
 

@@ -20,7 +20,6 @@ const ENDPOINTS = [
   ],
   ["GET", "/api/calls", "List calls"],
   ["GET", "/api/calls/:id", "Fetch a call with transcript and analysis"],
-  ["GET", "/api/calls/events", "Live call events (SSE)"],
 ] as const;
 
 const WEBHOOKS = [

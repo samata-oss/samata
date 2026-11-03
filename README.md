@@ -45,8 +45,8 @@ docker compose up -d
 ```
 
 This starts Caddy (automatic TLS), the control plane, the worker, LiveKit,
-Redis and Postgres. Add `--profile sip` for phone calls, and
-`--scale worker=N` for more concurrent calls.
+Redis, Postgres and the SIP server for phone calls (open 5060/tcp+udp and
+10000-10100/udp too). Add `--scale worker=N` for more concurrent calls.
 
 Your own logic doesn't go in this repo. Agents are JSON you send to the API,
 and your tools and post-call handling run on your own servers, which Samata
@@ -113,7 +113,7 @@ block), modeled on Vapi's:
 | ------------------ | ------------------------------------------------------------------------------------------------------------- |
 | Assistants         | Edit an agent's model, voice, transcriber, prompt, tools, VAD and analysis plan. Talk to it from the browser. |
 | Tools              | Every tool across assistants, and which assistants use it.                                                    |
-| Phone Numbers      | Assign an inbound number to an assistant.                                                                     |
+| Phone Numbers      | Import a number from Telnyx (API key + number), then assign it to any assistant.                              |
 | Logs               | Every call, with transcript, summary, structured data and latency.                                            |
 | Structured Outputs | Data extracted by each assistant's analysis plan.                                                             |
 | Metrics            | Call volume and the latency breakdown (end of turn, STT, LLM, TTS).                                           |
@@ -184,10 +184,6 @@ envelopes. Every request carries `x-samata-secret: $SAMATA_WEBHOOK_SECRET`.
 2. The dialed number (`sip.trunkPhoneNumber`), matched against `agent.phone_number`
 3. `SAMATA_DEFAULT_AGENT`
 
-Lifecycle events (`call.started`, `call.tool-calls`, `call.ended`, `call.analyzed`)
-are published on the Redis channel `samata:events` and streamed as SSE from
-`GET /api/calls/events`.
-
 ## Agent config
 
 Agents are declarative JSON. The schema is `control-plane/src/lib/agent-config.ts`,
@@ -240,19 +236,99 @@ worker.
 
 ## Phone calls (SIP)
 
-```bash
-docker compose --profile sip up -d
+Inbound calls reach an assistant like this:
+
+```
+caller ─► Telnyx number ─► Telnyx SIP connection ─► your SIP server (LiveKit SIP, :5060)
+       ─► LiveKit inbound trunk + dispatch rule ─► room ─► Samata worker
+       ─► control plane picks the assistant assigned to the dialed number
 ```
 
-Create an inbound trunk, then a dispatch rule that sends calls to the
-`samata` agent, using the [`lk` CLI](https://docs.livekit.io/sip/). The worker
-reads `sip.trunkPhoneNumber` and `sip.phoneNumber` from the caller's participant
-attributes.
+`docker compose up -d` runs the SIP server (`sip`) alongside LiveKit. Telnyx
+has to be able to reach it, so it needs a public address:
+
+1. Open 5060/tcp, 5060/udp and 10000-10100/udp on the machine running it (the
+   production compose already points DNS and `SAMATA_SIP_HOST` at
+   `LIVEKIT_DOMAIN`). On a laptop this isn't possible (and a tunnel like ngrok
+   can't carry the UDP audio): see
+   [Testing phone calls from your laptop](#testing-phone-calls-from-your-laptop).
+2. Set `SAMATA_SIP_HOST` on the control plane to that address: a hostname,
+   `host:port`, or IPv4.
+
+Then on the Phone Numbers page choose **Import number**, enter a Telnyx API key
+and a number from the same Telnyx account (E.164, e.g. `+14155550123`). Samata:
+
+1. checks with Telnyx that the key is valid and the number is active on it, and
+   stores the key encrypted (AES-256-GCM, keyed from `SAMATA_ENCRYPTION_KEY`,
+   falling back to `BETTER_AUTH_SECRET`);
+2. creates a LiveKit inbound trunk for the number that accepts calls only from
+   Telnyx's published signaling addresses (override with
+   `SAMATA_SIP_ALLOWED_ADDRESSES`), and a dispatch rule that gives each caller
+   their own room and dispatches the worker;
+3. creates a Telnyx SIP connection pointing at `SAMATA_SIP_HOST` and attaches
+   the number to it. If the number was on another connection, it is put back
+   there when you remove the number.
+
+Choose the assistant for the number in the same table. Reassigning only changes
+which assistant answers, so it's instant and never touches Telnyx or LiveKit.
+A call to an imported number with no assistant is hung up (or goes to
+`SAMATA_DEFAULT_AGENT` if set). If connecting fails (for example
+`SAMATA_SIP_HOST` isn't set yet) the number stays imported as "Not connected",
+and **Connect** retries it. Removing a number undoes the Telnyx and LiveKit
+setup.
+
+### Testing phone calls from your laptop
+
+Everything except real phone calls runs fully local with no accounts:
+`docker compose up -d`, the control plane and the worker. Browser test calls
+use that stack. Real calls need a public SIP address, which a laptop doesn't
+have, so for those use a [LiveKit Cloud](https://cloud.livekit.io) project
+(free to create) for the media side instead of the local one.
+
+**While you test phone calls, the local LiveKit server and SIP server are not
+used.** Your worker and control plane keep running on your machine; only where
+they connect changes.
+
+1. In your LiveKit Cloud project, copy the project URL
+   (`wss://<project>.livekit.cloud`), create an API key under Settings, and find
+   the project's SIP address (`<id>.sip.livekit.cloud`).
+2. Switch **both** `control-plane/.env` and `worker/.env` to it. They must point
+   at the same LiveKit, or calls will ring and nobody will answer:
+
+   ```
+   LIVEKIT_URL=wss://<project>.livekit.cloud
+   LIVEKIT_API_KEY=<key>
+   LIVEKIT_API_SECRET=<secret>
+   ```
+
+   and in `control-plane/.env` only: `SAMATA_SIP_HOST=<id>.sip.livekit.cloud`.
+3. Restart the control plane and the worker.
+4. Optionally stop the local LiveKit and SIP servers
+   (`docker compose stop livekit sip`). **Keep Postgres running** (your data).
+   Redis is only used by the local LiveKit and SIP servers, so you can stop it too.
+5. On the Phone Numbers page, **Import number** (or press **Connect** on one
+   you already imported).
+
+The worker needs no public address: it connects out to Cloud, which hands it
+each call. `SAMATA_CONTROL_PLANE_URL` stays `http://localhost:3000`.
+
+To go back to fully local, restore the original `LIVEKIT_*` values in both
+files, clear `SAMATA_SIP_HOST`, restart, and `docker compose up -d`. A number
+imported against one setup shows **Needs reconnect** after you switch: press
+**Connect** and Samata rebuilds its trunk on the LiveKit you're now using.
+
+If several people share one Cloud project, a call can land on anyone's worker.
+Use a project each, or give each worker a unique `SAMATA_AGENT_NAME` (matching
+`SAMATA_WORKER_AGENT_NAME` in their control plane).
+
+The worker reads `sip.trunkPhoneNumber` and `sip.phoneNumber` from the caller's
+participant attributes. To wire a trunk by hand instead, use the
+[`lk` CLI](https://docs.livekit.io/sip/).
 
 ## Layout
 
 ```
-docker-compose.yml        Dev infra: LiveKit, LiveKit SIP (profile), Redis, Postgres, worker (profile)
+docker-compose.yml        Dev infra: LiveKit, LiveKit SIP, Redis, Postgres, worker (profile)
 deploy/                   Production compose (prebuilt images + Caddy) and .env.example
 infra/livekit/            Dev livekit.yaml, sip.yaml (dev keys: devkey / samata_dev_secret_…)
 control-plane/            Next.js 16, Hono under /api, Drizzle (agent, call_log), Dockerfile
