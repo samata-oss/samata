@@ -259,7 +259,7 @@ export function AdvancedTab({
               onChange={(maxDelay) =>
                 updateConfig((c) => ({
                   ...c,
-                  endpointing: { ...c.endpointing, maxDelay: maxDelay ?? 3 },
+                  endpointing: { ...c.endpointing, maxDelay: maxDelay ?? 1 },
                 }))
               }
             />

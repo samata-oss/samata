@@ -88,7 +88,7 @@ export const agentConfigSchema = z.object({
   endpointing: z
     .object({
       minDelay: z.number().min(0).default(0.3),
-      maxDelay: z.number().min(0).default(3),
+      maxDelay: z.number().min(0).default(1),
     })
     .prefault({}),
 

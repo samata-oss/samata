@@ -52,7 +52,7 @@ class InterruptionConfig:
 @dataclass(frozen=True)
 class EndpointingConfig:
     min_delay: float = 0.3
-    max_delay: float = 3.0
+    max_delay: float = 1.0
 
 
 @dataclass(frozen=True)
