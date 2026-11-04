@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckIcon, CopyIcon, MicIcon, SaveIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { updateAgentAction } from "@/app/actions";
@@ -30,6 +30,10 @@ const TABS = [
 
 type TabValue = (typeof TABS)[number]["value"];
 
+function parseTab(value: string | null): TabValue {
+  return TABS.find((t) => t.value === value)?.value ?? "assistant";
+}
+
 function toDraft(agent: EditorAgent): Draft {
   return {
     name: agent.name,
@@ -54,11 +58,29 @@ export function AssistantEditor({
   const router = useRouter();
   const [draft, setDraft] = useState<Draft>(() => toDraft(agent));
   const [saved, setSaved] = useState(() => JSON.stringify(toDraft(agent)));
-  const [tab, setTab] = useState<TabValue>("assistant");
+  const searchParams = useSearchParams();
+  const [tab, setTabState] = useState<TabValue>(() =>
+    parseTab(searchParams.get("tab")),
+  );
   const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const dirty = JSON.stringify(draft) !== saved;
+
+  // Keep the active tab in the URL (?tab=logs) so it survives refreshes.
+  // replaceState avoids a server round trip and extra history entries.
+  function setTab(next: TabValue) {
+    setTabState(next);
+    const params = new URLSearchParams(window.location.search);
+    if (next === "assistant") params.delete("tab");
+    else params.set("tab", next);
+    const qs = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${qs ? `?${qs}` : ""}`,
+    );
+  }
 
   const updateConfig: UpdateConfig = (fn) =>
     setDraft((d) => ({ ...d, config: fn(d.config) }));
@@ -77,7 +99,10 @@ export function AssistantEditor({
       }
       setSaved(JSON.stringify(draft));
       toast.success("Assistant saved");
-      if (res.slug !== agent.slug) router.replace(`/assistants/${res.slug}`);
+      if (res.slug !== agent.slug)
+        router.replace(
+          `/assistants/${res.slug}${tab === "assistant" ? "" : `?tab=${tab}`}`,
+        );
       else router.refresh();
     });
   }
