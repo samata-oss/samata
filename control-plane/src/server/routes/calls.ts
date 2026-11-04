@@ -1,7 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "@/db";
-import { callLog } from "@/db/schema";
+import { agent, callLog } from "@/db/schema";
 import { requireWorkspace, type WorkspaceEnv } from "@/server/api-auth";
 
 export const callRoutes = new Hono<WorkspaceEnv>()
@@ -19,13 +19,21 @@ export const callRoutes = new Hono<WorkspaceEnv>()
 
   .get("/:id", async (c) => {
     const [row] = await db
-      .select()
+      .select({ call: callLog, agentName: agent.name, agentSlug: agent.slug })
       .from(callLog)
+      .leftJoin(agent, eq(agent.id, callLog.agentId))
       .where(
         and(
           eq(callLog.id, c.req.param("id")),
           eq(callLog.organizationId, c.get("organizationId")),
         ),
       );
-    return row ? c.json(row) : c.json({ error: "Not found" }, 404);
+    // The call row, plus the assistant's name/slug (null once it is deleted).
+    return row
+      ? c.json({
+          ...row.call,
+          agentName: row.agentName,
+          agentSlug: row.agentSlug,
+        })
+      : c.json({ error: "Not found" }, 404);
   });
