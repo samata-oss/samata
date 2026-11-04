@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { MIN_VAD_SILENCE } from "@/lib/agent-config";
 
 export function AdvancedTab({
   agentId,
@@ -112,7 +113,7 @@ export function AdvancedTab({
 
       <Section
         title="Voice activity detection"
-        description="Silero VAD. Min silence defaults to 0.3 s (livekit-plugins-silero uses 0.55 s) to keep end-of-turn latency low."
+        description="Silero VAD. Min silence defaults to 0.3 s (livekit-plugins-silero uses 0.55 s) to keep end-of-turn latency low. The lowest it can go is 0.25 s; anything below is raised to that."
       >
         <div className="grid gap-4 md:grid-cols-3">
           <Field label="Activation threshold (0–1)">
@@ -150,7 +151,7 @@ export function AdvancedTab({
           </Field>
           <Field label="Min silence (s)">
             <NumberField
-              min={0}
+              min={MIN_VAD_SILENCE}
               step={0.05}
               value={config.vad.minSilenceDuration}
               onChange={(minSilenceDuration) =>

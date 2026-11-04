@@ -9,6 +9,9 @@ import { z } from "zod";
  * same shape on the Python side.
  */
 
+/** Lowest VAD min-silence (s) LiveKit's turn detector accepts. */
+export const MIN_VAD_SILENCE = 0.25;
+
 /** A webhook target. `secret` is sent as `x-samata-secret`. */
 const serverSchema = z.object({
   url: z.url(),
@@ -66,12 +69,20 @@ export const agentConfigSchema = z.object({
     })
     .prefault({}),
 
-  /** Silero VAD. Min silence is 0.3 s (the plugin default is 0.55 s) for lower latency. */
+  /**
+   * Silero VAD. Min silence is 0.3 s (the plugin default is 0.55 s) for lower
+   * latency. Values under `MIN_VAD_SILENCE` are raised to it: LiveKit's turn
+   * detector refuses to start below that, which crashes every call. Clamping
+   * (rather than rejecting) keeps configs that were saved lower readable.
+   */
   vad: z
     .object({
       activationThreshold: z.number().min(0).max(1).default(0.5),
       minSpeechDuration: z.number().min(0).default(0.05),
-      minSilenceDuration: z.number().min(0).default(0.3),
+      minSilenceDuration: z
+        .number()
+        .transform((n) => Math.max(n, MIN_VAD_SILENCE))
+        .default(0.3),
     })
     .prefault({}),
 
