@@ -68,6 +68,17 @@ export const endOfCallReportSchema = z.object({
         ttsTtfbAvg: z.number().optional(),
         voiceToVoiceAvg: z.number().optional(),
         voiceToVoiceP95: z.number().optional(),
+        turnDetails: z
+          .array(
+            z.object({
+              endOfTurn: z.number(),
+              transcription: z.number().optional(),
+              llmTtft: z.number(),
+              ttsTtfb: z.number(),
+              total: z.number(),
+            }),
+          )
+          .optional(),
       })
       .default({ turns: 0 }),
     usage: z.array(z.record(z.string(), z.unknown())).default([]),

@@ -75,8 +75,15 @@ export function AnalysisError({ call }: { call: CallDetailData }) {
 }
 
 /** Summary, structured data, latency breakdown and usage. */
-export function CallSidebarSections({ call }: { call: CallDetailData }) {
-  const latency = call.latency;
+export function CallSidebarSections({
+  call,
+  hideLatency = false,
+}: {
+  call: CallDetailData;
+  /** For views that show a fuller latency section of their own. */
+  hideLatency?: boolean;
+}) {
+  const latency = hideLatency ? null : call.latency;
   return (
     <>
       <section className="space-y-2">

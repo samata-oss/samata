@@ -89,6 +89,22 @@ async function main() {
       ttsTtfbAvg: 0.14,
       endOfTurnDelayAvg: 0.52,
       voiceToVoiceAvg: 0.97,
+      turnDetails: [
+        {
+          endOfTurn: 0.5,
+          transcription: 0.2,
+          llmTtft: 0.3,
+          ttsTtfb: 0.13,
+          total: 0.93,
+        },
+        {
+          endOfTurn: 0.54,
+          transcription: 0.25,
+          llmTtft: 0.32,
+          ttsTtfb: 0.15,
+          total: 1.01,
+        },
+      ],
     },
     toolCallCount: 2,
   });

@@ -38,7 +38,9 @@ def build_report(
 ) -> dict[str, Any]:
     messages: list[dict[str, Any]] = []
     eot, stt, ttft, ttfb, v2v = [], [], [], [], []
+    turn_details: list[dict[str, float]] = []
     pending_eot: float | None = None
+    pending_stt: float | None = None
     tool_calls = 0
 
     for item in session.history.items:
@@ -56,11 +58,14 @@ def build_report(
             )
             m = item.metrics
             if item.role == "user":
+                # Reset so a turn missing a metric never inherits the last one.
+                pending_stt = None
                 if "end_of_turn_delay" in m:
                     pending_eot = m["end_of_turn_delay"]
                     eot.append(pending_eot)
                 if "transcription_delay" in m:
-                    stt.append(m["transcription_delay"])
+                    pending_stt = m["transcription_delay"]
+                    stt.append(pending_stt)
             elif "llm_node_ttft" in m:
                 ttft.append(m["llm_node_ttft"])
                 if "tts_node_ttfb" in m:
@@ -68,12 +73,28 @@ def build_report(
                     # Voice-to-voice only for direct replies to a measured
                     # user turn (not the greeting or a post-tool reply).
                     if pending_eot is not None:
-                        v2v.append(pending_eot + m["llm_node_ttft"] + m["tts_node_ttfb"])
+                        total = pending_eot + m["llm_node_ttft"] + m["tts_node_ttfb"]
+                        v2v.append(total)
+                        turn_details.append(
+                            {
+                                "endOfTurn": pending_eot,
+                                **(
+                                    {"transcription": pending_stt}
+                                    if pending_stt is not None
+                                    else {}
+                                ),
+                                "llmTtft": m["llm_node_ttft"],
+                                "ttsTtfb": m["tts_node_ttfb"],
+                                "total": total,
+                            }
+                        )
                 pending_eot = None
+                pending_stt = None
         elif item.type == "function_call":
             tool_calls += 1
             # The reply after a tool includes tool time; don't count it.
             pending_eot = None
+            pending_stt = None
         elif item.type == "function_call_output":
             messages.append(
                 {
@@ -97,6 +118,8 @@ def build_report(
         "ttsTtfbAvg": _avg(ttfb),
         "voiceToVoiceAvg": _avg(v2v),
         "voiceToVoiceP95": _p95(v2v),
+        # One entry per measured turn, in call order (seconds).
+        "turnDetails": turn_details,
     }
     return {
         "type": "end-of-call-report",

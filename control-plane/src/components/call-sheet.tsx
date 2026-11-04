@@ -11,6 +11,7 @@ import {
   CallStats,
   Transcript,
 } from "@/components/call-detail";
+import { LatencySummary } from "@/components/latency-summary";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sheet,
@@ -157,6 +158,7 @@ function CallSheetBody({ id }: { id: string }) {
       </SheetHeader>
 
       <div className="flex-1 space-y-6 overflow-y-auto p-4">
+        {call.latency && <LatencySummary latency={call.latency} />}
         <CallStats call={call} />
         <AnalysisError call={call} />
         <div className="grid gap-6 xl:grid-cols-[1fr_20rem]">
@@ -165,7 +167,7 @@ function CallSheetBody({ id }: { id: string }) {
             <Transcript messages={call.messages} fallback={call.transcript} />
           </section>
           <aside className="min-w-0 space-y-6">
-            <CallSidebarSections call={call} />
+            <CallSidebarSections call={call} hideLatency />
           </aside>
         </div>
       </div>

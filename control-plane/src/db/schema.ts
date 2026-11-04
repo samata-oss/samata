@@ -134,6 +134,17 @@ export type CallLatency = {
   /** Rough voice-to-voice: end-of-turn + LLM TTFT + TTS TTFB. */
   voiceToVoiceAvg?: number;
   voiceToVoiceP95?: number;
+  /** One entry per measured turn, in call order. Absent on older calls. */
+  turnDetails?: TurnLatency[];
+};
+
+/** One turn's latencies in seconds. `endOfTurn` includes `transcription`. */
+export type TurnLatency = {
+  endOfTurn: number;
+  transcription?: number;
+  llmTtft: number;
+  ttsTtfb: number;
+  total: number;
 };
 
 /**
