@@ -1,8 +1,0 @@
-# One caller line per row. Each becomes utterances/NN.wav (`gen-utterances`).
-# Keep them generic so any assistant, whatever its prompt, can answer.
-# Turn N of every call plays line N, so all targets hear the same script.
-Hi there, could you tell me a little about what you can help me with?
-That sounds good. What would be the first step if I wanted to get started?
-Okay, and how long does that usually take?
-Got it. Is there anything I should prepare ahead of time?
-Great, thanks. Can you give me a quick summary of what we just covered?

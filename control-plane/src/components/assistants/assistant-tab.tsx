@@ -10,11 +10,7 @@ import type {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { fmtDuration, fmtMs, mean } from "@/lib/format";
-import {
-  STACKED_STAGES as STAGES,
-  TRANSCRIPTION_NOTE,
-  TRANSCRIPTION_STAGE,
-} from "@/lib/latency-stages";
+import { STACKED_STAGES as STAGES, stageValue } from "@/lib/latency-stages";
 
 export function AssistantTab({
   draft,
@@ -27,11 +23,12 @@ export function AssistantTab({
 }) {
   const { config } = draft;
   const latency = Object.fromEntries(
-    STAGES.map((s) => [s.key, mean(calls.map((c) => c.latency?.[s.key]))]),
+    STAGES.map((s) => [
+      s.key,
+      mean(calls.map((c) => stageValue(c.latency, s.key))),
+    ]),
   ) as Record<(typeof STAGES)[number]["key"], number | null>;
-  const transcription = mean(
-    calls.map((c) => c.latency?.[TRANSCRIPTION_STAGE.key]),
-  );
+  const transcription = latency.transcriptionDelayAvg;
   const voiceToVoice = mean(calls.map((c) => c.latency?.voiceToVoiceAvg));
   const total = STAGES.reduce((sum, s) => sum + (latency[s.key] ?? 0), 0);
   const measured = calls.filter((c) => c.latency).length;
@@ -80,14 +77,6 @@ export function AssistantTab({
               {s.label} {fmtMs(latency[s.key])}
             </span>
           ))}
-          <span
-            className="inline-flex items-center gap-1.5"
-            title={TRANSCRIPTION_NOTE}
-          >
-            <span className="size-2 rounded-full border border-dashed border-amber-400" />
-            {TRANSCRIPTION_STAGE.label} {fmtMs(transcription)} (overlaps end of
-            turn)
-          </span>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
           {measured

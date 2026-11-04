@@ -12,11 +12,7 @@ import {
 import { db } from "@/db";
 import { agent, callLog } from "@/db/schema";
 import { fmtDuration, fmtMs, mean } from "@/lib/format";
-import {
-  STACKED_STAGES as STAGES,
-  TRANSCRIPTION_NOTE,
-  TRANSCRIPTION_STAGE,
-} from "@/lib/latency-stages";
+import { STACKED_STAGES as STAGES, stageValue } from "@/lib/latency-stages";
 import { requireWorkspaceSession } from "@/server/workspace";
 
 const RANGES = {
@@ -61,11 +57,8 @@ export default async function MetricsPage({
 
   const stageAvg = STAGES.map((s) => ({
     ...s,
-    value: mean(calls.map((c) => c.latency?.[s.key])),
+    value: mean(calls.map((c) => stageValue(c.latency, s.key))),
   }));
-  const transcription = mean(
-    calls.map((c) => c.latency?.[TRANSCRIPTION_STAGE.key]),
-  );
   const stageTotal = stageAvg.reduce((sum, s) => sum + (s.value ?? 0), 0);
   const voiceToVoice = mean(calls.map((c) => c.latency?.voiceToVoiceAvg));
   const failed = calls.filter((c) => c.status === "failed").length;
@@ -163,18 +156,6 @@ export default async function MetricsPage({
                   </div>
                 </div>
               ))}
-              <div title={TRANSCRIPTION_NOTE}>
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span className="size-2 rounded-full border border-dashed border-amber-400" />
-                  {TRANSCRIPTION_STAGE.label}
-                </div>
-                <div className="text-lg font-medium tabular-nums">
-                  {fmtMs(transcription)}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Overlaps end of turn
-                </div>
-              </div>
             </div>
           </section>
 

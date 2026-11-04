@@ -19,7 +19,6 @@ const LABELS: Record<string, string> = {
   logs: "Logs",
   "structured-outputs": "Structured Outputs",
   metrics: "Metrics",
-  benchmarks: "Benchmarks",
   "api-keys": "API Keys",
   team: "Team",
 };

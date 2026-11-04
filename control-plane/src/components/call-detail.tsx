@@ -3,6 +3,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
 import type { CallLatency, CallMessage, CallStatus } from "@/db/schema";
 import { fmtDateTime, fmtDuration, fmtMs } from "@/lib/format";
+import { STACKED_STAGES, stageValue } from "@/lib/latency-stages";
 import { cn } from "@/lib/utils";
 
 /**
@@ -94,17 +95,12 @@ export function CallSidebarSections({ call }: { call: CallDetailData }) {
         <section className="space-y-2">
           <h2 className="text-sm font-medium">Latency (averages)</h2>
           <dl className="divide-y rounded-lg border bg-card text-sm">
-            {(
-              [
-                ["End of turn", latency.endOfTurnDelayAvg],
-                ["Transcription", latency.transcriptionDelayAvg],
-                ["LLM first token", latency.llmTtftAvg],
-                ["TTS first byte", latency.ttsTtfbAvg],
-              ] as const
-            ).map(([label, value]) => (
-              <div key={label} className="flex justify-between px-3 py-2">
-                <dt className="text-muted-foreground">{label}</dt>
-                <dd className="tabular-nums">{fmtMs(value)}</dd>
+            {STACKED_STAGES.map((s) => (
+              <div key={s.key} className="flex justify-between px-3 py-2">
+                <dt className="text-muted-foreground">{s.label}</dt>
+                <dd className="tabular-nums">
+                  {fmtMs(stageValue(latency, s.key))}
+                </dd>
               </div>
             ))}
           </dl>
