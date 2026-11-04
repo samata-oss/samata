@@ -4,9 +4,18 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
-import { agent, importedNumber, PHONE_PROVIDERS } from "@/db/schema";
+import {
+  agent,
+  apiKey,
+  importedNumber,
+  PHONE_PROVIDERS,
+  tool,
+  toolServer,
+} from "@/db/schema";
 import { agentConfigSchema } from "@/lib/agent-config";
+import { canManageTeam } from "@/lib/workspace";
 import { isUniqueViolation, restoreSecrets, uniqueSlug } from "@/server/agents";
+import { createApiKey } from "@/server/api-keys";
 import { connectNumber, disconnectNumber } from "@/server/numbers";
 import { encryptSecret } from "@/server/secrets";
 import { lookupTelnyxNumber } from "@/server/telnyx";
@@ -281,6 +290,93 @@ export async function removePhoneNumberAction(
         ),
       );
   });
+  refresh();
+  return { ok: true };
+}
+
+const toolServerSchema = z.object({
+  url: z.url("Enter the full URL, e.g. https://example.com/samata."),
+  secret: z.string().optional(),
+  timeoutSeconds: z.number().positive().max(60),
+});
+
+/**
+ * Set where tool calls go by default: the one webhook server holding all the
+ * workspace's tool endpoints. A blank secret keeps the stored one (the
+ * dashboard never sees it).
+ */
+export async function saveToolServerAction(
+  input: z.input<typeof toolServerSchema>,
+): Promise<ActionResult> {
+  const { organizationId } = await requireWorkspaceSession();
+  const parsed = toolServerSchema.safeParse(input);
+  if (!parsed.success)
+    return { ok: false, error: parsed.error.issues[0].message };
+
+  const [stored] = await db
+    .select({ server: toolServer.server })
+    .from(toolServer)
+    .where(eq(toolServer.organizationId, organizationId));
+  const { secret, ...rest } = parsed.data;
+  const server = { ...rest, secret: secret || stored?.server.secret };
+  await db
+    .insert(toolServer)
+    .values({ organizationId, server })
+    .onConflictDoUpdate({ target: toolServer.organizationId, set: { server } });
+  refresh();
+  return { ok: true };
+}
+
+export async function removeToolServerAction(): Promise<ActionResult> {
+  const { organizationId } = await requireWorkspaceSession();
+  await db
+    .delete(toolServer)
+    .where(eq(toolServer.organizationId, organizationId));
+  refresh();
+  return { ok: true };
+}
+
+/** Remove a tool from the library. Assistants that list it just lose it. */
+export async function deleteToolAction(id: string): Promise<ActionResult> {
+  const { organizationId } = await requireWorkspaceSession();
+  const rows = await db
+    .delete(tool)
+    .where(and(eq(tool.id, id), eq(tool.organizationId, organizationId)))
+    .returning({ id: tool.id });
+  if (!rows.length) return { ok: false, error: "Tool not found." };
+  refresh();
+  return { ok: true };
+}
+
+const NOT_ALLOWED = "Only workspace owners and admins can manage API keys.";
+
+/**
+ * Create an API key. The secret comes back once, here, and is never readable
+ * again: only its hash is stored.
+ */
+export async function createApiKeyAction(
+  name: string,
+): Promise<ActionResult<{ secret: string }>> {
+  const { organizationId, role } = await requireWorkspaceSession();
+  if (!canManageTeam(role)) return { ok: false, error: NOT_ALLOWED };
+  const trimmed = name.trim();
+  if (!trimmed || trimmed.length > 80) {
+    return { ok: false, error: "Name the key (up to 80 characters)." };
+  }
+  const { secret } = await createApiKey(organizationId, trimmed);
+  refresh();
+  return { ok: true, secret };
+}
+
+/** Revoke a key. Anything still using it gets a 401 from then on. */
+export async function revokeApiKeyAction(id: string): Promise<ActionResult> {
+  const { organizationId, role } = await requireWorkspaceSession();
+  if (!canManageTeam(role)) return { ok: false, error: NOT_ALLOWED };
+  const rows = await db
+    .delete(apiKey)
+    .where(and(eq(apiKey.id, id), eq(apiKey.organizationId, organizationId)))
+    .returning({ id: apiKey.id });
+  if (!rows.length) return { ok: false, error: "Key not found." };
   refresh();
   return { ok: true };
 }

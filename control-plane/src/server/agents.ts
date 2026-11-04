@@ -8,6 +8,7 @@ import {
   agentConfigSchema,
 } from "@/lib/agent-config";
 import type { AssistantRequest } from "@/lib/webhook-payloads";
+import { resolveTools } from "@/server/tool-library";
 
 export type AgentRow = typeof agent.$inferSelect;
 
@@ -69,16 +70,14 @@ async function findByRef(ref: string) {
 
 /**
  * The config as the worker should see it. Re-parsed on read so rows written
- * before a schema change still get today's defaults. Webhook targets (and
- * their secrets) are dropped: tools run through the control plane, so the
- * worker never needs them.
+ * before a schema change still get today's defaults. Library tools are
+ * resolved into `tools`. Webhook targets (and their secrets) are dropped:
+ * tools run through the control plane, so the worker never needs them.
  */
-export function workerConfig(row: AgentRow) {
-  const {
-    server: _server,
-    tools,
-    ...config
-  } = agentConfigSchema.parse(row.config);
+export async function workerConfig(row: AgentRow) {
+  const full = agentConfigSchema.parse(row.config);
+  const tools = await resolveTools(row.organizationId, full);
+  const { server: _server, toolNames: _names, ...config } = full;
   return {
     id: row.id,
     slug: row.slug,

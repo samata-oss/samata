@@ -9,7 +9,10 @@ import { AdvancedTab } from "@/components/assistants/advanced-tab";
 import { AssistantTab } from "@/components/assistants/assistant-tab";
 import { LogsTab } from "@/components/assistants/logs-tab";
 import { TestTab } from "@/components/assistants/test-tab";
-import { ToolsTab } from "@/components/assistants/tools-tab";
+import {
+  type LibraryToolOption,
+  ToolsTab,
+} from "@/components/assistants/tools-tab";
 import type {
   AssistantCall,
   Draft,
@@ -51,9 +54,11 @@ function toDraft(agent: EditorAgent): Draft {
 export function AssistantEditor({
   agent,
   calls,
+  libraryTools,
 }: {
   agent: EditorAgent;
   calls: AssistantCall[];
+  libraryTools: LibraryToolOption[];
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<Draft>(() => toDraft(agent));
@@ -189,6 +194,7 @@ export function AssistantEditor({
             config={draft.config}
             updateConfig={updateConfig}
             secretsSet={agent.secretsSet.tools}
+            library={libraryTools}
           />
         </TabsContent>
         <TabsContent value="test" keepMounted>

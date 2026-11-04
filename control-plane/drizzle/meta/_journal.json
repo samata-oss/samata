@@ -36,6 +36,20 @@
       "when": 1793686068527,
       "tag": "0004_benchmarks",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793764570509,
+      "tag": "0005_tool_library",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793765368695,
+      "tag": "0006_api_keys",
+      "breakpoints": true
     }
   ]
 }

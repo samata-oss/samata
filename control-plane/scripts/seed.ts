@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { db } from "../src/db";
-import { agent } from "../src/db/schema";
+import { agent, tool, toolServer } from "../src/db/schema";
 import {
   type AgentConfigInput,
   agentConfigSchema,
@@ -20,7 +20,7 @@ const config: AgentConfigInput = {
       "You are the friendly phone receptionist for Acme, an online store.",
       "Keep replies to one or two short sentences: this is a voice call.",
       "Never use lists, markdown, or emoji.",
-      "Use lookup_order_status for order questions and get_current_time for the time.",
+      "Use lookup_order_status for order questions, get_store_hours for opening hours and get_current_time for the time.",
     ].join("\n"),
     temperature: 0.6,
   },
@@ -28,7 +28,7 @@ const config: AgentConfigInput = {
   transcriber: { model: "nova-3", language: "en-US", keyterms: ["Acme"] },
   vad: { activationThreshold: 0.5, minSilenceDuration: 0.3 },
   interruption: { enabled: true, minDuration: 0.5 },
-  server: { url: `${exampleServer}/events`, timeoutSeconds: 10 },
+  server: { url: exampleServer, timeoutSeconds: 10 },
   tools: [
     {
       name: "get_current_time",
@@ -40,18 +40,9 @@ const config: AgentConfigInput = {
         },
       },
     },
-    {
-      name: "lookup_order_status",
-      description: "Look up the shipping status of an order.",
-      parameters: {
-        type: "object",
-        properties: { orderNumber: { type: "string" } },
-        required: ["orderNumber"],
-      },
-      messageOnStart: "One moment while I look that up.",
-      server: { url: `${exampleServer}/order-status`, timeoutSeconds: 10 },
-    },
   ],
+  // Library tools: defined once in the workspace, served by the tool server.
+  toolNames: ["lookup_order_status", "get_store_hours"],
   analysisPlan: {
     structuredDataSchema: {
       type: "object",
@@ -65,8 +56,46 @@ const config: AgentConfigInput = {
   },
 };
 
+// What the example server pushes on start (`pnpm example:webhooks` with
+// SAMATA_API_KEY set). Seeded too so the demo works before it has run.
+const libraryTools = [
+  {
+    name: "lookup_order_status",
+    description: "Look up the shipping status of an order.",
+    parameters: {
+      type: "object",
+      properties: { orderNumber: { type: "string" } },
+      required: ["orderNumber"],
+    },
+    messageOnStart: "One moment while I look that up.",
+  },
+  {
+    name: "get_store_hours",
+    description: "Get the store's opening hours for a day of the week.",
+    parameters: {
+      type: "object",
+      properties: { day: { type: "string", description: "e.g. Monday" } },
+      required: ["day"],
+    },
+  },
+];
+
 async function main() {
   const parsed = agentConfigSchema.parse(config);
+
+  await db
+    .insert(toolServer)
+    .values({
+      organizationId: DEFAULT_ORGANIZATION_ID,
+      server: { url: exampleServer, timeoutSeconds: 10 },
+    })
+    .onConflictDoNothing();
+  for (const t of libraryTools) {
+    await db
+      .insert(tool)
+      .values({ organizationId: DEFAULT_ORGANIZATION_ID, ...t })
+      .onConflictDoNothing();
+  }
   await db
     .insert(agent)
     .values({

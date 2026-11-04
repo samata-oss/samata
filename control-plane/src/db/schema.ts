@@ -9,6 +9,7 @@ import {
   real,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { AgentConfig } from "@/lib/agent-config";
 import { organization } from "./auth-schema";
@@ -52,6 +53,94 @@ export const agent = pgTable(
       .notNull(),
   },
   (table) => [index("agent_organization_idx").on(table.organizationId)],
+);
+
+/** A webhook target: where Samata POSTs a Vapi-style `{ message }`. */
+export type ServerConfig = {
+  url: string;
+  /** Sent as `x-samata-secret`. Never returned by any API. */
+  secret?: string;
+  timeoutSeconds: number;
+};
+
+/**
+ * A workspace's tool library: functions defined once (typically in the
+ * developer's code, pushed with `PUT /api/tools`) that any assistant can use
+ * by listing the name in `config.toolNames`. Identity is the name, unique per
+ * workspace, so re-pushing the same name updates the tool in place.
+ *
+ * A tool without its own `server` is sent to the workspace tool server
+ * (`toolServer`), so a developer runs one webhook server for all tools.
+ */
+export const tool = pgTable(
+  "tool",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description").notNull(),
+    /** JSON Schema for the arguments, as sent to the LLM. */
+    parameters: jsonb("parameters").$type<Record<string, unknown>>().notNull(),
+    /** Overrides the workspace tool server for this one tool. */
+    server: jsonb("server").$type<ServerConfig>(),
+    messageOnStart: text("message_on_start"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("tool_organization_name_idx").on(
+      table.organizationId,
+      table.name,
+    ),
+  ],
+);
+
+/**
+ * The one webhook server a workspace runs to hold all its tool endpoints.
+ * Tool calls that name no server of their own are POSTed here. One row per
+ * workspace.
+ */
+export const toolServer = pgTable("tool_server", {
+  organizationId: text("organization_id")
+    .primaryKey()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  server: jsonb("server").$type<ServerConfig>().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+/**
+ * A workspace's API key, for scripts and servers that call the management API
+ * (`Authorization: Bearer smt_...`), e.g. to push tools. Only a hash is kept:
+ * the secret is shown once, when the key is created.
+ */
+export const apiKey = pgTable(
+  "api_key",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** SHA-256 of the secret, hex. Secrets are 256 random bits, so no salt. */
+    hash: text("hash").notNull().unique(),
+    /** The secret's first characters, so a key can be recognised in a list. */
+    prefix: text("prefix").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    lastUsedAt: timestamp("last_used_at"),
+  },
+  (table) => [index("api_key_organization_idx").on(table.organizationId)],
 );
 
 export const PHONE_PROVIDERS = ["telnyx"] as const;

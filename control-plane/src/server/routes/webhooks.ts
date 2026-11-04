@@ -56,7 +56,10 @@ export const webhookRoutes = new Hono()
       })
       .returning({ id: callLog.id });
 
-    return c.json({ call: { id: call.id }, assistant: workerConfig(row) });
+    return c.json({
+      call: { id: call.id },
+      assistant: await workerConfig(row),
+    });
   })
 
   /** The LLM asked for one or more tools. Results go back to the LLM. */

@@ -112,7 +112,7 @@ block), modeled on Vapi's:
 | Page               | What it shows                                                                                                 |
 | ------------------ | ------------------------------------------------------------------------------------------------------------- |
 | Assistants         | Edit an agent's model, voice, transcriber, prompt, tools, VAD and analysis plan. Talk to it from the browser. |
-| Tools              | Every tool across assistants, and which assistants use it.                                                    |
+| Tools              | The tool server, the workspace tool library (pushed from code), and which assistants use each tool.           |
 | Phone Numbers      | Import a number from Telnyx (API key + number), then assign it to any assistant.                              |
 | Logs               | Every call, with transcript, summary, structured data and latency.                                            |
 | Structured Outputs | Data extracted by each assistant's analysis plan.                                                             |
@@ -147,8 +147,12 @@ sign-in set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, with the redirect URI
 `https://<your-domain>/api/auth/callback/google`.
 
 The management API (`/api/agents`, `/api/calls`, `/api/session/start`) takes
-`Authorization: Bearer $SAMATA_API_KEY`, which acts on the default workspace.
-The dashboard calls the same API with its session cookie.
+`Authorization: Bearer <key>`. Create keys on the dashboard's **API Keys** page
+(owners and admins; the secret, `smt_…`, is shown once and only its hash is
+stored). A key acts on its own workspace and can be revoked there. The
+`SAMATA_API_KEY` environment variable still works as a key for the default
+workspace. The dashboard calls the same API with its session cookie, except
+`/api/tools` and `/api/tool-server`, which accept only an API key.
 
 ## Starting a browser call
 
@@ -176,7 +180,7 @@ envelopes. Every request carries `x-samata-secret: $SAMATA_WEBHOOK_SECRET`.
 | Webhook                                 | When                       | Control plane does                                                                                                                                                           |
 | --------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `POST /api/webhooks/assistant-request`  | A participant joins a room | Picks the agent, opens a `call_log` row, returns `{ call: { id }, assistant }`. Returns `{ error }` with 404 to reject the call, and the worker then hangs up.               |
-| `POST /api/webhooks/tool-calls`         | The LLM calls a tool       | Runs a built-in tool or forwards it to the tool's `server.url`, then returns `{ results: [{ toolCallId, result \| error }] }`.                                               |
+| `POST /api/webhooks/tool-calls`         | The LLM calls a tool       | Runs a built-in tool or forwards it to your [tool server](#tools-and-your-webhook-server), then returns `{ results: [{ toolCallId, result \| error }] }`.                    |
 | `POST /api/webhooks/end-of-call-report` | The room closes            | Saves the transcript, messages, latency and usage. After responding, it runs the summary and structured-data extraction and forwards the report to the agent's `server.url`. |
 
 **Choosing the agent** (`assistant-request`), in order:
@@ -233,6 +237,88 @@ curl -X PATCH localhost:3000/api/agents/support \
 Any field you leave out gets a default. Barge-in is on by default; the
 `interruption` block tunes it. `server` URLs and secrets are never sent to the
 worker.
+
+## Tools and your webhook server
+
+Like Vapi, you run one webhook server that holds all your tool endpoints, and
+you define the tools in code. Samata calls it when an assistant uses a tool.
+
+**1. Push your tools.** Create an API key on the API Keys page first;
+`/api/tools` requires one. `PUT /api/tools` is idempotent (run it on every deploy):
+it creates new tools, updates changed ones and leaves the rest. They show up on
+the dashboard's Tools page.
+
+```bash
+curl -X PUT localhost:3000/api/tools \
+  -H "authorization: Bearer $SAMATA_API_KEY" -H "content-type: application/json" \
+  -d '{
+    "server": { "url": "https://example.com/samata", "secret": "…" },
+    "tools": [{
+      "name": "lookup_order_status",
+      "description": "Look up the shipping status of an order.",
+      "parameters": { "type": "object", "properties": { "orderNumber": { "type": "string" } }, "required": ["orderNumber"] },
+      "messageOnStart": "One moment while I look that up."
+    }]
+  }'
+# -> { created: [...], updated: [...], unchanged: [...], deleted: [...], tools: [...] }
+```
+
+`server` registers your webhook server as the **tool server**: where every tool
+without its own `server` is sent. It replaces the stored one, secret included.
+Add `"prune": true` to delete library tools missing from the push, so the
+library mirrors your code (`deleted[].usedBy` names assistants that still used
+them). Without it a partial push never deletes anything.
+
+**2. Give tools to assistants.** Turn them on in an assistant's Tools tab, or
+list them by name in its config:
+
+```json
+{ "config": { "toolNames": ["lookup_order_status"] } }
+```
+
+Tools defined directly in `config.tools` still work, and win over a library
+tool of the same name.
+
+**3. Answer tool calls.** Samata POSTs to your server:
+
+```json
+{
+  "message": {
+    "type": "tool-calls",
+    "call": {
+      "id": "…",
+      "agentId": "…",
+      "type": "inbound",
+      "customer": { "number": "+1415…" }
+    },
+    "toolCallList": [
+      {
+        "id": "call_1",
+        "name": "lookup_order_status",
+        "arguments": { "orderNumber": "A1234" }
+      }
+    ]
+  }
+}
+```
+
+and expects `{ "results": [{ "toolCallId": "call_1", "result": "…" }] }` (or
+`"error"` instead of `"result"`). The `result` string goes to the LLM. The
+secret arrives as `x-samata-secret`. `examples/webhook-server` does all three.
+
+Which server gets a call, most specific first:
+1. the tool's own `server`
+2. a built-in of that name (`get_current_time`), run inside Samata
+3. the assistant's `server` (the same URL that gets `end-of-call-report`)
+4. the workspace tool server
+
+| Endpoint                          | Does                                                           |
+| --------------------------------- | -------------------------------------------------------------- |
+| `PUT /api/tools`                  | Push many: `{ tools, prune?, server? }`. Returns what changed. |
+| `GET /api/tools[/:name]`          | List / fetch, with `usedBy` (assistant slugs). No secrets.     |
+| `PUT /api/tools/:name`            | Create or replace one tool.                                    |
+| `DELETE /api/tools/:name`         | Delete. Assistants that listed it just skip it.                |
+| `GET/PUT/DELETE /api/tool-server` | Read, set or clear the workspace tool server.                  |
 
 ## Phone calls (SIP)
 

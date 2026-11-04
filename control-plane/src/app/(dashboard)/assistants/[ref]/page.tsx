@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { AssistantEditor } from "@/components/assistants/assistant-editor";
 import { db } from "@/db";
-import { agent, callLog } from "@/db/schema";
+import { agent, callLog, tool } from "@/db/schema";
 import { editorView, inWorkspace } from "@/server/agents";
 import { requireWorkspaceSession } from "@/server/workspace";
 
@@ -43,6 +43,19 @@ export default async function AssistantPage({
     .orderBy(desc(callLog.startedAt))
     .limit(100);
 
+  const libraryTools = await db
+    .select({ name: tool.name, description: tool.description })
+    .from(tool)
+    .where(eq(tool.organizationId, organizationId))
+    .orderBy(tool.name);
+
   // Keyed by id so switching assistants resets the editor's draft.
-  return <AssistantEditor key={row.id} agent={editorView(row)} calls={calls} />;
+  return (
+    <AssistantEditor
+      key={row.id}
+      agent={editorView(row)}
+      calls={calls}
+      libraryTools={libraryTools}
+    />
+  );
 }

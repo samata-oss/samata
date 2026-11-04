@@ -13,14 +13,16 @@ import { z } from "zod";
 export const MIN_VAD_SILENCE = 0.25;
 
 /** A webhook target. `secret` is sent as `x-samata-secret`. */
-const serverSchema = z.object({
+export const serverSchema = z.object({
   url: z.url(),
   secret: z.string().optional(),
   timeoutSeconds: z.number().positive().max(60).default(10),
 });
 
+const toolNameSchema = z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/);
+
 export const toolSchema = z.object({
-  name: z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/),
+  name: toolNameSchema,
   description: z.string().min(1),
   /** JSON Schema for the arguments, as sent to the LLM. */
   parameters: z
@@ -115,7 +117,13 @@ export const agentConfigSchema = z.object({
     })
     .prefault({}),
 
+  /** Tools defined on this assistant alone. */
   tools: z.array(toolSchema).default([]),
+  /**
+   * Tools from the workspace library (`PUT /api/tools`), by name. The same
+   * name inline in `tools` wins. A name with no library tool is skipped.
+   */
+  toolNames: z.array(toolNameSchema).default([]),
   /** Let the LLM hang up when the caller is done. */
   endCallEnabled: z.boolean().default(true),
   maxDurationSeconds: z.number().int().positive().default(600),

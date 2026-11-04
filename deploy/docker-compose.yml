@@ -44,7 +44,9 @@ services:
     environment:
       DATABASE_URL: postgres://samata:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/samata
       SAMATA_WEBHOOK_SECRET: ${SAMATA_WEBHOOK_SECRET:?set SAMATA_WEBHOOK_SECRET}
-      SAMATA_API_KEY: ${SAMATA_API_KEY:?set SAMATA_API_KEY}
+      # Optional. Create API keys on the dashboard's API Keys page instead;
+      # this one acts on the default workspace only.
+      SAMATA_API_KEY: ${SAMATA_API_KEY:-}
       # Signs dashboard sessions. Changing it signs everyone out.
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET}
       # Invitation links and cookies are built from this.

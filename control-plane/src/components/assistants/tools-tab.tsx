@@ -29,14 +29,19 @@ const BUILTIN_TOOLS: ToolConfig[] = [
 let nextKey = 0;
 const newKey = () => `tool-${nextKey++}`;
 
+/** A tool from the workspace library, as the picker lists it. */
+export type LibraryToolOption = { name: string; description: string };
+
 export function ToolsTab({
   config,
   updateConfig,
   secretsSet,
+  library,
 }: {
   config: AgentConfig;
   updateConfig: UpdateConfig;
   secretsSet: string[];
+  library: LibraryToolOption[];
 }) {
   // Stable React keys, parallel to `config.tools`, so removing a tool in the
   // middle doesn't hand its editor state to its neighbour.
@@ -62,6 +67,20 @@ export function ToolsTab({
     }));
   }
 
+  function toggleLibraryTool(name: string, on: boolean) {
+    updateConfig((c) => ({
+      ...c,
+      toolNames: on
+        ? [...c.toolNames.filter((n) => n !== name), name]
+        : c.toolNames.filter((n) => n !== name),
+    }));
+  }
+
+  // Listed on the assistant but gone from the library (deleted, or renamed in
+  // code and pushed under the new name). The assistant skips them.
+  const known = new Set(library.map((t) => t.name));
+  const dangling = config.toolNames.filter((n) => !known.has(n));
+
   const missing = BUILTIN_TOOLS.filter(
     (b) => !config.tools.some((t) => t.name === b.name),
   );
@@ -83,10 +102,66 @@ export function ToolsTab({
         />
       </section>
 
+      <section className="space-y-3 rounded-lg border bg-card p-4">
+        <div>
+          <h3 className="text-sm font-medium">Workspace tools</h3>
+          <p className="text-xs text-muted-foreground">
+            Tools shared by every assistant, served by your tool server. Push
+            them from code with <code>PUT /api/tools</code>.
+          </p>
+        </div>
+        {library.length === 0 && dangling.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            No workspace tools yet.
+          </p>
+        )}
+        <div className="divide-y">
+          {library.map((t) => (
+            <div
+              key={t.name}
+              className="flex items-center justify-between gap-4 py-2"
+            >
+              <span className="min-w-0">
+                <span className="block font-mono text-sm">{t.name}</span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {t.description}
+                </span>
+              </span>
+              <Switch
+                checked={config.toolNames.includes(t.name)}
+                onCheckedChange={(on) => toggleLibraryTool(t.name, on)}
+                aria-label={`Use ${t.name}`}
+              />
+            </div>
+          ))}
+          {dangling.map((name) => (
+            <div
+              key={name}
+              className="flex items-center justify-between gap-4 py-2"
+            >
+              <span className="font-mono text-sm">{name}</span>
+              <span className="flex items-center gap-2">
+                <Badge variant="destructive">Not in library</Badge>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => toggleLibraryTool(name, false)}
+                  aria-label={`Remove ${name}`}
+                >
+                  <Trash2Icon />
+                </Button>
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {config.tools.length} tool{config.tools.length === 1 ? "" : "s"}.
-          Tools without a server run inside the control plane.
+          {config.tools.length} assistant-only tool
+          {config.tools.length === 1 ? "" : "s"}. One with no server uses this
+          assistant's server, then the workspace tool server, or runs inside the
+          control plane if it is a built-in.
         </p>
         <div className="flex gap-2">
           {missing.map((b) => (

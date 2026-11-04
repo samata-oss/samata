@@ -5,6 +5,7 @@ import { benchRoutes } from "@/server/routes/bench";
 import { benchRunnerRoutes } from "@/server/routes/bench-runner";
 import { callRoutes } from "@/server/routes/calls";
 import { sessionRoutes } from "@/server/routes/session";
+import { toolRoutes, toolServerRoutes } from "@/server/routes/tools";
 import { webhookRoutes } from "@/server/routes/webhooks";
 
 // pg needs the Node runtime; analysis and webhooks run after the response.
@@ -23,6 +24,8 @@ app.route("/bench-runner", benchRunnerRoutes);
 // each router). Better Auth's own endpoints live at /api/auth/*.
 app.route("/agents", agentRoutes);
 app.route("/calls", callRoutes);
+app.route("/tools", toolRoutes);
+app.route("/tool-server", toolServerRoutes);
 app.route("/bench", benchRoutes);
 
 // Browser voice sessions (signed-in session or bearer API key).
