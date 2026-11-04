@@ -19,6 +19,7 @@ const LABELS: Record<string, string> = {
   logs: "Logs",
   "structured-outputs": "Structured Outputs",
   metrics: "Metrics",
+  benchmarks: "Benchmarks",
   "api-keys": "API Keys",
   team: "Team",
 };
@@ -27,7 +28,7 @@ function label(segment: string) {
   const known = LABELS[segment];
   if (known) return known;
   const decoded = decodeURIComponent(segment);
-  // Call ids are UUIDs: keep them readable.
+  // Call and run ids are UUIDs: keep them readable.
   return /^[0-9a-f]{8}-[0-9a-f-]{27}$/.test(decoded)
     ? `${decoded.slice(0, 8)}…`
     : decoded;

@@ -3,6 +3,7 @@ import {
   BarChart3Icon,
   BracesIcon,
   BotIcon,
+  GaugeIcon,
   KeyRoundIcon,
   PhoneIcon,
   RadioIcon,
@@ -64,6 +65,7 @@ export function AppSidebar({
           icon: <BracesIcon />,
         },
         { title: "Metrics", url: "/metrics", icon: <BarChart3Icon /> },
+        { title: "Benchmarks", url: "/benchmarks", icon: <GaugeIcon /> },
       ],
     },
     {

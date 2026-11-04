@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { relations } from "drizzle-orm";
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -189,6 +190,119 @@ export const callLog = pgTable(
     ),
   ],
 );
+
+export const BENCH_STATUSES = [
+  "queued",
+  "running",
+  "completed",
+  "failed",
+  "cancelled",
+] as const;
+export type BenchStatus = (typeof BENCH_STATUSES)[number];
+
+/** What a benchmark run was asked to do. Sent to the runner as the job. */
+export type BenchRunConfig = {
+  /** Phone numbers to dial. Each should front an equivalent agent. */
+  targets: { name: string; number: string; notes?: string }[];
+  callsPerTarget: number;
+  turnsPerCall: number;
+  /** First N calls per target are recorded but left out of the results. */
+  warmupCalls: number;
+  /** Simultaneous calls. Keep low: load on the caller distorts latency. */
+  concurrency: number;
+};
+
+/**
+ * A black-box latency benchmark. The control plane only queues it and keeps
+ * the results; the bench runner (`bench/`, `python -m samata_bench serve`)
+ * does the dialing and reports every turn back.
+ */
+export const benchRun = pgTable(
+  "bench_run",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    status: text("status").$type<BenchStatus>().notNull().default("queued"),
+    config: jsonb("config").$type<BenchRunConfig>().notNull(),
+    error: text("error"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    startedAt: timestamp("started_at"),
+    finishedAt: timestamp("finished_at"),
+    /** Bumped whenever the runner reports in, to spot a runner that died. */
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("bench_run_organization_created_idx").on(
+      table.organizationId,
+      table.createdAt,
+    ),
+    index("bench_run_status_idx").on(table.status),
+  ],
+);
+
+/** One dialed call within a run. */
+export const benchCall = pgTable(
+  "bench_call",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    runId: text("run_id")
+      .notNull()
+      .references(() => benchRun.id, { onDelete: "cascade" }),
+    target: text("target").notNull(),
+    callIdx: integer("call_idx").notNull(),
+    warmup: boolean("warmup").notNull().default(false),
+    /** Dial to answer. */
+    answerMs: real("answer_ms"),
+    /** Answer to the agent's first words (its greeting), if it had one. */
+    greetingOnsetMs: real("greeting_onset_ms"),
+    turnsRecorded: integer("turns_recorded").notNull().default(0),
+    error: text("error"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("bench_call_run_idx").on(table.runId)],
+);
+
+/**
+ * One caller turn: the gap between the end of our speech and the first speech
+ * on the agent's audio. Invalid turns are kept, with the reason, so drops are
+ * visible instead of silently improving the numbers.
+ */
+export const benchTurn = pgTable(
+  "bench_turn",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    runId: text("run_id")
+      .notNull()
+      .references(() => benchRun.id, { onDelete: "cascade" }),
+    target: text("target").notNull(),
+    callIdx: integer("call_idx").notNull(),
+    warmup: boolean("warmup").notNull().default(false),
+    turnIdx: integer("turn_idx").notNull(),
+    utterance: text("utterance").notNull(),
+    latencyMs: real("latency_ms"),
+    valid: boolean("valid").notNull(),
+    invalidReason: text("invalid_reason"),
+    /** How long the agent spoke. */
+    responseMs: real("response_ms"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("bench_turn_run_idx").on(table.runId)],
+);
+
+/** When a bench runner last polled for work. One row per install. */
+export const benchRunner = pgTable("bench_runner", {
+  id: text("id").primaryKey(),
+  lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+});
 
 export const agentRelations = relations(agent, ({ many }) => ({
   calls: many(callLog),

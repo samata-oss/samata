@@ -6,7 +6,10 @@ import { z } from "zod";
 import { db } from "@/db";
 import { agent, importedNumber, PHONE_PROVIDERS } from "@/db/schema";
 import { agentConfigSchema } from "@/lib/agent-config";
+import { benchConfigSchema } from "@/lib/bench";
+import { canManageTeam } from "@/lib/workspace";
 import { isUniqueViolation, restoreSecrets, uniqueSlug } from "@/server/agents";
+import { cancelBenchRun, createBenchRun, deleteBenchRun } from "@/server/bench";
 import { connectNumber, disconnectNumber } from "@/server/numbers";
 import { encryptSecret } from "@/server/secrets";
 import { lookupTelnyxNumber } from "@/server/telnyx";
@@ -283,4 +286,58 @@ export async function removePhoneNumberAction(
   });
   refresh();
   return { ok: true };
+}
+
+// -- Benchmarks ---------------------------------------------------------------
+//
+// Starting a benchmark makes the runner dial real phone numbers, which costs
+// money and rings someone's line, so only owners and admins can do it.
+
+const benchInputSchema = z.object({
+  name: z.string().trim().min(1, "Name the run.").max(120),
+  config: benchConfigSchema,
+});
+
+export async function createBenchRunAction(
+  input: z.input<typeof benchInputSchema>,
+): Promise<ActionResult<{ id: string }>> {
+  const { organizationId, role } = await requireWorkspaceSession();
+  if (!canManageTeam(role)) {
+    return {
+      ok: false,
+      error: "Only workspace owners and admins can start benchmarks.",
+    };
+  }
+  const parsed = benchInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0].message };
+  }
+  const res = await createBenchRun(
+    organizationId,
+    parsed.data.name,
+    parsed.data.config,
+  );
+  if (!res.ok) return res;
+  refresh();
+  return { ok: true, id: res.id };
+}
+
+export async function cancelBenchRunAction(id: string): Promise<ActionResult> {
+  const { organizationId, role } = await requireWorkspaceSession();
+  if (!canManageTeam(role)) {
+    return { ok: false, error: "Only owners and admins can cancel runs." };
+  }
+  const res = await cancelBenchRun(organizationId, id);
+  refresh();
+  return res;
+}
+
+export async function deleteBenchRunAction(id: string): Promise<ActionResult> {
+  const { organizationId, role } = await requireWorkspaceSession();
+  if (!canManageTeam(role)) {
+    return { ok: false, error: "Only owners and admins can delete runs." };
+  }
+  const res = await deleteBenchRun(organizationId, id);
+  refresh();
+  return res;
 }

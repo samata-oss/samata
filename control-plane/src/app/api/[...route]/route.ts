@@ -1,6 +1,8 @@
 import { Hono } from "hono";
 import { handle } from "hono/vercel";
 import { agentRoutes } from "@/server/routes/agents";
+import { benchRoutes } from "@/server/routes/bench";
+import { benchRunnerRoutes } from "@/server/routes/bench-runner";
 import { callRoutes } from "@/server/routes/calls";
 import { sessionRoutes } from "@/server/routes/session";
 import { webhookRoutes } from "@/server/routes/webhooks";
@@ -15,11 +17,13 @@ app.get("/health", (c) => c.json({ ok: true }));
 
 // Worker -> control plane (shared secret).
 app.route("/webhooks", webhookRoutes);
+app.route("/bench-runner", benchRunnerRoutes);
 
 // Management API (bearer API key or a signed-in session, enforced inside
 // each router). Better Auth's own endpoints live at /api/auth/*.
 app.route("/agents", agentRoutes);
 app.route("/calls", callRoutes);
+app.route("/bench", benchRoutes);
 
 // Browser voice sessions (signed-in session or bearer API key).
 app.route("/session", sessionRoutes);

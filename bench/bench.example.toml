@@ -1,0 +1,45 @@
+# Copy to bench.toml. Credentials come from .env (see .env.example).
+#
+# Setup, once:
+#   1. Create an outbound SIP trunk on a carrier account you own (e.g. a Telnyx
+#      credential connection with an outbound voice profile).
+#   2. python -m samata_bench setup-trunk --address sip.telnyx.com \
+#        --number +15550001111 --username ... --password ...
+#      and paste the printed id below.
+#   3. python -m samata_bench gen-utterances
+#   4. python -m samata_bench selftest      # detector bias, no calls
+#   5. python -m samata_bench run
+#   6. python -m samata_bench report results/<run_id>
+
+trunk_id = "ST_xxxxxxxx"
+
+# Every target is just a phone number. Give each platform an equivalent agent:
+# same prompt, same LLM / STT / TTS providers, same region. Otherwise you're
+# comparing models, not platforms. Record what you used in `notes`.
+[[targets]]
+name = "samata"
+number = "+15550000001"
+notes = "gpt-4o-mini, deepgram nova-3, cartesia sonic-2, us-east"
+
+[[targets]]
+name = "vapi"
+number = "+15550000002"
+notes = "same models as samata"
+
+[[targets]]
+name = "retell"
+number = "+15550000003"
+notes = "same models as samata"
+
+[run]
+calls_per_target = 30
+turns_per_call = 5
+concurrency = 1
+warmup_calls = 1
+utterances_dir = "utterances"
+output_dir = "results"
+seed = 1
+
+[detector]
+threshold = 0.5
+onset_windows = 3

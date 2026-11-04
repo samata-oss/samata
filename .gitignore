@@ -10,3 +10,8 @@ __pycache__
 *.pyc
 .venv
 .DS_Store
+
+# bench
+bench/results/
+bench/bench.toml
+bench/utterances/
