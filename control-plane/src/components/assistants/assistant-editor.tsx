@@ -2,7 +2,7 @@
 
 import { CheckIcon, CopyIcon, MicIcon, SaveIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { updateAgentAction } from "@/app/actions";
 import { AdvancedTab } from "@/components/assistants/advanced-tab";
@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { KeyProvider } from "@/lib/providers";
+import { cn } from "@/lib/utils";
 import type { EditorAgent } from "@/server/agents";
 
 const TABS = [
@@ -80,6 +81,19 @@ export function AssistantEditor({
     parseTab(searchParams.get("tab")),
   );
   const [copied, setCopied] = useState(false);
+  // The header sticks under the top bar. It only needs its own divider once
+  // content is scrolling beneath it, so a 1px sentinel above it tells us when.
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) =>
+      setStuck(!entry.isIntersecting),
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   const [pending, startTransition] = useTransition();
 
   const dirty = JSON.stringify(draft) !== saved;
@@ -149,7 +163,13 @@ export function AssistantEditor({
       onValueChange={(v) => setTab(v as TabValue)}
       className="gap-0"
     >
-      <header className="sticky top-0 z-10 border-b bg-background/85 backdrop-blur-md">
+      <div ref={sentinelRef} aria-hidden className="-mb-px h-px" />
+      <header
+        className={cn(
+          "sticky top-0 z-10 border-b border-transparent bg-background/85 backdrop-blur-md transition-colors",
+          stuck && "border-border",
+        )}
+      >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 pt-4">
           <div className="min-w-0">
             <div className="flex items-center gap-1">
