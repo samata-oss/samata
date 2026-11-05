@@ -4,6 +4,7 @@ import {
   AudioLinesIcon,
   BrainIcon,
   ChevronDownIcon,
+  CircleHelpIcon,
   EarIcon,
   ScrollTextIcon,
 } from "lucide-react";
@@ -22,6 +23,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { fmtDuration, fmtMs, mean } from "@/lib/format";
 import { STACKED_STAGES as STAGES, stageValue } from "@/lib/latency-stages";
 import {
@@ -119,11 +125,22 @@ export function AssistantTab({
               return (
                 <div
                   key={s.key}
-                  className="grid grid-cols-[8.5rem_minmax(0,1fr)_5.5rem] items-center gap-3 text-xs"
+                  className="grid grid-cols-[10rem_minmax(0,1fr)_5.5rem] items-center gap-3 text-xs"
                 >
                   <span className="flex items-center gap-2 text-muted-foreground">
-                    <span className={`size-2 rounded-sm ${s.color}`} />
+                    <span className={`size-2 shrink-0 rounded-sm ${s.color}`} />
                     {s.label}
+                    <Tooltip>
+                      <TooltipTrigger
+                        aria-label={`What is ${s.label}?`}
+                        className="rounded-full text-muted-foreground/60 transition-colors outline-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <CircleHelpIcon className="size-3.5" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        {s.description}
+                      </TooltipContent>
+                    </Tooltip>
                   </span>
                   <div className="relative h-4 rounded-sm bg-muted/60">
                     {width > 0 && (

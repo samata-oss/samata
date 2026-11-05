@@ -20,10 +20,30 @@ export const STACKED_STAGES = [
     key: "transcriptionDelayAvg",
     label: "Transcription",
     color: "bg-chart-2",
+    description:
+      "How long after the caller stops speaking until speech-to-text returns the final transcript of what they said.",
   },
-  { key: "endpointingDelayAvg", label: "Endpointing", color: "bg-chart-1" },
-  { key: "llmTtftAvg", label: "LLM first token", color: "bg-chart-3" },
-  { key: "ttsTtfbAvg", label: "TTS first byte", color: "bg-chart-4" },
+  {
+    key: "endpointingDelayAvg",
+    label: "Endpointing",
+    color: "bg-chart-1",
+    description:
+      "The extra wait after the transcript, while the assistant decides the caller is really done talking and not just pausing.",
+  },
+  {
+    key: "llmTtftAvg",
+    label: "LLM first token",
+    color: "bg-chart-3",
+    description:
+      "How long the language model takes to start answering: the time until its first word comes back.",
+  },
+  {
+    key: "ttsTtfbAvg",
+    label: "TTS first byte",
+    color: "bg-chart-4",
+    description:
+      "How long the text-to-speech voice takes to produce its first piece of audio, which is when the caller starts to hear the reply.",
+  },
 ] as const;
 
 export type StageKey = (typeof STACKED_STAGES)[number]["key"];
