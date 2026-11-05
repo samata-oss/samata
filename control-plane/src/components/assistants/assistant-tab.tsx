@@ -144,13 +144,35 @@ export function AssistantTab({
                   </span>
                   <div className="relative h-4 rounded-sm bg-muted/60">
                     {width > 0 && (
-                      <div
-                        className={`absolute inset-y-0 rounded-sm ${s.color}`}
-                        style={{
-                          left: `${start}%`,
-                          width: `max(${width}%, 3px)`,
-                        }}
-                      />
+                      <Tooltip>
+                        <TooltipTrigger
+                          aria-label={`${s.label}: ${fmtMs(latency[s.key])}`}
+                          className={cn(
+                            "absolute inset-y-0 rounded-sm outline-none transition-[filter] hover:brightness-125 focus-visible:ring-2 focus-visible:ring-ring",
+                            // Widen the hover target past the drawn bar so
+                            // thin bars are still easy to hit.
+                            "before:absolute before:inset-y-0 before:-inset-x-2 before:content-['']",
+                            s.color,
+                          )}
+                          style={{
+                            left: `${start}%`,
+                            width: `max(${width}%, 3px)`,
+                          }}
+                        />
+                        <TooltipContent
+                          side="top"
+                          className="flex-col items-start gap-0.5"
+                        >
+                          <span className="font-medium">{s.label}</span>
+                          <span className="font-mono tabular-nums">
+                            {fmtMs(latency[s.key])}
+                            <span className="opacity-60">
+                              {" "}
+                              · {Math.round((value / total) * 100)}% of total
+                            </span>
+                          </span>
+                        </TooltipContent>
+                      </Tooltip>
                     )}
                   </div>
                   <span className="text-right font-mono tabular-nums">
