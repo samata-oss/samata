@@ -27,6 +27,7 @@ from livekit.agents import (
     AgentServer,
     AgentSession,
     CloseEvent,
+    ConversationItemAddedEvent,
     JobContext,
     JobProcess,
     RunContext,
@@ -147,6 +148,60 @@ def _build_session(ctx: JobContext, config: AssistantConfig) -> AgentSession:
     )
 
 
+async def _watch_loop_lag(threshold: float = 0.1, interval: float = 0.05) -> None:
+    """Warn when something blocks this process's event loop for over `threshold`."""
+    last = time.perf_counter()
+    while True:
+        await asyncio.sleep(interval)
+        now = time.perf_counter()
+        lag = now - last - interval
+        last = now
+        if lag > threshold:
+            logger.warning("event loop blocked for %.0fms", lag * 1000)
+
+
+def _trace_llm_timing(session: AgentSession) -> None:
+    """Log each turn's LLM first-token time measured two ways.
+
+    - `request`: the HTTP call alone, clocked around the plugin's stream. This is
+      what the model provider took to answer.
+    - `node`: what the dashboard shows (`llm_node_ttft`), clocked from the moment
+      the pipeline invokes the LLM node. It also covers the worker's own work
+      before the request goes out (context and tool schemas) and any delay in
+      the event loop.
+
+    Each logs on its own line (a turn can make several requests, or cancel a
+    preemptive one). If the numbers agree, the time is in the provider call or
+    the network. If `node` is much larger, it is inside this process.
+    """
+    def on_request(m) -> None:
+        if m.ttft >= 0:
+            logger.info(
+                "llm ttft: request=%.0fms prompt_tokens=%d cached=%d cancelled=%s id=%s",
+                m.ttft * 1000,
+                m.prompt_tokens,
+                m.prompt_cached_tokens,
+                m.cancelled,
+                m.request_id,
+            )
+
+    def on_item(ev: ConversationItemAddedEvent) -> None:
+        item = ev.item
+        if item.type != "message" or item.role != "assistant":
+            return
+        node = item.metrics.get("llm_node_ttft")
+        if node is not None:
+            logger.info("llm ttft: node=%.0fms (shown on dashboard)", node * 1000)
+
+    if session.llm is not None:
+        session.llm.on("metrics_collected", on_request)
+    session.on("conversation_item_added", on_item)
+
+    # A blocked event loop inflates both numbers above equally, so watch for it.
+    lag_task = asyncio.get_running_loop().create_task(_watch_loop_lag())
+    session.on("close", lambda _ev: lag_task.cancel())
+
+
 @server.rtc_session(agent_name=AGENT_NAME)
 async def entrypoint(ctx: JobContext) -> None:
     await ctx.connect()
@@ -214,6 +269,7 @@ async def entrypoint(ctx: JobContext) -> None:
             ctx.shutdown(reason="provider-config-error")
         return
 
+    _trace_llm_timing(session)
     ended_reason: str | None = None
 
     @session.on("close")
