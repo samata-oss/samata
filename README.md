@@ -187,7 +187,7 @@ built on [Better Auth](https://better-auth.com).
   `organization_id`, and every dashboard and API query is scoped to it. A fresh
   install, or an upgrade, has a single `default` workspace holding all existing
   data. Creating more workspaces and managing teams across them is intentionally
-  not in this repo (planned for `ee/`).
+  not in this repo yet.
 
 Set `BETTER_AUTH_SECRET` (`openssl rand -hex 32`) and, in production,
 `BETTER_AUTH_URL` (the compose file derives it from `SAMATA_DOMAIN`). For Google
@@ -475,10 +475,7 @@ worker/                   livekit-agents 1.8 worker, Dockerfile
 
 ## License
 
-Copyright (c) 2026 Samata.
+Copyright 2026 Samata.
 
-Everything in this repository is licensed under the
-[GNU Affero General Public License v3.0](LICENSE), except the contents of
-[`ee/`](ee), which are licensed under the
-[Elastic License 2.0](ee/LICENSE). You can self-host both for free. If you run
-`ee/` in production, we'd love to hear about it.
+Licensed under the [Apache License, Version 2.0](LICENSE). You can use, modify,
+self-host, and redistribute it, including commercially.
