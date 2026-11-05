@@ -1,11 +1,47 @@
 "use client";
 
-import { type RemoteTrack, Room, RoomEvent, Track } from "livekit-client";
+import {
+  type Participant,
+  type RemoteTrack,
+  Room,
+  RoomEvent,
+  Track,
+} from "livekit-client";
 import { MicIcon, MicOffIcon, PhoneIcon, PhoneOffIcon } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import type { Character } from "@/components/assistants/talking-avatar";
 import { Button } from "@/components/ui/button";
+import {
+  AGENT_STATE_ATTRIBUTE,
+  AgentSignals,
+  type AgentState,
+} from "@/lib/agent-signals";
 import { cn } from "@/lib/utils";
+
+// three.js is heavy and needs the browser, so it loads only when this tab
+// does and never on the server.
+const TalkingAvatar = dynamic(
+  () =>
+    import("@/components/assistants/talking-avatar").then(
+      (m) => m.TalkingAvatar,
+    ),
+  { ssr: false },
+);
+
+const CHARACTERS: { value: Character; label: string }[] = [
+  { value: "pig", label: "Pig" },
+  { value: "cow", label: "Cow" },
+];
+
+const STATE_LABEL: Record<AgentState, string> = {
+  idle: "Idle",
+  initializing: "Waking up",
+  listening: "Listening",
+  thinking: "Thinking",
+  speaking: "Speaking",
+};
 
 type Phase = "idle" | "connecting" | "waiting" | "live";
 
@@ -31,20 +67,31 @@ export function TestTab({
   const [phase, setPhase] = useState<Phase>("idle");
   const [muted, setMuted] = useState(false);
   const [lines, setLines] = useState<Line[]>([]);
+  const [character, setCharacter] = useState<Character>("pig");
+  // Mutable on purpose: the avatar reads it every frame, outside React.
+  const [signals] = useState(() => new AgentSignals());
+  const [agentState, setAgentState] = useState<AgentState>("idle");
+
+  useEffect(
+    () => signals.subscribe(() => setAgentState(signals.state)),
+    [signals],
+  );
 
   const hangUp = useCallback(() => {
     roomRef.current?.disconnect();
     roomRef.current = null;
+    signals.reset();
     setPhase("idle");
     setMuted(false);
-  }, []);
+  }, [signals]);
 
   // Leaving the page (or deleting the assistant) ends the call.
   useEffect(
     () => () => {
       void roomRef.current?.disconnect();
+      signals.reset();
     },
-    [],
+    [signals],
   );
 
   async function start() {
@@ -72,18 +119,39 @@ export function TestTab({
         setPhase(room.remoteParticipants.size > 0 ? "live" : "waiting");
 
       room
-        .on(RoomEvent.ParticipantConnected, syncPhase)
-        .on(RoomEvent.ParticipantDisconnected, syncPhase)
+        .on(RoomEvent.ParticipantConnected, (participant: Participant) => {
+          signals.setState(participant.attributes[AGENT_STATE_ATTRIBUTE]);
+          syncPhase();
+        })
+        .on(RoomEvent.ParticipantDisconnected, () => {
+          signals.setState(undefined);
+          syncPhase();
+        })
+        .on(
+          RoomEvent.ParticipantAttributesChanged,
+          (changed, participant: Participant) => {
+            if (
+              participant !== room.localParticipant &&
+              AGENT_STATE_ATTRIBUTE in changed
+            ) {
+              signals.setState(participant.attributes[AGENT_STATE_ATTRIBUTE]);
+            }
+          },
+        )
         .on(RoomEvent.Disconnected, () => {
           roomRef.current = null;
+          signals.reset();
           setPhase("idle");
         })
         .on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
           if (track.kind === Track.Kind.Audio) {
             audioHost.current?.appendChild(track.attach());
+            // Measure the same audio that is playing, to move the mouth.
+            signals.attachAudio(track.mediaStreamTrack);
           }
         })
         .on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
+          if (track.kind === Track.Kind.Audio) signals.detachAudio();
           track.detach().forEach((el) => {
             el.remove();
           });
@@ -118,6 +186,7 @@ export function TestTab({
     } catch (err) {
       roomRef.current?.disconnect();
       roomRef.current = null;
+      signals.reset();
       setPhase("idle");
       toast.error(err instanceof Error ? err.message : "Could not start call");
     }
@@ -134,6 +203,53 @@ export function TestTab({
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
+      <section className="relative overflow-hidden rounded-lg border bg-card">
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_35%,color-mix(in_oklch,var(--primary)_16%,transparent),transparent)]"
+        />
+        <div className="relative h-72">
+          <TalkingAvatar signals={signals} character={character} />
+        </div>
+        <div className="absolute top-3 right-3 flex rounded-md border bg-background/70 p-0.5 backdrop-blur">
+          {CHARACTERS.map((c) => (
+            <button
+              key={c.value}
+              type="button"
+              onClick={() => setCharacter(c.value)}
+              aria-pressed={character === c.value}
+              className={cn(
+                "rounded-[5px] px-2 py-0.5 text-xs transition-colors",
+                character === c.value
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+        <div
+          className={cn(
+            "absolute bottom-3 left-3 flex items-center gap-1.5 rounded-md border bg-background/70 px-2 py-1 text-xs backdrop-blur transition-opacity",
+            phase !== "live" && "opacity-0",
+          )}
+          aria-live="polite"
+        >
+          <span
+            className={cn(
+              "size-1.5 rounded-full",
+              agentState === "speaking" && "bg-primary",
+              agentState === "listening" && "bg-emerald-500",
+              agentState === "thinking" && "animate-pulse bg-amber-500",
+              (agentState === "idle" || agentState === "initializing") &&
+                "bg-muted-foreground/50",
+            )}
+          />
+          {STATE_LABEL[agentState]}
+        </div>
+      </section>
+
       <section className="flex items-center justify-between gap-4 rounded-lg border bg-card p-4">
         <div className="flex items-center gap-3">
           <span

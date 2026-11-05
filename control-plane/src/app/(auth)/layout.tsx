@@ -20,9 +20,7 @@ export default function AuthLayout({
           <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-[inset_0_1px_0_0_oklch(1_0_0/20%)]">
             <AudioLinesIcon className="size-4" />
           </div>
-          <span className="text-lg font-semibold tracking-tight">
-            Samata
-          </span>
+          <span className="text-lg font-semibold tracking-tight">Samata</span>
         </div>
         {children}
       </div>

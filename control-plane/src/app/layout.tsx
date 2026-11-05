@@ -26,6 +26,7 @@ export default function RootLayout({
       className={cn("dark antialiased", geist.variable, geistMono.variable)}
     >
       <head>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static constant, must run before first paint to avoid a theme flash */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>

@@ -18,9 +18,7 @@ export function PageShell({
     <div className={cn("mx-auto w-full max-w-6xl space-y-6 p-6", className)}>
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1.5">
-          <h1 className="text-xl font-semibold tracking-tight">
-            {title}
-          </h1>
+          <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
           {description && (
             <p className="text-sm text-muted-foreground">{description}</p>
           )}
@@ -61,7 +59,9 @@ export function Stat({
 }) {
   return (
     <div className="rounded-lg border bg-card p-4">
-      <div className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">{label}</div>
+      <div className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">
+        {label}
+      </div>
       <div className="mt-1.5 text-2xl font-semibold tracking-tight tabular-nums">
         {value}
       </div>
