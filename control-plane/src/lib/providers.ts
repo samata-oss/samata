@@ -154,6 +154,8 @@ export type LlmPreset = {
   baseUrl?: string;
   /** Default model id, in the provider's own naming. */
   model: string;
+  /** Models offered in the dropdown; any other id can be typed. */
+  models: readonly string[];
   modelPlaceholder: string;
 };
 
@@ -163,35 +165,66 @@ export const LLM_PRESETS: Record<LlmProvider, LlmPreset> = {
     baseUrl: "https://api.openai.com/v1",
     model: "gpt-4.1-mini",
     modelPlaceholder: "gpt-4.1-mini",
+    models: [
+      "gpt-4.1-mini",
+      "gpt-4.1",
+      "gpt-4.1-nano",
+      "gpt-4o",
+      "gpt-4o-mini",
+    ],
   },
   openrouter: {
     label: "OpenRouter",
     baseUrl: "https://openrouter.ai/api/v1",
     model: "openai/gpt-4.1-mini",
     modelPlaceholder: "anthropic/claude-sonnet-4.5",
+    models: [
+      "openai/gpt-4.1-mini",
+      "openai/gpt-4.1",
+      "anthropic/claude-sonnet-4.5",
+      "anthropic/claude-haiku-4.5",
+      "google/gemini-2.5-flash",
+      "meta-llama/llama-3.3-70b-instruct",
+    ],
   },
   "vercel-ai-gateway": {
     label: "Vercel AI Gateway",
     baseUrl: "https://ai-gateway.vercel.sh/v1",
     model: "openai/gpt-4.1-mini",
     modelPlaceholder: "anthropic/claude-sonnet-4.5",
+    models: [
+      "openai/gpt-4.1-mini",
+      "openai/gpt-4.1",
+      "anthropic/claude-sonnet-4.5",
+      "anthropic/claude-haiku-4.5",
+      "google/gemini-2.5-flash",
+    ],
   },
   groq: {
     label: "Groq",
     baseUrl: "https://api.groq.com/openai/v1",
     model: "llama-3.3-70b-versatile",
     modelPlaceholder: "llama-3.3-70b-versatile",
+    models: [
+      "llama-3.3-70b-versatile",
+      "llama-3.1-8b-instant",
+      "openai/gpt-oss-120b",
+      "openai/gpt-oss-20b",
+    ],
   },
   custom: {
     label: "Custom endpoint",
     model: "gpt-4.1-mini",
     modelPlaceholder: "model id",
+    models: [],
   },
 };
 
 export type SttPreset = {
   label: string;
   model: string;
+  /** Models offered in the dropdown; any other id can be typed. */
+  models: readonly string[];
   language: string;
   modelPlaceholder: string;
 };
@@ -202,30 +235,42 @@ export const STT_PRESETS: Record<SttProvider, SttPreset> = {
     model: "nova-3",
     language: "en-US",
     modelPlaceholder: "nova-3",
+    models: ["nova-3", "nova-2", "nova-2-phonecall"],
   },
   assemblyai: {
     label: "AssemblyAI",
     model: "universal-3-6-pro",
     language: "en",
     modelPlaceholder: "universal-3-6-pro",
+    models: [
+      "universal-3-6-pro",
+      "universal-3-5-pro",
+      "u3-rt-pro",
+      "universal-streaming-english",
+      "universal-streaming-multilingual",
+    ],
   },
   elevenlabs: {
     label: "ElevenLabs",
     model: "scribe_v2_realtime",
     language: "en",
     modelPlaceholder: "scribe_v2_realtime",
+    models: ["scribe_v2_realtime", "scribe_v2", "scribe_v1"],
   },
   openai: {
     label: "OpenAI",
     model: "gpt-4o-mini-transcribe",
     language: "en",
     modelPlaceholder: "gpt-4o-mini-transcribe",
+    models: ["gpt-4o-mini-transcribe", "gpt-4o-transcribe", "whisper-1"],
   },
 };
 
 export type TtsPreset = {
   label: string;
   model: string;
+  /** Models offered in the dropdown; any other id can be typed. */
+  models: readonly string[];
   voiceId: string;
   language: string;
   modelPlaceholder: string;
@@ -244,6 +289,7 @@ export const TTS_PRESETS: Record<TtsProvider, TtsPreset> = {
     voiceId: "f786b574-daa5-4673-aa0c-cbe3e8534c02",
     language: "en",
     modelPlaceholder: "sonic-3",
+    models: ["sonic-3", "sonic-2", "sonic-turbo"],
     voiceLabel: "Voice ID",
     hasLanguage: true,
     speed: { min: 0.5, max: 2 },
@@ -254,6 +300,12 @@ export const TTS_PRESETS: Record<TtsProvider, TtsPreset> = {
     voiceId: "hpp4J3VqNfWAUOO0d1Us",
     language: "en",
     modelPlaceholder: "eleven_flash_v2_5",
+    models: [
+      "eleven_flash_v2_5",
+      "eleven_turbo_v2_5",
+      "eleven_multilingual_v2",
+      "eleven_v3_conversational",
+    ],
     voiceLabel: "Voice ID",
     hasLanguage: true,
     speed: { min: 0.8, max: 1.2 },
@@ -264,6 +316,54 @@ export const TTS_PRESETS: Record<TtsProvider, TtsPreset> = {
     voiceId: "",
     language: "en",
     modelPlaceholder: "aura-2-andromeda-en",
+    models: [
+      "aura-2-andromeda-en",
+      "aura-2-apollo-en",
+      "aura-2-arcas-en",
+      "aura-2-aries-en",
+      "aura-2-artemis-en",
+      "aura-2-asteria-en",
+      "aura-2-atlas-en",
+      "aura-2-aurora-en",
+      "aura-2-callisto-en",
+      "aura-2-cetus-en",
+      "aura-2-chiron-en",
+      "aura-2-columbia-en",
+      "aura-2-cordelia-en",
+      "aura-2-crina-en",
+      "aura-2-draco-en",
+      "aura-2-electra-en",
+      "aura-2-eos-en",
+      "aura-2-harmonia-en",
+      "aura-2-helios-en",
+      "aura-2-hera-en",
+      "aura-2-hermes-en",
+      "aura-2-hyperion-en",
+      "aura-2-io-en",
+      "aura-2-iris-en",
+      "aura-2-janus-en",
+      "aura-2-juno-en",
+      "aura-2-jupiter-en",
+      "aura-2-luna-en",
+      "aura-2-mars-en",
+      "aura-2-minerva-en",
+      "aura-2-mira-en",
+      "aura-2-neptune-en",
+      "aura-2-odysseus-en",
+      "aura-2-ophiuchus-en",
+      "aura-2-orion-en",
+      "aura-2-orpheus-en",
+      "aura-2-phoebe-en",
+      "aura-2-pluto-en",
+      "aura-2-saturn-en",
+      "aura-2-selene-en",
+      "aura-2-theia-en",
+      "aura-2-titan-en",
+      "aura-2-triton-en",
+      "aura-2-vega-en",
+      "aura-2-venus-en",
+      "aura-2-zeus-en",
+    ],
     // Deepgram names the voice in the model.
     voiceLabel: null,
     hasLanguage: false,
@@ -276,6 +376,7 @@ export const TTS_PRESETS: Record<TtsProvider, TtsPreset> = {
     voiceId: "ash",
     language: "en",
     modelPlaceholder: "gpt-4o-mini-tts",
+    models: ["gpt-4o-mini-tts", "tts-1", "tts-1-hd"],
     voiceLabel: "Voice",
     hasLanguage: false,
     speed: { min: 0.25, max: 4 },

@@ -9,6 +9,7 @@ import type {
 } from "@/components/assistants/types";
 import {
   MissingKeyNotice,
+  ModelSelect,
   ProviderSelect,
 } from "@/components/assistants/provider-select";
 import { Input } from "@/components/ui/input";
@@ -134,16 +135,18 @@ export function AssistantTab({
             />
           </Field>
           <Field label="Model" htmlFor="stt-model">
-            <Input
+            <ModelSelect
+              key={config.transcriber.provider}
               id="stt-model"
+              models={STT_PRESETS[config.transcriber.provider].models}
               placeholder={
                 STT_PRESETS[config.transcriber.provider].modelPlaceholder
               }
               value={config.transcriber.model}
-              onChange={(e) =>
+              onChange={(model) =>
                 updateConfig((c) => ({
                   ...c,
-                  transcriber: { ...c.transcriber, model: e.target.value },
+                  transcriber: { ...c.transcriber, model },
                 }))
               }
             />
@@ -225,14 +228,16 @@ export function AssistantTab({
             />
           </Field>
           <Field label="Model" htmlFor="llm-model">
-            <Input
+            <ModelSelect
+              key={config.model.provider}
               id="llm-model"
+              models={LLM_PRESETS[config.model.provider].models}
               placeholder={LLM_PRESETS[config.model.provider].modelPlaceholder}
               value={config.model.model}
-              onChange={(e) =>
+              onChange={(model) =>
                 updateConfig((c) => ({
                   ...c,
-                  model: { ...c.model, model: e.target.value },
+                  model: { ...c.model, model },
                 }))
               }
             />
@@ -309,14 +314,16 @@ export function AssistantTab({
             />
           </Field>
           <Field label="Model" htmlFor="tts-model">
-            <Input
+            <ModelSelect
+              key={config.voice.provider}
               id="tts-model"
+              models={TTS_PRESETS[config.voice.provider].models}
               placeholder={TTS_PRESETS[config.voice.provider].modelPlaceholder}
               value={config.voice.model}
-              onChange={(e) =>
+              onChange={(model) =>
                 updateConfig((c) => ({
                   ...c,
-                  voice: { ...c.voice, model: e.target.value },
+                  voice: { ...c.voice, model },
                 }))
               }
             />

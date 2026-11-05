@@ -1,83 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { type KeyProvider, PROVIDER_INFO } from "@/lib/providers";
 
 /**
- * Whether calls can use this provider: the workspace has a key for it, or it
- * runs without one (a custom endpoint).
- */
-const isReady = (provider: KeyProvider, configured: ReadonlySet<KeyProvider>) =>
-  configured.has(provider) || !PROVIDER_INFO[provider].keyRequired;
-
-/** One option: the name, whether it has a key, and why on hover if not. */
-function ProviderOption({
-  provider,
-  configured,
-}: {
-  provider: KeyProvider;
-  configured: ReadonlySet<KeyProvider>;
-}) {
-  const info = PROVIDER_INFO[provider];
-  const hasKey = configured.has(provider);
-  const ready = isReady(provider, configured);
-
-  const row = (
-    <span className="flex w-full items-center justify-between gap-3">
-      <span className={ready ? undefined : "text-muted-foreground"}>
-        {info.label}
-      </span>
-      <span
-        className={
-          hasKey
-            ? "inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-500"
-            : ready
-              ? "text-xs text-muted-foreground"
-              : "inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-500"
-        }
-      >
-        <span
-          className={`size-1.5 rounded-full ${
-            hasKey ? "bg-current" : ready ? "bg-transparent" : "bg-current"
-          }`}
-        />
-        {hasKey ? "Key added" : ready ? "Key optional" : "No key yet"}
-      </span>
-    </span>
-  );
-
-  // Nothing to explain for a provider that is ready to use.
-  if (hasKey) return row;
-  return (
-    <Tooltip>
-      <TooltipTrigger render={row} />
-      <TooltipContent side="right">
-        {ready
-          ? `${info.label} works without a key if your endpoint doesn't need one.`
-          : `No ${info.label} key in this workspace yet. You can pick it, but calls will fail until you add one under Provider Keys.`}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-/**
- * A dropdown of providers. Ones the workspace has a key for are listed first
- * and marked; the rest say they need one, and explain on hover. They stay
- * selectable so an assistant can be set up before the key is added.
+ * A dropdown of providers, labelled from `PROVIDER_INFO`. With `configured`,
+ * providers that need a key the workspace hasn't added are marked "(no key)".
  */
 export function ProviderSelect<T extends KeyProvider>({
   id,
@@ -89,22 +26,16 @@ export function ProviderSelect<T extends KeyProvider>({
   id?: string;
   value: T;
   options: readonly T[];
-  /** Providers the workspace has a key for. */
-  configured: ReadonlySet<KeyProvider>;
+  configured?: ReadonlySet<KeyProvider>;
   onChange: (value: T) => void;
 }) {
-  // Plain labels for the trigger; the richer rows are only in the list.
   const items = options.map((o) => ({
     value: o,
-    label: PROVIDER_INFO[o].label,
+    label:
+      configured && PROVIDER_INFO[o].keyRequired && !configured.has(o)
+        ? `${PROVIDER_INFO[o].label} (no key)`
+        : PROVIDER_INFO[o].label,
   }));
-  const ready = options.filter((o) => isReady(o, configured));
-  const needKey = options.filter((o) => !isReady(o, configured));
-  const groups = [
-    { label: "Ready to use", providers: ready },
-    { label: "Needs an API key", providers: needKey },
-  ].filter((g) => g.providers.length > 0);
-
   return (
     <Select
       value={value}
@@ -115,22 +46,11 @@ export function ProviderSelect<T extends KeyProvider>({
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {groups.map((group) => (
-          <SelectGroup key={group.label}>
-            {/* One group needs no heading. */}
-            {groups.length > 1 && <SelectLabel>{group.label}</SelectLabel>}
-            {group.providers.map((provider) => (
-              <SelectItem key={provider} value={provider}>
-                <ProviderOption provider={provider} configured={configured} />
-              </SelectItem>
-            ))}
-          </SelectGroup>
+        {items.map((o) => (
+          <SelectItem key={o.value} value={o.value}>
+            {o.label}
+          </SelectItem>
         ))}
-        <div className="border-t px-2 py-1.5 text-xs text-muted-foreground">
-          <Link href="/provider-keys" className="underline">
-            Manage provider keys
-          </Link>
-        </div>
       </SelectContent>
     </Select>
   );
@@ -156,5 +76,76 @@ export function MissingKeyNotice({
         Add it
       </Link>
     </p>
+  );
+}
+
+const OTHER = "__other__";
+
+/**
+ * A model picker: a dropdown of the provider's common models plus "Other…",
+ * which reveals a text box for any id the provider accepts (new releases, a
+ * gateway's long tail). With no list (a custom endpoint) it is just the text
+ * box. Key it by provider so the "Other" state resets when the provider
+ * changes.
+ */
+export function ModelSelect({
+  id,
+  value,
+  models,
+  placeholder,
+  onChange,
+}: {
+  id?: string;
+  value: string;
+  models: readonly string[];
+  placeholder?: string;
+  onChange: (value: string) => void;
+}) {
+  const [typing, setTyping] = useState(false);
+  const input = (
+    <Input
+      id={models.length ? undefined : id}
+      className={models.length ? "font-mono text-xs" : undefined}
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  );
+  if (!models.length) return input;
+
+  // A saved id that isn't in the list is shown as "Other", not hidden.
+  const showInput = typing || !models.includes(value);
+  const items = [
+    ...models.map((m) => ({ value: m, label: m })),
+    { value: OTHER, label: "Other…" },
+  ];
+  return (
+    <div className="grid gap-2">
+      <Select
+        value={showInput ? OTHER : value}
+        items={items}
+        onValueChange={(next) => {
+          if (!next) return;
+          if (next === OTHER) {
+            setTyping(true);
+            return;
+          }
+          setTyping(false);
+          onChange(next);
+        }}
+      >
+        <SelectTrigger id={id} className="w-full font-mono text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {items.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {showInput && input}
+    </div>
   );
 }
