@@ -1,3 +1,4 @@
+import { CircleHelpIcon } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -20,24 +21,14 @@ import {
 } from "@/lib/latency-stages";
 import { cn } from "@/lib/utils";
 
-/** Vapi-style names and hints for each stage of a turn. */
-const STAGE_INFO: Record<StageKey, { label: string; hint: string }> = {
-  transcriptionDelayAvg: {
-    label: "Transcriber",
-    hint: "Time from the end of user speech until the transcript that ends the turn arrives.",
-  },
-  endpointingDelayAvg: {
-    label: "Endpointing",
-    hint: "Time after that transcript until the turn is confirmed finished.",
-  },
-  llmTtftAvg: {
-    label: "LLM",
-    hint: "Time the model took to start answering after the turn was confirmed. With preemptive generation it starts earlier, on the transcript, so part of its first-token time is already counted in Endpointing.",
-  },
-  ttsTtfbAvg: {
-    label: "Voice",
-    hint: "Time for the voice to produce its first audio byte.",
-  },
+/** Vapi-style names for each stage of a turn. The `?` tooltips use the stage descriptions. */
+const STAGE_LABELS: Record<StageKey, string> = {
+  fromTransportAvg: "From transport",
+  transcriptionDelayAvg: "Transcriber",
+  endpointingDelayAvg: "Endpointing",
+  llmTtftAvg: "LLM",
+  ttsTtfbAvg: "Voice",
+  toTransportAvg: "To transport",
 };
 
 /** Latency for a call: summary tiles, a breakdown bar and a per-turn table. */
@@ -53,7 +44,7 @@ export function LatencySummary({
 }) {
   const stages = STACKED_STAGES.map((s) => ({
     ...s,
-    ...STAGE_INFO[s.key],
+    label: STAGE_LABELS[s.key],
     value: stageValue(latency, s.key),
   }));
   const total = stages.reduce((sum, s) => sum + (s.value ?? 0), 0);
@@ -115,17 +106,25 @@ export function LatencySummary({
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {stages.map((s) => (
           <div
             key={s.key}
-            title={s.hint}
             className="flex items-center justify-between gap-3 rounded-lg border bg-card p-4"
           >
             <div>
               <div className="flex items-center gap-2 text-sm font-medium">
                 <span className={`size-2 rounded-full ${s.color}`} />
                 {s.label}
+                <Tooltip>
+                  <TooltipTrigger
+                    aria-label={`What is ${s.label}?`}
+                    className="rounded-full text-muted-foreground/60 transition-colors outline-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <CircleHelpIcon className="size-3.5" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{s.description}</TooltipContent>
+                </Tooltip>
               </div>
               <div className="mt-0.5 text-xs text-muted-foreground">
                 Avg latency
@@ -172,6 +171,8 @@ export function LatencySummary({
                     llmTtftAvg: t.llmTtft,
                     ttsTtfbAvg: t.ttsTtfb,
                     overlapAvg: t.overlap,
+                    fromTransportAvg: t.fromTransport,
+                    toTransportAvg: t.toTransport,
                   };
                   return (
                     // biome-ignore lint/suspicious/noArrayIndexKey: turns have no id

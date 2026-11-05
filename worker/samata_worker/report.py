@@ -7,6 +7,8 @@ from typing import Any
 
 from livekit.agents import AgentSession, CloseReason
 
+from samata_worker.transport import rtt_at
+
 # CloseReason -> Vapi-style endedReason.
 ENDED_REASONS = {
     CloseReason.PARTICIPANT_DISCONNECTED: "customer-ended-call",
@@ -58,9 +60,11 @@ def build_report(
     started_at: float,
     ended_at: float,
     ended_reason: str,
+    rtt_samples: list[tuple[float, float]] | None = None,
 ) -> dict[str, Any]:
     messages: list[dict[str, Any]] = []
     eot, stt, ttft, ttfb, v2v, overlaps = [], [], [], [], [], []
+    from_transport, to_transport = [], []
     turn_details: list[dict[str, float]] = []
     pending_eot: float | None = None
     pending_stt: float | None = None
@@ -102,6 +106,16 @@ def build_report(
                             m["tts_node_ttfb"],
                             m.get("e2e_latency"),
                         )
+                        # Network time to and from LiveKit, half the round trip each
+                        # way (see transport.py). Added on top because the worker's
+                        # clock starts when the audio reaches it and stops when the
+                        # reply leaves it.
+                        rtt = rtt_at(rtt_samples or [], item.created_at)
+                        hop = rtt / 2 if rtt is not None else None
+                        if hop is not None:
+                            total += 2 * hop
+                            from_transport.append(hop)
+                            to_transport.append(hop)
                         v2v.append(total)
                         overlaps.append(overlap)
                         turn_details.append(
@@ -115,6 +129,11 @@ def build_report(
                                 "llmTtft": m["llm_node_ttft"],
                                 "ttsTtfb": m["tts_node_ttfb"],
                                 "overlap": overlap,
+                                **(
+                                    {"fromTransport": hop, "toTransport": hop}
+                                    if hop is not None
+                                    else {}
+                                ),
                                 "total": total,
                             }
                         )
@@ -147,6 +166,8 @@ def build_report(
         "llmTtftAvg": _avg(ttft),
         "ttsTtfbAvg": _avg(ttfb),
         "overlapAvg": _avg(overlaps),
+        "fromTransportAvg": _avg(from_transport),
+        "toTransportAvg": _avg(to_transport),
         "voiceToVoiceAvg": _avg(v2v),
         "voiceToVoiceP95": _p95(v2v),
         # One entry per measured turn, in call order (seconds).

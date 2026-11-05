@@ -5,6 +5,10 @@ import type { CallLatency } from "@/db/schema";
  * after another and sum to voice-to-voice latency (worker/samata_worker/report.py).
  * Where they actually overlap, see "Overlap" below.
  *
+ * The first and last stages are the network: audio travelling from LiveKit to
+ * the worker, and the reply travelling back. Each is half the worker's
+ * round-trip time to LiveKit, so it covers that leg only, as Vapi's do.
+ *
  * The worker reports the wait after the caller stops speaking as one number,
  * "end of turn". The final transcript arrives *inside* that wait, so we split
  * it the way Vapi does:
@@ -25,6 +29,13 @@ import type { CallLatency } from "@/db/schema";
  * time, which is what other platforms report, is `llmTtftAvg` as stored.
  */
 export const STACKED_STAGES = [
+  {
+    key: "fromTransportAvg",
+    label: "From transport",
+    color: "bg-chart-5",
+    description:
+      "Average network time for the caller's audio to travel from the transport provider (LiveKit) to the assistant. Half of the round trip between them.",
+  },
   {
     key: "transcriptionDelayAvg",
     label: "Transcription",
@@ -52,6 +63,13 @@ export const STACKED_STAGES = [
     color: "bg-chart-4",
     description:
       "How long the text-to-speech voice takes to produce its first piece of audio, which is when the caller starts to hear the reply.",
+  },
+  {
+    key: "toTransportAvg",
+    label: "To transport",
+    color: "bg-chart-5/60",
+    description:
+      "Average network time for the assistant's reply audio to travel from the assistant to the transport provider (LiveKit), on its way to the caller. Half of the round trip between them.",
   },
 ] as const;
 
@@ -85,5 +103,7 @@ export function stageValue(
         ? undefined
         : Math.max(0, ttfb - Math.max(0, overlap - ttft));
     }
+    default:
+      return latency[key];
   }
 }

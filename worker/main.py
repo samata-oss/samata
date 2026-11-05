@@ -42,6 +42,7 @@ from samata_worker.config import AssistantConfig, ToolConfig, VadConfig
 from samata_worker.control_plane import AssistantRejected, ControlPlane
 from samata_worker.providers import ProviderError, build_llm, build_stt, build_tts
 from samata_worker.report import ENDED_REASONS, build_report
+from samata_worker.transport import RttSampler
 
 load_dotenv()
 logger = logging.getLogger("samata.worker")
@@ -292,9 +293,12 @@ async def entrypoint(ctx: JobContext) -> None:
         session.shutdown()
 
     timer = asyncio.create_task(enforce_max_duration())
+    rtt_sampler = RttSampler(ctx.room)
+    rtt_sampler.start()
 
     async def send_report() -> None:
         timer.cancel()
+        rtt_sampler.stop()
         try:
             # Make sure the history is final if the job ended first.
             await session.aclose()
@@ -304,6 +308,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 started_at=started_at,
                 ended_at=time.time(),
                 ended_reason=ended_reason or "worker-shutdown",
+                rtt_samples=rtt_sampler.samples(),
             )
             await cp.end_of_call_report(report)
         except Exception:

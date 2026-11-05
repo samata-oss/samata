@@ -255,9 +255,15 @@ export type CallLatency = {
    */
   overlapAvg?: number;
   /**
-   * Voice-to-voice: end of the caller's speech to the first audio frame. The
-   * stages overlap, so this is less than their plain sum when preemptive
-   * generation is on.
+   * Network time each way between the worker and LiveKit: half the WebRTC round
+   * trip, as the call went. Absent when it couldn't be read.
+   */
+  fromTransportAvg?: number;
+  toTransportAvg?: number;
+  /**
+   * Voice-to-voice: end of the caller's speech to the first audio frame, plus
+   * the network time to and from LiveKit. The stages overlap, so this is less
+   * than their plain sum when preemptive generation is on.
    */
   voiceToVoiceAvg?: number;
   voiceToVoiceP95?: number;
@@ -273,6 +279,8 @@ export type TurnLatency = {
   ttsTtfb: number;
   /** Part of `llmTtft` + `ttsTtfb` already inside `endOfTurn`. See `CallLatency`. */
   overlap?: number;
+  fromTransport?: number;
+  toTransport?: number;
   total: number;
 };
 
