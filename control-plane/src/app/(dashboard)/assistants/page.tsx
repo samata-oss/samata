@@ -1,34 +1,46 @@
-import { count, desc, eq } from "drizzle-orm";
-import { ArrowUpRightIcon } from "lucide-react";
+import { count, desc, eq, max } from "drizzle-orm";
+import { ChevronRightIcon } from "lucide-react";
 import Link from "next/link";
 import { CreateAssistantDialog } from "@/components/assistants/create-assistant-dialog";
 import { EmptyState, PageShell } from "@/components/page-shell";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { db } from "@/db";
 import { agent, callLog } from "@/db/schema";
 import { agentConfigSchema } from "@/lib/agent-config";
-import { TTS_PRESETS } from "@/lib/providers";
+import { fmtDateTime } from "@/lib/format";
 import { requireWorkspaceSession } from "@/server/workspace";
 
 export default async function AssistantsIndex() {
   const { organizationId } = await requireWorkspaceSession();
-  const [rows, callCounts] = await Promise.all([
+  const [rows, stats] = await Promise.all([
     db
       .select()
       .from(agent)
       .where(eq(agent.organizationId, organizationId))
       .orderBy(desc(agent.createdAt)),
     db
-      .select({ agentId: callLog.agentId, calls: count() })
+      .select({
+        agentId: callLog.agentId,
+        calls: count(),
+        lastCall: max(callLog.startedAt),
+      })
       .from(callLog)
       .where(eq(callLog.organizationId, organizationId))
       .groupBy(callLog.agentId),
   ]);
-  const calls = new Map(callCounts.map((c) => [c.agentId, c.calls]));
+  const byAgent = new Map(stats.map((s) => [s.agentId, s]));
 
   return (
     <PageShell
       title="Assistants"
-      description="Each assistant is a listen, think and speak pipeline you can call."
+      description="Each assistant is a speech-to-text, LLM and text-to-speech pipeline you can call."
       actions={<CreateAssistantDialog />}
     >
       {rows.length === 0 ? (
@@ -37,47 +49,69 @@ export default async function AssistantsIndex() {
           <code>POST /api/agents</code>.
         </EmptyState>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {rows.map((row) => {
-            const config = agentConfigSchema.parse(row.config);
-            const n = calls.get(row.id) ?? 0;
-            return (
-              <Link
-                key={row.id}
-                href={`/assistants/${row.slug}`}
-                className="group flex flex-col gap-5 rounded-2xl border bg-card p-5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h2 className="truncate font-serif text-2xl leading-tight font-normal">
-                      {row.name}
-                    </h2>
-                    <p className="truncate font-mono text-xs text-muted-foreground">
-                      {row.phoneNumber ?? row.slug}
-                    </p>
-                  </div>
-                  <ArrowUpRightIcon className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
-                </div>
-                <dl className="grid gap-1.5 text-sm">
-                  {[
-                    ["Listen", config.transcriber.model],
-                    ["Think", config.model.model],
-                    ["Speak", TTS_PRESETS[config.voice.provider].label],
-                  ].map(([k, v]) => (
-                    <div key={k} className="flex items-baseline gap-3">
-                      <dt className="w-12 text-xs text-muted-foreground">
-                        {k}
-                      </dt>
-                      <dd className="truncate">{v}</dd>
-                    </div>
-                  ))}
-                </dl>
-                <div className="mt-auto border-t pt-3 text-xs text-muted-foreground">
-                  {n === 0 ? "No calls yet" : `${n} call${n === 1 ? "" : "s"}`}
-                </div>
-              </Link>
-            );
-          })}
+        <div className="overflow-hidden rounded-lg border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Name</TableHead>
+                <TableHead>Pipeline</TableHead>
+                <TableHead>Number</TableHead>
+                <TableHead className="text-right">Calls</TableHead>
+                <TableHead>Last call</TableHead>
+                <TableHead className="w-8" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => {
+                const config = agentConfigSchema.parse(row.config);
+                const s = byAgent.get(row.id);
+                const href = `/assistants/${row.slug}`;
+                return (
+                  <TableRow key={row.id} className="group relative">
+                    <TableCell>
+                      <Link
+                        href={href}
+                        className="font-medium after:absolute after:inset-0"
+                      >
+                        {row.name}
+                      </Link>
+                      <div className="font-mono text-xs text-muted-foreground">
+                        {row.slug}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap items-center gap-1 font-mono text-xs text-muted-foreground">
+                        {[
+                          config.transcriber.model,
+                          config.model.model,
+                          config.voice.model,
+                        ].map((m, i) => (
+                          <span key={m + String(i)} className="contents">
+                            {i > 0 && <span className="text-primary">→</span>}
+                            <span className="rounded border bg-muted/50 px-1.5 py-0.5 text-foreground/80">
+                              {m}
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {row.phoneNumber ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono tabular-nums">
+                      {s?.calls ?? 0}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {s?.lastCall ? fmtDateTime(s.lastCall) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <ChevronRightIcon className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
       )}
     </PageShell>

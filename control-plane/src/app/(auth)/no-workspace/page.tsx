@@ -10,8 +10,8 @@ export default async function NoWorkspacePage() {
   if ((await lookupSession(await headers())).kind === "ok") redirect("/");
 
   return (
-    <div className="space-y-4 rounded-xl border bg-card p-6">
-      <h1 className="font-serif text-3xl font-normal tracking-tight">No workspace</h1>
+    <div className="space-y-4 rounded-lg border bg-card/80 p-6 shadow-2xl shadow-black/10 backdrop-blur">
+      <h1 className="text-lg font-semibold tracking-tight">No workspace</h1>
       <p className="text-sm text-muted-foreground">
         {user.email} isn't a member of any workspace yet. Ask a workspace admin
         to invite you, then open the invitation link.

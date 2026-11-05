@@ -10,12 +10,13 @@ export const THEME_KEY = "theme";
  * Runs in <head> before first paint, so the page never flashes the wrong
  * theme. Keep it dependency-free: it is inlined as a string.
  */
-export const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("${THEME_KEY}");var d=t==="dark"||((!t||t==="system")&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d)}catch(e){}})()`;
+export const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("${THEME_KEY}");var d=t==="light"?false:t==="system"?matchMedia("(prefers-color-scheme: dark)").matches:true;document.documentElement.classList.toggle("dark",d)}catch(e){}})()`;
 
 function readStored(): Theme {
   try {
     const t = localStorage.getItem(THEME_KEY);
-    return t === "light" || t === "dark" ? t : "system";
+    // Dark is the default until someone picks something else.
+    return t === "light" || t === "system" ? t : "dark";
   } catch {
     return "system";
   }
@@ -50,8 +51,7 @@ function subscribe(cb: () => void) {
 
 export function setTheme(theme: Theme) {
   try {
-    if (theme === "system") localStorage.removeItem(THEME_KEY);
-    else localStorage.setItem(THEME_KEY, theme);
+    localStorage.setItem(THEME_KEY, theme);
   } catch {
     // Private mode: the choice just won't persist.
   }
@@ -61,7 +61,7 @@ export function setTheme(theme: Theme) {
 
 /** The stored preference: "light", "dark" or "system". */
 export function useThemePreference(): Theme {
-  return useSyncExternalStore(subscribe, readStored, () => "system");
+  return useSyncExternalStore(subscribe, readStored, () => "dark");
 }
 
 /** Whether the page is rendering dark right now. */
@@ -69,6 +69,6 @@ export function useIsDark(): boolean {
   return useSyncExternalStore(
     subscribe,
     () => document.documentElement.classList.contains("dark"),
-    () => false,
+    () => true,
   );
 }

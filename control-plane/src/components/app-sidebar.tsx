@@ -1,18 +1,7 @@
-import {
-  AudioLinesIcon,
-  BarChart3Icon,
-  BracesIcon,
-  BotIcon,
-  CpuIcon,
-  KeyRoundIcon,
-  PhoneIcon,
-  RadioIcon,
-  ScrollTextIcon,
-  UsersIcon,
-  WrenchIcon,
-} from "lucide-react";
+import { AudioLinesIcon } from "lucide-react";
 import type * as React from "react";
-import { type NavGroup, NavMain } from "@/components/nav-main";
+import { NavMain } from "@/components/nav-main";
+import { NAV_GROUPS } from "@/components/nav-items";
 import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
@@ -42,63 +31,21 @@ export function AppSidebar({
   user: { name: string; email: string };
   workspaceName: string;
 }) {
-  const groups: NavGroup[] = [
-    {
-      label: "Studio",
-      items: [
-        {
-          title: "Assistants",
-          url: "/assistants",
-          icon: <BotIcon />,
-        },
-        { title: "Tools", url: "/tools", icon: <WrenchIcon /> },
-        { title: "Phone Numbers", url: "/phone-numbers", icon: <PhoneIcon /> },
-      ],
-    },
-    {
-      label: "Insights",
-      items: [
-        { title: "Logs", url: "/logs", icon: <ScrollTextIcon /> },
-        {
-          title: "Structured Outputs",
-          url: "/structured-outputs",
-          icon: <BracesIcon />,
-        },
-        { title: "Metrics", url: "/metrics", icon: <BarChart3Icon /> },
-      ],
-    },
-    {
-      label: "Connections",
-      items: [
-        {
-          title: "Provider Keys",
-          url: "/provider-keys",
-          icon: <CpuIcon />,
-        },
-        { title: "API Keys", url: "/api-keys", icon: <KeyRoundIcon /> },
-      ],
-    },
-    {
-      label: "Workspace",
-      items: [{ title: "Team", url: "/team", icon: <UsersIcon /> }],
-    },
-  ];
-
   return (
-    <Sidebar collapsible="icon" variant="inset" {...props}>
+    <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" render={<a href="/assistants" />}>
-              <div className="flex aspect-square size-8 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
+              <div className="flex aspect-square size-7 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-[inset_0_1px_0_0_oklch(1_0_0/20%)]">
                 <AudioLinesIcon className="size-4" />
               </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-serif text-2xl leading-none font-normal tracking-tight">
+              <div className="grid flex-1 text-left leading-tight">
+                <span className="truncate text-sm font-semibold tracking-tight">
                   Samata
                 </span>
-                <span className="truncate text-xs text-sidebar-foreground/60">
-                  Self-hosted voice AI
+                <span className="truncate font-mono text-[11px] text-sidebar-foreground/50">
+                  {workspaceName}
                 </span>
               </div>
             </SidebarMenuButton>
@@ -106,26 +53,23 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain groups={groups} />
+        <NavMain groups={NAV_GROUPS} />
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              tooltip="LiveKit server"
-              className="pointer-events-none"
-            >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-primary">
-                <RadioIcon className="size-4" />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">LiveKit</span>
-                <span className="truncate text-xs">{livekitHost()}</span>
-              </div>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <div className="flex items-center gap-2 rounded-md border border-sidebar-border px-2.5 py-1.5 group-data-[collapsible=icon]:hidden">
+          <span className="relative flex size-2">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-chart-4 opacity-60" />
+            <span className="relative inline-flex size-2 rounded-full bg-chart-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[11px] leading-tight text-sidebar-foreground/50">
+              LiveKit
+            </span>
+            <span className="block truncate font-mono text-[11px] leading-tight">
+              {livekitHost()}
+            </span>
+          </span>
+        </div>
         <NavUser
           name={user.name}
           email={user.email}

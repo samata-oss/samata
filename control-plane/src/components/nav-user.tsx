@@ -35,7 +35,7 @@ export function NavUser({
           tooltip={`${name} · ${workspaceName}`}
           className="pointer-events-none"
         >
-          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-xs font-medium uppercase">
+          <div className="flex aspect-square size-7 items-center justify-center rounded-md bg-sidebar-accent font-mono text-[11px] font-medium uppercase">
             {name.slice(0, 2)}
           </div>
           <div className="grid flex-1 text-left text-sm leading-tight">

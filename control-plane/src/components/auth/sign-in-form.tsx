@@ -69,9 +69,9 @@ export function SignInForm({
   }
 
   return (
-    <div className="space-y-4 rounded-2xl border bg-card p-7 shadow-sm">
+    <div className="space-y-4 rounded-lg border bg-card/80 p-6 shadow-2xl shadow-black/10 backdrop-blur">
       <div className="space-y-1">
-        <h1 className="font-serif text-3xl font-normal tracking-tight">
+        <h1 className="text-lg font-semibold tracking-tight">
           {signingUp ? "Create your account" : "Sign in"}
         </h1>
         <p className="text-sm text-muted-foreground">

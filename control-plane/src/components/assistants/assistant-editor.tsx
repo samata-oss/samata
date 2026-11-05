@@ -2,7 +2,7 @@
 
 import { CheckIcon, CopyIcon, MicIcon, SaveIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { updateAgentAction } from "@/app/actions";
 import { AdvancedTab } from "@/components/assistants/advanced-tab";
@@ -124,6 +124,19 @@ export function AssistantEditor({
     });
   }
 
+  // ⌘S / Ctrl+S saves. A ref-free effect is fine: `save` closes over the
+  // latest draft because the listener is re-bound on every change.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        if (dirty && !pending) save();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   async function copyId() {
     await navigator.clipboard.writeText(agent.id);
     setCopied(true);
@@ -136,11 +149,11 @@ export function AssistantEditor({
       onValueChange={(v) => setTab(v as TabValue)}
       className="gap-0"
     >
-      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl items-end justify-between gap-4 px-8 pt-4">
+      <header className="sticky top-0 z-10 border-b bg-background/85 backdrop-blur-md">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 pt-4">
           <div className="min-w-0">
             <div className="flex items-center gap-1">
-              <h1 className="truncate font-serif text-4xl leading-tight font-normal tracking-tight">
+              <h1 className="truncate text-xl font-semibold tracking-tight">
                 {agent.name}
               </h1>
               <AssistantSwitcher
@@ -148,32 +161,34 @@ export function AssistantEditor({
                 currentSlug={agent.slug}
               />
             </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="font-mono">{agent.slug}</span>
-              <span>·</span>
+            <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
+              <span>{agent.slug}</span>
+              <span className="text-border">/</span>
               <button
                 type="button"
                 onClick={copyId}
-                className="inline-flex items-center gap-1 font-mono hover:text-foreground"
+                className="inline-flex items-center gap-1 hover:text-foreground"
                 title="Copy assistant id"
               >
-                {agent.id.slice(0, 8)}…
+                {agent.id.slice(0, 8)}
                 {copied ? (
-                  <CheckIcon className="size-3" />
+                  <CheckIcon className="size-3 text-chart-4" />
                 ) : (
                   <CopyIcon className="size-3" />
                 )}
               </button>
               {agent.phoneNumber && (
-                <Badge variant="secondary">{agent.phoneNumber}</Badge>
+                <Badge variant="secondary" className="font-mono">
+                  {agent.phoneNumber}
+                </Badge>
               )}
             </div>
           </div>
           <div className="flex items-center gap-2">
             {dirty && (
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="size-1.5 rounded-full bg-chart-2" />
-                Unsaved changes
+                <span className="size-1.5 rounded-full bg-chart-3" />
+                Unsaved
               </span>
             )}
             <Button variant="outline" onClick={() => setTab("test")}>
@@ -183,13 +198,16 @@ export function AssistantEditor({
             <Button onClick={save} disabled={!dirty || pending}>
               <SaveIcon />
               {pending ? "Saving…" : "Save"}
+              <kbd className="ml-1 rounded bg-primary-foreground/15 px-1 font-mono text-[10px]">
+                ⌘S
+              </kbd>
             </Button>
           </div>
         </div>
-        <div className="mx-auto max-w-5xl px-8 py-4">
-          <TabsList>
+        <div className="mx-auto max-w-5xl px-5">
+          <TabsList variant="line" className="mt-2">
             {TABS.map((t) => (
-              <TabsTrigger key={t.value} value={t.value} className="px-4">
+              <TabsTrigger key={t.value} value={t.value} className="flex-none px-2.5">
                 {t.label}
               </TabsTrigger>
             ))}
@@ -197,7 +215,7 @@ export function AssistantEditor({
         </div>
       </header>
 
-      <div className="mx-auto max-w-5xl px-8 pt-2 pb-12">
+      <div className="mx-auto max-w-5xl px-6 py-6">
         <TabsContent value="assistant" keepMounted>
           <AssistantTab
             draft={draft}

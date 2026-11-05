@@ -137,7 +137,7 @@ export function Section({
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-xl border bg-card p-5", className)}>
+    <section className={cn("rounded-lg border bg-card p-4", className)}>
       <h3 className="text-sm font-medium">{title}</h3>
       {description && (
         <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>

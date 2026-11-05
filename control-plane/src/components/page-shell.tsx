@@ -15,10 +15,10 @@ export function PageShell({
   className?: string;
 }) {
   return (
-    <div className={cn("mx-auto w-full max-w-6xl space-y-8 p-8", className)}>
+    <div className={cn("mx-auto w-full max-w-6xl space-y-6 p-6", className)}>
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1.5">
-          <h1 className="font-serif text-4xl leading-none font-normal tracking-tight">
+          <h1 className="text-xl font-semibold tracking-tight">
             {title}
           </h1>
           {description && (
@@ -40,7 +40,7 @@ export function EmptyState({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-dashed bg-card/40 p-12 text-center">
+    <div className="rounded-lg border border-dashed bg-card/40 p-12 text-center">
       <p className="font-medium">{title}</p>
       {children && (
         <div className="mt-1 text-sm text-muted-foreground">{children}</div>
@@ -60,9 +60,9 @@ export function Stat({
   hint?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border bg-card p-5">
-      <div className="text-xs font-medium text-muted-foreground">{label}</div>
-      <div className="mt-1.5 font-serif text-4xl font-normal tabular-nums">
+    <div className="rounded-lg border bg-card p-4">
+      <div className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">{label}</div>
+      <div className="mt-1.5 text-2xl font-semibold tracking-tight tabular-nums">
         {value}
       </div>
       {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}

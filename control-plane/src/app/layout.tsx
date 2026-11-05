@@ -1,18 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
-const serif = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
-  variable: "--font-serif",
-});
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
@@ -29,12 +23,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn(
-        "antialiased",
-        geist.variable,
-        geistMono.variable,
-        serif.variable,
-      )}
+      className={cn("dark antialiased", geist.variable, geistMono.variable)}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
