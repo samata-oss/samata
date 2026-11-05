@@ -13,6 +13,7 @@ import {
 import { resolveAgent, workerConfig } from "@/server/agents";
 import { analyzeCall } from "@/server/analysis";
 import { forward } from "@/server/forward";
+import { MissingKeysError } from "@/server/provider-keys";
 import { runToolCalls } from "@/server/tools";
 import { requireWorkerSecret } from "@/server/webhook-auth";
 
@@ -45,21 +46,40 @@ export const webhookRoutes = new Hono()
       return c.json({ error: "No agent is configured for this call." }, 404);
     }
 
-    const [call] = await db
+    const call = {
+      organizationId: row.organizationId,
+      agentId: row.id,
+      roomName: message.call.roomName,
+      type: message.call.type,
+      customerNumber: message.customer?.number ?? null,
+    };
+
+    let assistant: Awaited<ReturnType<typeof workerConfig>>;
+    try {
+      assistant = await workerConfig(row);
+    } catch (err) {
+      if (!(err instanceof MissingKeysError)) throw err;
+      // Refuse the call, but leave a failed entry in Logs saying why,
+      // instead of a caller hearing nothing and nobody knowing.
+      console.warn("[assistant-request]", row.slug, err.message);
+      const now = new Date();
+      await db.insert(callLog).values({
+        ...call,
+        status: "failed",
+        endedReason: "missing-provider-keys",
+        summary: err.message,
+        endedAt: now,
+        durationSeconds: 0,
+      });
+      return c.json({ error: err.message }, 422);
+    }
+
+    const [started] = await db
       .insert(callLog)
-      .values({
-        organizationId: row.organizationId,
-        agentId: row.id,
-        roomName: message.call.roomName,
-        type: message.call.type,
-        customerNumber: message.customer?.number ?? null,
-      })
+      .values(call)
       .returning({ id: callLog.id });
 
-    return c.json({
-      call: { id: call.id },
-      assistant: await workerConfig(row),
-    });
+    return c.json({ call: { id: started.id }, assistant });
   })
 
   /** The LLM asked for one or more tools. Results go back to the LLM. */
@@ -126,7 +146,7 @@ async function postProcess(
 
   let analysis: Awaited<ReturnType<typeof analyzeCall>> = null;
   try {
-    analysis = await analyzeCall(report.transcript, config.analysisPlan);
+    analysis = await analyzeCall(report.transcript, config, row.organizationId);
     if (analysis) {
       await db.update(callLog).set(analysis).where(eq(callLog.id, callId));
     }

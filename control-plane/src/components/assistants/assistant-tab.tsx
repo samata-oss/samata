@@ -7,21 +7,38 @@ import type {
   Draft,
   UpdateConfig,
 } from "@/components/assistants/types";
+import {
+  MissingKeyNotice,
+  ProviderSelect,
+} from "@/components/assistants/provider-select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { fmtDuration, fmtMs, mean } from "@/lib/format";
 import { STACKED_STAGES as STAGES, stageValue } from "@/lib/latency-stages";
+import {
+  type KeyProvider,
+  LLM_PRESETS,
+  LLM_PROVIDERS,
+  STT_PRESETS,
+  STT_PROVIDERS,
+  TTS_PRESETS,
+  TTS_PROVIDERS,
+} from "@/lib/providers";
 
 export function AssistantTab({
   draft,
   updateConfig,
   calls,
+  configuredKeys,
 }: {
   draft: Draft;
   updateConfig: UpdateConfig;
   calls: AssistantCall[];
+  /** Providers this workspace has a key for. */
+  configuredKeys: ReadonlySet<KeyProvider>;
 }) {
   const { config } = draft;
+  const voice = TTS_PRESETS[config.voice.provider];
   const latency = Object.fromEntries(
     STAGES.map((s) => [
       s.key,
@@ -89,13 +106,39 @@ export function AssistantTab({
         <ProviderCard
           icon={<MicIcon className="size-3.5" />}
           label="Transcriber"
-          provider="Deepgram"
+          provider={STT_PRESETS[config.transcriber.provider].label}
           measured={fmtMs(transcription)}
           measuredLabel="Transcription delay"
         >
+          <Field label="Provider" htmlFor="stt-provider">
+            <ProviderSelect
+              id="stt-provider"
+              value={config.transcriber.provider}
+              options={STT_PROVIDERS}
+              configured={configuredKeys}
+              onChange={(provider) =>
+                updateConfig((c) => ({
+                  ...c,
+                  transcriber: {
+                    ...c.transcriber,
+                    provider,
+                    model: STT_PRESETS[provider].model,
+                    language: STT_PRESETS[provider].language,
+                  },
+                }))
+              }
+            />
+            <MissingKeyNotice
+              provider={config.transcriber.provider}
+              configured={configuredKeys}
+            />
+          </Field>
           <Field label="Model" htmlFor="stt-model">
             <Input
               id="stt-model"
+              placeholder={
+                STT_PRESETS[config.transcriber.provider].modelPlaceholder
+              }
               value={config.transcriber.model}
               onChange={(e) =>
                 updateConfig((c) => ({
@@ -144,13 +187,47 @@ export function AssistantTab({
         <ProviderCard
           icon={<BrainIcon className="size-3.5" />}
           label="Model"
-          provider="OpenAI-compatible"
+          provider={LLM_PRESETS[config.model.provider].label}
           measured={fmtMs(latency.llmTtftAvg)}
           measuredLabel="Time to first token"
         >
+          <Field
+            label="Provider"
+            htmlFor="llm-provider"
+            hint={
+              config.model.provider === "openrouter" ||
+              config.model.provider === "vercel-ai-gateway"
+                ? "A gateway: one key for many models. Name models as vendor/model."
+                : undefined
+            }
+          >
+            <ProviderSelect
+              id="llm-provider"
+              value={config.model.provider}
+              options={LLM_PROVIDERS}
+              configured={configuredKeys}
+              onChange={(provider) =>
+                updateConfig((c) => ({
+                  ...c,
+                  model: {
+                    ...c.model,
+                    provider,
+                    model: LLM_PRESETS[provider].model,
+                    baseUrl:
+                      provider === "custom" ? c.model.baseUrl : undefined,
+                  },
+                }))
+              }
+            />
+            <MissingKeyNotice
+              provider={config.model.provider}
+              configured={configuredKeys}
+            />
+          </Field>
           <Field label="Model" htmlFor="llm-model">
             <Input
               id="llm-model"
+              placeholder={LLM_PRESETS[config.model.provider].modelPlaceholder}
               value={config.model.model}
               onChange={(e) =>
                 updateConfig((c) => ({
@@ -160,6 +237,25 @@ export function AssistantTab({
               }
             />
           </Field>
+          {config.model.provider === "custom" && (
+            <Field
+              label="Base URL"
+              htmlFor="llm-base-url"
+              hint="Any OpenAI-compatible endpoint: vLLM, Together, your own proxy."
+            >
+              <Input
+                id="llm-base-url"
+                placeholder="https://example.com/v1"
+                value={config.model.baseUrl ?? ""}
+                onChange={(e) =>
+                  updateConfig((c) => ({
+                    ...c,
+                    model: { ...c.model, baseUrl: e.target.value || undefined },
+                  }))
+                }
+              />
+            </Field>
+          )}
           <Field label="Temperature" htmlFor="llm-temperature">
             <NumberField
               id="llm-temperature"
@@ -176,48 +272,46 @@ export function AssistantTab({
               }
             />
           </Field>
-          <Field
-            label="Base URL"
-            htmlFor="llm-base-url"
-            hint="Groq, Together, vLLM… any OpenAI-compatible endpoint."
-          >
-            <Input
-              id="llm-base-url"
-              placeholder="https://api.openai.com/v1"
-              value={config.model.baseUrl ?? ""}
-              onChange={(e) =>
-                updateConfig((c) => ({
-                  ...c,
-                  model: { ...c.model, baseUrl: e.target.value || undefined },
-                }))
-              }
-            />
-          </Field>
         </ProviderCard>
 
         <ProviderCard
           icon={<AudioLinesIcon className="size-3.5" />}
           label="Voice"
-          provider="Cartesia"
+          provider={TTS_PRESETS[config.voice.provider].label}
           measured={fmtMs(latency.ttsTtfbAvg)}
           measuredLabel="Time to first byte"
         >
-          <Field label="Voice ID" htmlFor="tts-voice">
-            <Input
-              id="tts-voice"
-              className="font-mono text-xs"
-              value={config.voice.voiceId}
-              onChange={(e) =>
+          <Field label="Provider" htmlFor="tts-provider">
+            <ProviderSelect
+              id="tts-provider"
+              value={config.voice.provider}
+              options={TTS_PROVIDERS}
+              configured={configuredKeys}
+              onChange={(provider) => {
+                const preset = TTS_PRESETS[provider];
                 updateConfig((c) => ({
                   ...c,
-                  voice: { ...c.voice, voiceId: e.target.value },
-                }))
-              }
+                  voice: {
+                    ...c.voice,
+                    provider,
+                    model: preset.model,
+                    voiceId: preset.voiceId,
+                    language: preset.language,
+                    // Speed ranges differ per provider; start from its default.
+                    speed: undefined,
+                  },
+                }));
+              }}
+            />
+            <MissingKeyNotice
+              provider={config.voice.provider}
+              configured={configuredKeys}
             />
           </Field>
           <Field label="Model" htmlFor="tts-model">
             <Input
               id="tts-model"
+              placeholder={TTS_PRESETS[config.voice.provider].modelPlaceholder}
               value={config.voice.model}
               onChange={(e) =>
                 updateConfig((c) => ({
@@ -227,35 +321,58 @@ export function AssistantTab({
               }
             />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Language" htmlFor="tts-language">
+          {voice.voiceLabel ? (
+            <Field label={voice.voiceLabel} htmlFor="tts-voice">
               <Input
-                id="tts-language"
-                value={config.voice.language}
+                id="tts-voice"
+                className="font-mono text-xs"
+                value={config.voice.voiceId}
                 onChange={(e) =>
                   updateConfig((c) => ({
                     ...c,
-                    voice: { ...c.voice, language: e.target.value },
+                    voice: { ...c.voice, voiceId: e.target.value },
                   }))
                 }
               />
             </Field>
-            <Field label="Speed" htmlFor="tts-speed">
-              <NumberField
-                id="tts-speed"
-                min={0.5}
-                max={2}
-                step={0.1}
-                placeholder="1.0"
-                value={config.voice.speed}
-                onChange={(speed) =>
-                  updateConfig((c) => ({
-                    ...c,
-                    voice: { ...c.voice, speed },
-                  }))
-                }
-              />
-            </Field>
+          ) : (
+            voice.voiceHint && (
+              <p className="text-xs text-muted-foreground">{voice.voiceHint}</p>
+            )
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            {voice.hasLanguage && (
+              <Field label="Language" htmlFor="tts-language">
+                <Input
+                  id="tts-language"
+                  value={config.voice.language}
+                  onChange={(e) =>
+                    updateConfig((c) => ({
+                      ...c,
+                      voice: { ...c.voice, language: e.target.value },
+                    }))
+                  }
+                />
+              </Field>
+            )}
+            {voice.speed && (
+              <Field label="Speed" htmlFor="tts-speed">
+                <NumberField
+                  id="tts-speed"
+                  min={voice.speed.min}
+                  max={voice.speed.max}
+                  step={0.1}
+                  placeholder="1.0"
+                  value={config.voice.speed}
+                  onChange={(speed) =>
+                    updateConfig((c) => ({
+                      ...c,
+                      voice: { ...c.voice, speed },
+                    }))
+                  }
+                />
+              </Field>
+            )}
           </div>
         </ProviderCard>
       </div>

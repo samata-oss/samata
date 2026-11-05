@@ -1,4 +1,9 @@
 import type { AgentConfig } from "@/lib/agent-config";
+import { LLM_PRESETS } from "@/lib/providers";
+import {
+  type LlmCredentials,
+  resolveLlmCredentials,
+} from "@/server/provider-keys";
 
 const DEFAULT_SUMMARY_PROMPT =
   "Summarize this phone call in 2-3 sentences: who called, what they wanted, and the outcome.";
@@ -9,24 +14,40 @@ export type Analysis = {
 };
 
 /**
- * Post-call analysis over any OpenAI-compatible chat completions endpoint.
- * Returns null when no API key is configured (analysis is optional).
+ * Post-call analysis over the assistant's own LLM: the same provider, endpoint
+ * and workspace key as its calls (any OpenAI-compatible chat completions API).
+ * The model is `analysisPlan.model`, else `SAMATA_ANALYSIS_MODEL`, else the
+ * provider's default (a small, cheap one, not the possibly large model the
+ * assistant talks with; a custom endpoint has no default, so it uses the
+ * assistant's). Returns null when the call had no transcript. Throws
+ * `MissingKeysError` if the assistant's LLM key has since been removed.
  */
 export async function analyzeCall(
   transcript: string,
-  plan: AgentConfig["analysisPlan"],
+  config: AgentConfig,
+  organizationId: string,
 ): Promise<Analysis | null> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey || !transcript.trim()) return null;
+  if (!transcript.trim()) return null;
+
+  const { analysisPlan: plan } = config;
+  const llm = await resolveLlmCredentials(organizationId, config.model);
+  // `||`, not `??`: compose passes an unset SAMATA_ANALYSIS_MODEL as "".
+  const model =
+    plan.model ||
+    process.env.SAMATA_ANALYSIS_MODEL ||
+    (config.model.provider === "custom"
+      ? config.model.model
+      : LLM_PRESETS[config.model.provider].model);
 
   const [summary, structuredData] = await Promise.all([
-    complete(apiKey, [
+    complete(llm, model, [
       { role: "system", content: plan.summaryPrompt ?? DEFAULT_SUMMARY_PROMPT },
       { role: "user", content: transcript },
     ]),
     plan.structuredDataSchema
       ? complete(
-          apiKey,
+          llm,
+          model,
           [
             {
               role: "system",
@@ -43,19 +64,20 @@ export async function analyzeCall(
 }
 
 async function complete(
-  apiKey: string,
+  llm: LlmCredentials,
+  model: string,
   messages: { role: string; content: string }[],
   schema?: Record<string, unknown>,
 ): Promise<string | null> {
-  const base = process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1";
+  const base = (llm.baseUrl ?? "https://api.openai.com/v1").replace(/\/+$/, "");
   const res = await fetch(`${base}/chat/completions`, {
     method: "POST",
     headers: {
-      authorization: `Bearer ${apiKey}`,
+      ...(llm.apiKey && { authorization: `Bearer ${llm.apiKey}` }),
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: process.env.SAMATA_ANALYSIS_MODEL ?? "gpt-4.1-mini",
+      model,
       messages,
       ...(schema && {
         response_format: {

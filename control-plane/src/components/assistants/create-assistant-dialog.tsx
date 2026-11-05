@@ -57,7 +57,8 @@ export function CreateAssistantDialog() {
             <DialogTitle>Create assistant</DialogTitle>
             <DialogDescription>
               Starts with the default Deepgram → OpenAI → Cartesia pipeline. You
-              can change everything afterwards.
+              can switch any of them afterwards. Calls use the keys on the
+              Provider Keys page.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">

@@ -17,8 +17,9 @@ Samata keeps real-time media separate from agent logic:
 
 - **LiveKit Server** carries the audio (WebRTC and SIP) and dispatches rooms to workers.
 - **The worker** (`/worker`) stores nothing about any agent. For each call it asks
-  the control plane for the agent's config, builds the Deepgram → OpenAI → Cartesia
-  pipeline from it, and reports back when the call ends.
+  the control plane for the agent's config and the workspace's provider keys,
+  builds the speech-to-text → LLM → text-to-speech pipeline from them, and
+  reports back when the call ends.
 - **The control plane** (`/control-plane`, Next.js + Hono + Drizzle) stores agent
   configs and call logs, runs tools, and does post-call analysis.
 
@@ -40,13 +41,17 @@ for two hostnames pointing at it:
 mkdir samata && cd samata
 curl -O https://raw.githubusercontent.com/<org>/samata/main/deploy/docker-compose.yml
 curl -o .env https://raw.githubusercontent.com/<org>/samata/main/deploy/.env.example
-$EDITOR .env            # domains, secrets, provider keys
+$EDITOR .env            # domains and secrets
 docker compose up -d
 ```
 
 This starts Caddy (automatic TLS), the control plane, the worker, LiveKit,
 Redis, Postgres and the SIP server for phone calls (open 5060/tcp+udp and
 10000-10100/udp too). Add `--scale worker=N` for more concurrent calls.
+
+Model provider keys (OpenAI, Deepgram, ...) are not in `.env`: sign in and add
+them on the dashboard's **Provider Keys** page (see
+[Bring your own models](#bring-your-own-models)).
 
 Your own logic doesn't go in this repo. Agents are JSON you send to the API,
 and your tools and post-call handling run on your own servers, which Samata
@@ -77,7 +82,8 @@ pnpm dev                                    # http://localhost:3000
 # 3. Try the webhook lifecycle without any audio
 pnpm simulate:call
 
-# 4. Worker (add your OPENAI / DEEPGRAM / CARTESIA keys to worker/.env)
+# 4. Worker (provider keys come from the control plane: add them on the
+#    dashboard's Provider Keys page, not in worker/.env)
 cd worker
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env
@@ -117,11 +123,53 @@ block), modeled on Vapi's:
 | Logs               | Every call, with transcript, summary, structured data and latency.                                            |
 | Structured Outputs | Data extracted by each assistant's analysis plan.                                                             |
 | Metrics            | Call volume and the latency breakdown (end of turn, STT, LLM, TTS).                                           |
-| API Keys           | Which keys are configured, and the management API and webhook endpoints.                                      |
+| Provider Keys      | Your keys for OpenAI, Deepgram, Cartesia, OpenRouter, ... Stored encrypted, never shown again.                |
+| API Keys           | Keys for the management API, which settings are configured, and the API and webhook endpoints.                |
 | Team               | Who is in the workspace. Invite people, remove them.                                                          |
 
 Webhook secrets stored on an agent are never sent to the browser; leave a secret
 field empty to keep the stored value.
+
+### Bring your own models
+
+Each assistant picks its own transcriber, model and voice, and calls use **your
+workspace's key** for whichever it chose. Add keys on **Provider Keys** (owners
+and admins only). They are encrypted at rest (`SAMATA_ENCRYPTION_KEY`, falling
+back to `BETTER_AUTH_SECRET`), shown only as their last four characters, and
+sent to the worker only when it takes a call. The workers need no provider
+keys of their own. A call whose assistant uses a provider you haven't added a
+key for is refused up front, with the reason in Logs and in the Test tab.
+
+| Layer       | Providers                                                                                  |
+| ----------- | ------------------------------------------------------------------------------------------ |
+| Model       | OpenAI, [OpenRouter](https://openrouter.ai), Vercel AI Gateway, Groq, or any custom OpenAI-compatible endpoint |
+| Transcriber | Deepgram, AssemblyAI, ElevenLabs, OpenAI                                                   |
+| Voice       | Cartesia, ElevenLabs, Deepgram, OpenAI                                                     |
+
+One OpenAI key covers all three layers. For the model, OpenRouter and Vercel AI
+Gateway give one key for many vendors' models (name them `vendor/model`, like
+`anthropic/claude-sonnet-4.5`); call a provider directly when latency matters
+most. Speech has no equivalent gateway, so each speech provider needs its own key.
+
+In an assistant's config, set `provider` (and the provider's own `model` /
+`voiceId`) on `model`, `transcriber` and `voice`. Omitted fields take that
+provider's defaults. Keys are never part of the config:
+
+```json
+"model": { "provider": "openrouter", "model": "anthropic/claude-sonnet-4.5", "systemPrompt": "..." },
+"transcriber": { "provider": "assemblyai" },
+"voice": { "provider": "elevenlabs", "voiceId": "hpp4J3VqNfWAUOO0d1Us" }
+```
+
+`provider: "custom"` takes a `baseUrl` and an optional key. Post-call analysis
+runs on the assistant's model provider with the same key, using the provider's
+small default model unless `analysisPlan.model` says otherwise.
+
+**Upgrading:** the worker and control plane no longer read `OPENAI_API_KEY`,
+`DEEPGRAM_API_KEY` or `CARTESIA_API_KEY`. Add those keys on Provider Keys, then
+remove them from your env. An assistant that pointed `openai` at another host
+with `baseUrl` is now `custom` (its OpenAI key was never meant for that host);
+switch it to the provider's own entry if there is one.
 
 ### Accounts and workspaces
 
@@ -130,8 +178,8 @@ built on [Better Auth](https://better-auth.com).
 
 - **The first account becomes the owner.** Sign up as soon as you deploy,
   because whoever gets there first owns the install.
-- **After that, sign-up is invitation-only.** Samata spends your Deepgram,
-  OpenAI and Cartesia keys on every call, so open registration would let anyone
+- **After that, sign-up is invitation-only.** Samata spends your workspace's
+  provider keys on every call, so open registration would let anyone
   on the internet run up your bill. Invite people from **Team**. Samata doesn't
   send email, so creating an invitation gives you a link to share; the link is
   what lets them create their account.

@@ -29,10 +29,3 @@ export function mean(values: (number | null | undefined)[]) {
   const nums = values.filter((v): v is number => typeof v === "number");
   return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
 }
-
-/** Fixed list of providers, for the "Deepgram · OpenAI · Cartesia" subtitles. */
-export const PROVIDER_LABEL = {
-  deepgram: "Deepgram",
-  openai: "OpenAI",
-  cartesia: "Cartesia",
-} as const;

@@ -35,10 +35,11 @@ from livekit.agents import (
     function_tool,
 )
 from livekit.agents.beta.tools import EndCallTool
-from livekit.plugins import cartesia, deepgram, openai, silero
+from livekit.plugins import silero
 
 from samata_worker.config import AssistantConfig, ToolConfig, VadConfig
 from samata_worker.control_plane import AssistantRejected, ControlPlane
+from samata_worker.providers import ProviderError, build_llm, build_stt, build_tts
 from samata_worker.report import ENDED_REASONS, build_report
 
 load_dotenv()
@@ -118,28 +119,12 @@ class SamataAgent(Agent):
 
 
 def _build_session(ctx: JobContext, config: AssistantConfig) -> AgentSession:
-    m, v, t, i, e, p = (
-        config.model,
-        config.voice,
-        config.transcriber,
-        config.interruption,
-        config.endpointing,
-        config.preemptive_generation,
-    )
-    llm_kwargs: dict[str, Any] = {"model": m.model}
-    if m.temperature is not None:
-        llm_kwargs["temperature"] = m.temperature
-    if m.base_url:
-        llm_kwargs["base_url"] = m.base_url
-
-    stt_kwargs: dict[str, Any] = {"model": t.model, "language": t.language}
-    if t.keyterms:
-        stt_kwargs["keyterm"] = list(t.keyterms)
+    i, e, p = config.interruption, config.endpointing, config.preemptive_generation
 
     return AgentSession(
-        stt=deepgram.STT(**stt_kwargs),
-        llm=openai.LLM(**llm_kwargs),
-        tts=cartesia.TTS(model=v.model, voice=v.voice_id, language=v.language, speed=v.speed),
+        stt=build_stt(config.transcriber),
+        llm=build_llm(config.model),
+        tts=build_tts(config.voice),
         vad=_vad_for(ctx, config.vad),
         # Barge-in: the caller talking over the agent cuts it off. Brief
         # noises (< min_duration) are ignored, and if a "false" interruption
@@ -202,7 +187,33 @@ async def entrypoint(ctx: JobContext) -> None:
     if config.end_call_enabled:
         tools.append(EndCallTool(delete_room=True))
 
-    session = _build_session(ctx, config)
+    try:
+        session = _build_session(ctx, config)
+    except Exception as err:
+        # A provider we can't build (unknown id, key rejected by the plugin).
+        # Don't leave the caller in dead air and the call "in progress".
+        if isinstance(err, ProviderError):
+            logger.error("call %s cannot start: %s", call_id, err)
+        else:
+            logger.exception("call %s cannot start", call_id)
+        try:
+            await cp.end_of_call_report(
+                {
+                    "type": "end-of-call-report",
+                    "call": {"id": call_id},
+                    "endedReason": "error",
+                    "startedAt": started_at,
+                    "endedAt": time.time(),
+                }
+            )
+        except Exception:
+            logger.exception("failed to report failed call %s", call_id)
+        finally:
+            await http.close()
+            await ctx.delete_room()
+            ctx.shutdown(reason="provider-config-error")
+        return
+
     ended_reason: str | None = None
 
     @session.on("close")

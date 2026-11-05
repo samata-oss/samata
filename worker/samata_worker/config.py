@@ -11,27 +11,39 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+# `api_key` is the workspace's key for the provider, sent by the control plane
+# with each assistant-request. It is hidden from repr so it can't leak into
+# logs that print a config.
+
+
 @dataclass(frozen=True)
 class ModelConfig:
     system_prompt: str
+    provider: str = "openai"
     model: str = "gpt-4.1-mini"
     temperature: float | None = None
+    # The provider's OpenAI-compatible endpoint (None: the SDK default).
     base_url: str | None = None
+    api_key: str | None = field(default=None, repr=False)
 
 
 @dataclass(frozen=True)
 class VoiceConfig:
+    provider: str = "cartesia"
     voice_id: str = "f786b574-daa5-4673-aa0c-cbe3e8534c02"
     model: str = "sonic-3"
     language: str = "en"
     speed: float | None = None
+    api_key: str | None = field(default=None, repr=False)
 
 
 @dataclass(frozen=True)
 class TranscriberConfig:
+    provider: str = "deepgram"
     model: str = "nova-3"
     language: str = "en-US"
     keyterms: tuple[str, ...] = ()
+    api_key: str | None = field(default=None, repr=False)
 
 
 @dataclass(frozen=True)
@@ -102,20 +114,26 @@ class AssistantConfig:
             first_message=d.get("firstMessage"),
             model=ModelConfig(
                 system_prompt=m.get("systemPrompt", "You are a helpful voice assistant."),
+                provider=m.get("provider", ModelConfig.provider),
                 model=m.get("model", ModelConfig.model),
                 temperature=m.get("temperature"),
                 base_url=m.get("baseUrl"),
+                api_key=m.get("apiKey"),
             ),
             voice=VoiceConfig(
+                provider=v.get("provider", VoiceConfig.provider),
                 voice_id=v.get("voiceId", VoiceConfig.voice_id),
                 model=v.get("model", VoiceConfig.model),
                 language=v.get("language", VoiceConfig.language),
                 speed=v.get("speed"),
+                api_key=v.get("apiKey"),
             ),
             transcriber=TranscriberConfig(
+                provider=t.get("provider", TranscriberConfig.provider),
                 model=t.get("model", TranscriberConfig.model),
                 language=t.get("language", TranscriberConfig.language),
                 keyterms=tuple(t.get("keyterms") or ()),
+                api_key=t.get("apiKey"),
             ),
             vad=VadConfig(
                 activation_threshold=vad.get("activationThreshold", VadConfig.activation_threshold),

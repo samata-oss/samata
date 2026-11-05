@@ -312,8 +312,27 @@ export function AdvancedTab({
 
       <Section
         title="Analysis plan"
-        description="Runs after each call. Needs OPENAI_API_KEY on the control plane."
+        description="Runs after each call on this assistant's model provider, with your key for it."
       >
+        <Field
+          label="Model"
+          htmlFor="analysis-model"
+          hint="Leave empty for the provider's small default model. The assistant's own model may be larger than you need for summaries."
+        >
+          <Input
+            id="analysis-model"
+            value={config.analysisPlan.model ?? ""}
+            onChange={(e) =>
+              updateConfig((c) => ({
+                ...c,
+                analysisPlan: {
+                  ...c.analysisPlan,
+                  model: e.target.value || undefined,
+                },
+              }))
+            }
+          />
+        </Field>
         <Field
           label="Summary prompt"
           htmlFor="summary-prompt"

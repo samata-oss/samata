@@ -1,5 +1,6 @@
 import { CheckCircle2Icon, CircleAlertIcon } from "lucide-react";
 import { headers } from "next/headers";
+import Link from "next/link";
 import { desc, eq } from "drizzle-orm";
 import { ApiKeysManager } from "@/components/api-keys-manager";
 import { PageShell } from "@/components/page-shell";
@@ -136,12 +137,14 @@ export default async function ApiKeysPage() {
             Mint browser test tokens
           </span>
         </Status>
-        <Status ok={Boolean(process.env.OPENAI_API_KEY)}>
-          <code>OPENAI_API_KEY</code>
-          <span className="text-muted-foreground">
-            Post-call summaries and structured data (optional)
-          </span>
-        </Status>
+        <p className="text-xs text-muted-foreground">
+          Model provider keys (OpenAI, Deepgram, Cartesia, …) are not configured
+          here: add them per workspace on{" "}
+          <Link href="/provider-keys" className="underline">
+            Provider Keys
+          </Link>
+          .
+        </p>
       </section>
 
       <section className="space-y-3">

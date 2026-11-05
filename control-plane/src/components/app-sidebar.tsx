@@ -3,6 +3,7 @@ import {
   BarChart3Icon,
   BracesIcon,
   BotIcon,
+  CpuIcon,
   KeyRoundIcon,
   PhoneIcon,
   RadioIcon,
@@ -68,7 +69,14 @@ export function AppSidebar({
     },
     {
       label: "Integrations",
-      items: [{ title: "API Keys", url: "/api-keys", icon: <KeyRoundIcon /> }],
+      items: [
+        {
+          title: "Provider Keys",
+          url: "/provider-keys",
+          icon: <CpuIcon />,
+        },
+        { title: "API Keys", url: "/api-keys", icon: <KeyRoundIcon /> },
+      ],
     },
     {
       label: "Workspace",

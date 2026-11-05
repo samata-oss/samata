@@ -6,12 +6,14 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   real,
   text,
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { AgentConfig } from "@/lib/agent-config";
+import type { KeyProvider } from "@/lib/providers";
 import { organization } from "./auth-schema";
 
 // Better Auth's tables (user, session, organization, member, ...). The
@@ -141,6 +143,32 @@ export const apiKey = pgTable(
     lastUsedAt: timestamp("last_used_at"),
   },
   (table) => [index("api_key_organization_idx").on(table.organizationId)],
+);
+
+/**
+ * A workspace's key for a model provider (OpenAI, Deepgram, OpenRouter, ...),
+ * bring-your-own-key style. One per provider: an assistant uses the key of
+ * whichever providers it is set to. The key is encrypted (`server/secrets.ts`)
+ * and only ever leaves the server inside the assistant-request response to the
+ * worker; the dashboard sees `hint` (its last characters) and nothing more.
+ */
+export const providerKey = pgTable(
+  "provider_key",
+  {
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    provider: text("provider").$type<KeyProvider>().notNull(),
+    encryptedKey: text("encrypted_key").notNull(),
+    /** The key's last characters, so it can be recognised in a list. */
+    hint: text("hint").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.organizationId, table.provider] })],
 );
 
 export const PHONE_PROVIDERS = ["telnyx"] as const;

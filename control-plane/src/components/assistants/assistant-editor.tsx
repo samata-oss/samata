@@ -2,7 +2,7 @@
 
 import { CheckIcon, CopyIcon, MicIcon, SaveIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { updateAgentAction } from "@/app/actions";
 import { AdvancedTab } from "@/components/assistants/advanced-tab";
@@ -21,6 +21,7 @@ import type {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { KeyProvider } from "@/lib/providers";
 import type { EditorAgent } from "@/server/agents";
 
 const TABS = [
@@ -55,12 +56,16 @@ export function AssistantEditor({
   agent,
   calls,
   libraryTools,
+  configuredKeys,
 }: {
   agent: EditorAgent;
   calls: AssistantCall[];
   libraryTools: LibraryToolOption[];
+  /** Providers the workspace has a key for. */
+  configuredKeys: KeyProvider[];
 }) {
   const router = useRouter();
+  const keys = useMemo(() => new Set(configuredKeys), [configuredKeys]);
   const [draft, setDraft] = useState<Draft>(() => toDraft(agent));
   const [saved, setSaved] = useState(() => JSON.stringify(toDraft(agent)));
   const searchParams = useSearchParams();
@@ -184,6 +189,7 @@ export function AssistantEditor({
             draft={draft}
             updateConfig={updateConfig}
             calls={calls}
+            configuredKeys={keys}
           />
         </TabsContent>
         <TabsContent value="logs">

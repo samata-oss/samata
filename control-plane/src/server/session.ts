@@ -6,7 +6,9 @@ import {
 } from "livekit-server-sdk";
 import { db } from "@/db";
 import { agent } from "@/db/schema";
+import { agentConfigSchema } from "@/lib/agent-config";
 import { inWorkspace } from "@/server/agents";
+import { MissingKeysError, resolveCredentials } from "@/server/provider-keys";
 
 /** Must match AGENT_NAME in the worker. */
 export const WORKER_AGENT_NAME =
@@ -27,7 +29,7 @@ export type StartedSession = {
 
 export class SessionError extends Error {
   constructor(
-    readonly status: 404 | 500 | 502,
+    readonly status: 404 | 422 | 500 | 502,
     message: string,
   ) {
     super(message);
@@ -67,10 +69,23 @@ export async function startSession(
   organizationId: string,
 ): Promise<StartedSession> {
   const [row] = await db
-    .select({ id: agent.id })
+    .select({ id: agent.id, config: agent.config })
     .from(agent)
     .where(inWorkspace(organizationId, assistantRef));
   if (!row) throw new SessionError(404, "Assistant not found.");
+
+  // Fail here, where the person testing sees why, rather than after the
+  // worker joins and finds it can't authenticate with a provider.
+  try {
+    await resolveCredentials(
+      organizationId,
+      agentConfigSchema.parse(row.config),
+    );
+  } catch (err) {
+    if (err instanceof MissingKeysError)
+      throw new SessionError(422, err.message);
+    throw err;
+  }
 
   const { url, key, secret } = livekit();
   const roomName = `call_${randomUUID().replaceAll("-", "").slice(0, 12)}`;

@@ -1,6 +1,8 @@
 livekit-agents==1.8.10
 livekit-plugins-openai==1.8.10
 livekit-plugins-deepgram==1.8.10
+livekit-plugins-assemblyai==1.8.10
+livekit-plugins-elevenlabs==1.8.10
 livekit-plugins-cartesia==1.8.10
 livekit-plugins-silero==1.8.10
 aiohttp==3.14.5

@@ -47,7 +47,8 @@ services:
       # Optional. Create API keys on the dashboard's API Keys page instead;
       # this one acts on the default workspace only.
       SAMATA_API_KEY: ${SAMATA_API_KEY:-}
-      # Signs dashboard sessions. Changing it signs everyone out.
+      # Signs dashboard sessions. Changing it signs everyone out (and, unless
+      # SAMATA_ENCRYPTION_KEY is set, makes stored provider keys unreadable).
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET}
       # Invitation links and cookies are built from this.
       BETTER_AUTH_URL: https://${SAMATA_DOMAIN}
@@ -58,8 +59,9 @@ services:
       LIVEKIT_URL: ${LIVEKIT_PUBLIC_URL:-wss://${LIVEKIT_DOMAIN}}
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:?set LIVEKIT_API_KEY}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?set LIVEKIT_API_SECRET}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      SAMATA_ANALYSIS_MODEL: ${SAMATA_ANALYSIS_MODEL:-gpt-4.1-mini}
+      # Encrypts provider keys stored in the dashboard (empty: BETTER_AUTH_SECRET).
+      SAMATA_ENCRYPTION_KEY: ${SAMATA_ENCRYPTION_KEY:-}
+      SAMATA_ANALYSIS_MODEL: ${SAMATA_ANALYSIS_MODEL:-}
       # Where phone providers send calls: this server's SIP port (5060). Any
       # hostname/IP that reaches this machine works; LIVEKIT_DOMAIN already does.
       SAMATA_SIP_HOST: ${SAMATA_SIP_HOST:-${LIVEKIT_DOMAIN}}
@@ -80,9 +82,8 @@ services:
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
       SAMATA_CONTROL_PLANE_URL: http://control-plane:3000
       SAMATA_WEBHOOK_SECRET: ${SAMATA_WEBHOOK_SECRET}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:?set OPENAI_API_KEY}
-      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:?set DEEPGRAM_API_KEY}
-      CARTESIA_API_KEY: ${CARTESIA_API_KEY:?set CARTESIA_API_KEY}
+      # No model provider keys: the control plane sends the workspace's keys
+      # with each call (dashboard -> Provider Keys).
 
   livekit:
     image: livekit/livekit-server:v1.13

@@ -13,10 +13,12 @@ import {
   toolServer,
 } from "@/db/schema";
 import { agentConfigSchema } from "@/lib/agent-config";
+import { isKeyProvider, KEY_PROVIDERS } from "@/lib/providers";
 import { canManageTeam } from "@/lib/workspace";
 import { isUniqueViolation, restoreSecrets, uniqueSlug } from "@/server/agents";
 import { createApiKey } from "@/server/api-keys";
 import { connectNumber, disconnectNumber } from "@/server/numbers";
+import { deleteProviderKey, saveProviderKey } from "@/server/provider-keys";
 import { encryptSecret } from "@/server/secrets";
 import { lookupTelnyxNumber } from "@/server/telnyx";
 import { requireWorkspaceSession } from "@/server/workspace";
@@ -344,6 +346,49 @@ export async function deleteToolAction(id: string): Promise<ActionResult> {
     .where(and(eq(tool.id, id), eq(tool.organizationId, organizationId)))
     .returning({ id: tool.id });
   if (!rows.length) return { ok: false, error: "Tool not found." };
+  refresh();
+  return { ok: true };
+}
+
+const providerKeySchema = z.object({
+  provider: z.enum(KEY_PROVIDERS),
+  // Forgive a pasted trailing newline or space; keys never contain either.
+  key: z.string().trim().min(1, "Enter the API key.").max(1000),
+});
+
+const PROVIDER_KEYS_NOT_ALLOWED =
+  "Only workspace owners and admins can manage provider keys.";
+
+/**
+ * Store a provider key for the workspace, replacing any existing one. The key
+ * is encrypted and can't be read back: the dashboard only ever shows its last
+ * characters.
+ */
+export async function saveProviderKeyAction(
+  input: z.input<typeof providerKeySchema>,
+): Promise<ActionResult> {
+  const { organizationId, role } = await requireWorkspaceSession();
+  if (!canManageTeam(role))
+    return { ok: false, error: PROVIDER_KEYS_NOT_ALLOWED };
+  const parsed = providerKeySchema.safeParse(input);
+  if (!parsed.success)
+    return { ok: false, error: parsed.error.issues[0].message };
+  await saveProviderKey(organizationId, parsed.data.provider, parsed.data.key);
+  refresh();
+  return { ok: true };
+}
+
+/** Remove a provider key. Assistants using that provider can't take calls. */
+export async function removeProviderKeyAction(
+  provider: string,
+): Promise<ActionResult> {
+  const { organizationId, role } = await requireWorkspaceSession();
+  if (!canManageTeam(role))
+    return { ok: false, error: PROVIDER_KEYS_NOT_ALLOWED };
+  if (!isKeyProvider(provider))
+    return { ok: false, error: "Unknown provider." };
+  if (!(await deleteProviderKey(organizationId, provider)))
+    return { ok: false, error: "No key is stored for that provider." };
   refresh();
   return { ok: true };
 }

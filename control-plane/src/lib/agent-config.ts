@@ -1,4 +1,12 @@
 import { z } from "zod";
+import {
+  LLM_PRESETS,
+  LLM_PROVIDERS,
+  STT_PRESETS,
+  STT_PROVIDERS,
+  TTS_PRESETS,
+  TTS_PROVIDERS,
+} from "@/lib/providers";
 
 /**
  * The declarative agent config: everything the stateless worker needs to run
@@ -41,33 +49,85 @@ export const agentConfigSchema = z.object({
   /** Spoken as soon as the caller joins. Omit to wait for the caller. */
   firstMessage: z.string().optional(),
 
+  /**
+   * The LLM. Every provider speaks the OpenAI chat API, so gateways
+   * (OpenRouter, Vercel AI Gateway) and self-hosted servers work alongside
+   * OpenAI itself. The API key is the workspace's key for `provider`
+   * (Provider Keys page), never part of this config. Omitted `model` takes
+   * the provider's default.
+   */
   model: z
     .object({
-      provider: z.literal("openai").default("openai"),
-      model: z.string().default("gpt-4.1-mini"),
+      provider: z.enum(LLM_PROVIDERS).default("openai"),
+      model: z.string().min(1).optional(),
       systemPrompt: z.string().min(1),
       temperature: z.number().min(0).max(2).optional(),
-      /** Any OpenAI-compatible endpoint (Groq, Together, vLLM, ...). */
+      /** Only used by `custom`: hosted providers have a fixed endpoint. */
       baseUrl: z.url().optional(),
+    })
+    .refine((m) => m.provider !== "custom" || m.baseUrl, {
+      message: "A custom endpoint needs a base URL.",
+      path: ["baseUrl"],
+    })
+    .transform((m) => {
+      // Configs saved before providers existed pointed `openai` at another
+      // OpenAI-compatible host through `baseUrl`. Treat those as `custom`
+      // rather than send an OpenAI key to a third party.
+      const provider =
+        m.provider === "openai" &&
+        m.baseUrl &&
+        m.baseUrl.replace(/\/+$/, "") !== LLM_PRESETS.openai.baseUrl
+          ? "custom"
+          : m.provider;
+      return {
+        ...m,
+        provider,
+        model: m.model ?? LLM_PRESETS[provider].model,
+      };
     })
     .prefault({ systemPrompt: "You are a helpful voice assistant." }),
 
+  /**
+   * Text-to-speech. `voiceId` is the provider's own voice identifier (Cartesia
+   * voice id, ElevenLabs voice id, OpenAI voice name); Deepgram ignores it
+   * because its voice is part of `model`. Omitted fields take the provider's
+   * defaults. `speed` is a multiplier; the worker clamps it to what the
+   * provider accepts (see `TTS_PRESETS`).
+   */
   voice: z
     .object({
-      provider: z.literal("cartesia").default("cartesia"),
-      voiceId: z.string().default("f786b574-daa5-4673-aa0c-cbe3e8534c02"),
-      model: z.string().default("sonic-3"),
-      language: z.string().default("en"),
-      speed: z.number().min(0.5).max(2).optional(),
+      provider: z.enum(TTS_PROVIDERS).default("cartesia"),
+      voiceId: z.string().optional(),
+      model: z.string().min(1).optional(),
+      language: z.string().optional(),
+      speed: z.number().min(0.25).max(4).optional(),
+    })
+    .transform((v) => {
+      const preset = TTS_PRESETS[v.provider];
+      return {
+        ...v,
+        voiceId: v.voiceId ?? preset.voiceId,
+        model: v.model ?? preset.model,
+        language: v.language ?? preset.language,
+      };
     })
     .prefault({}),
 
+  /** Speech-to-text. Omitted `model` / `language` take the provider's. */
   transcriber: z
     .object({
-      provider: z.literal("deepgram").default("deepgram"),
-      model: z.string().default("nova-3"),
-      language: z.string().default("en-US"),
+      provider: z.enum(STT_PROVIDERS).default("deepgram"),
+      model: z.string().min(1).optional(),
+      language: z.string().optional(),
       keyterms: z.array(z.string()).default([]),
+    })
+    .transform((t) => {
+      const preset = STT_PRESETS[t.provider];
+      return {
+        ...t,
+        model: t.model ?? preset.model,
+        language: t.language ?? preset.language,
+      };
     })
     .prefault({}),
 
@@ -128,9 +188,14 @@ export const agentConfigSchema = z.object({
   endCallEnabled: z.boolean().default(true),
   maxDurationSeconds: z.number().int().positive().default(600),
 
-  /** Post-call analysis, run by the control plane on end-of-call-report. */
+  /**
+   * Post-call analysis, run by the control plane on end-of-call-report. It
+   * uses the assistant's own LLM provider and key.
+   */
   analysisPlan: z
     .object({
+      /** Defaults to the provider's small default model, not `model.model`. */
+      model: z.string().min(1).optional(),
       summaryPrompt: z.string().optional(),
       /** JSON Schema; the extracted object lands on `call_log.structured_data`. */
       structuredDataSchema: z.record(z.string(), z.unknown()).optional(),

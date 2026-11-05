@@ -8,6 +8,7 @@ import {
   agentConfigSchema,
 } from "@/lib/agent-config";
 import type { AssistantRequest } from "@/lib/webhook-payloads";
+import { resolveCredentials } from "@/server/provider-keys";
 import { resolveTools } from "@/server/tool-library";
 
 export type AgentRow = typeof agent.$inferSelect;
@@ -73,16 +74,34 @@ async function findByRef(ref: string) {
  * before a schema change still get today's defaults. Library tools are
  * resolved into `tools`. Webhook targets (and their secrets) are dropped:
  * tools run through the control plane, so the worker never needs them.
+ *
+ * This is the one place provider keys leave the control plane: each of
+ * `model`, `transcriber` and `voice` carries the workspace's `apiKey` for its
+ * provider, and `model.baseUrl` is the provider's endpoint. Throws
+ * `MissingKeysError` if a needed key isn't set.
  */
 export async function workerConfig(row: AgentRow) {
   const full = agentConfigSchema.parse(row.config);
-  const tools = await resolveTools(row.organizationId, full);
-  const { server: _server, toolNames: _names, ...config } = full;
+  const [tools, credentials] = await Promise.all([
+    resolveTools(row.organizationId, full),
+    resolveCredentials(row.organizationId, full),
+  ]);
+  const {
+    server: _server,
+    toolNames: _names,
+    model,
+    transcriber,
+    voice,
+    ...config
+  } = full;
   return {
     id: row.id,
     slug: row.slug,
     name: row.name,
     ...config,
+    model: { ...model, ...credentials.llm },
+    transcriber: { ...transcriber, ...credentials.stt },
+    voice: { ...voice, ...credentials.tts },
     tools: tools.map(({ server: _s, ...tool }) => tool),
   };
 }

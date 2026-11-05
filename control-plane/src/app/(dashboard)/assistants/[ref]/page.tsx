@@ -4,6 +4,7 @@ import { AssistantEditor } from "@/components/assistants/assistant-editor";
 import { db } from "@/db";
 import { agent, callLog, tool } from "@/db/schema";
 import { editorView, inWorkspace } from "@/server/agents";
+import { listProviderKeys } from "@/server/provider-keys";
 import { requireWorkspaceSession } from "@/server/workspace";
 
 export default async function AssistantPage({
@@ -49,6 +50,10 @@ export default async function AssistantPage({
     .where(eq(tool.organizationId, organizationId))
     .orderBy(tool.name);
 
+  const configuredKeys = (await listProviderKeys(organizationId)).map(
+    (k) => k.provider,
+  );
+
   // Keyed by id so switching assistants resets the editor's draft.
   return (
     <AssistantEditor
@@ -56,6 +61,7 @@ export default async function AssistantPage({
       agent={editorView(row)}
       calls={calls}
       libraryTools={libraryTools}
+      configuredKeys={configuredKeys}
     />
   );
 }
