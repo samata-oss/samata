@@ -24,10 +24,12 @@ export function AssistantList({ items }: { items: AssistantListItem[] }) {
     : items;
 
   return (
-    <aside className="hidden w-72 shrink-0 flex-col border-r md:flex">
-      <div className="flex h-12 items-center gap-2 border-b px-4">
+    <aside className="hidden w-72 shrink-0 flex-col border-r bg-sidebar/40 md:flex">
+      <div className="flex h-14 items-center gap-2 border-b px-5">
         <h2 className="text-sm font-semibold">Assistants</h2>
-        <span className="text-sm text-muted-foreground">{items.length}</span>
+        <span className="rounded-full bg-muted px-1.5 text-xs text-muted-foreground tabular-nums">
+          {items.length}
+        </span>
       </div>
       <div className="flex flex-col gap-3 border-b p-3">
         <CreateAssistantDialog />
@@ -49,12 +51,12 @@ export function AssistantList({ items }: { items: AssistantListItem[] }) {
               key={item.slug}
               href={`/assistants/${item.slug}`}
               className={cn(
-                "relative rounded-lg border border-transparent px-3 py-2.5 text-sm transition-colors hover:bg-accent",
-                active && "border-primary/30 bg-primary/10 hover:bg-primary/10",
+                "relative rounded-xl border border-transparent px-3 py-2.5 text-sm transition-colors hover:bg-accent/60",
+                active && "border-border bg-accent hover:bg-accent",
               )}
             >
               {active && (
-                <span className="absolute inset-y-0 -left-px w-0.5 rounded-full bg-primary" />
+                <span className="absolute inset-y-2.5 left-0 w-0.5 rounded-full bg-primary" />
               )}
               <div className="truncate font-medium">{item.name}</div>
               <div className="truncate text-xs text-muted-foreground">

@@ -69,7 +69,7 @@ export function SignInForm({
   }
 
   return (
-    <div className="space-y-4 rounded-xl border bg-card p-6">
+    <div className="space-y-4 rounded-2xl border bg-card p-7 shadow-xl shadow-black/20">
       <div className="space-y-1">
         <h1 className="text-lg font-semibold tracking-tight">
           {signingUp ? "Create your account" : "Sign in"}

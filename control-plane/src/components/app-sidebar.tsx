@@ -90,14 +90,16 @@ export function AppSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" render={<a href="/assistants" />}>
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+              <div className="flex aspect-square size-8 items-center justify-center rounded-xl bg-gradient-to-br from-sidebar-primary to-sky-400 text-sidebar-primary-foreground shadow-md shadow-sidebar-primary/20">
                 <AudioLinesIcon className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-mono font-semibold tracking-[0.2em] uppercase">
+                <span className="truncate text-base font-semibold tracking-tight">
                   Samata
                 </span>
-                <span className="truncate text-xs">Self-hosted voice AI</span>
+                <span className="truncate text-xs text-sidebar-foreground/60">
+                  Self-hosted voice AI
+                </span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -114,7 +116,7 @@ export function AppSidebar({
               tooltip="LiveKit server"
               className="pointer-events-none"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent">
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-primary">
                 <RadioIcon className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">

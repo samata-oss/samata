@@ -52,14 +52,14 @@ export function AssistantTab({
   const measured = calls.filter((c) => c.latency).length;
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-lg border bg-card p-4">
+    <div className="space-y-8">
+      <section className="rounded-xl border bg-card p-5">
         <div className="flex items-end justify-between gap-6">
           <div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs font-medium text-muted-foreground">
               Latency (voice to voice)
             </div>
-            <div className="text-2xl font-semibold tabular-nums">
+            <div className="text-3xl font-semibold tracking-tight tabular-nums">
               {voiceToVoice == null ? "—" : `~${fmtMs(voiceToVoice)}`}
             </div>
           </div>
@@ -78,7 +78,7 @@ export function AssistantTab({
             </div>
           </div>
         </div>
-        <div className="mt-3 flex h-1.5 overflow-hidden rounded-full bg-muted">
+        <div className="mt-4 flex h-2 gap-0.5 overflow-hidden rounded-full bg-muted">
           {total > 0 &&
             STAGES.map((s) => (
               <div
@@ -384,7 +384,7 @@ export function AssistantTab({
         </ProviderCard>
       </div>
 
-      <section className="grid gap-4 rounded-lg border bg-card p-4">
+      <section className="grid gap-5 rounded-xl border bg-card p-5">
         <Field
           label="First message"
           htmlFor="first-message"
@@ -436,18 +436,22 @@ function ProviderCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col rounded-lg border bg-card">
-      <div className="flex items-center gap-2 border-b px-4 py-3 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        {icon}
+    <section className="flex flex-col rounded-xl border bg-card">
+      <div className="flex items-center gap-2.5 border-b px-5 py-3.5 text-sm font-medium">
+        <span className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+          {icon}
+        </span>
         {label}
-        <span className="ml-auto font-normal tracking-normal normal-case">
+        <span className="ml-auto text-xs font-normal text-muted-foreground">
           {provider}
         </span>
       </div>
-      <div className="grid flex-1 content-start gap-3 p-4">{children}</div>
-      <div className="flex items-center justify-between border-t px-4 py-2 text-xs text-muted-foreground">
+      <div className="grid flex-1 content-start gap-4 p-5">{children}</div>
+      <div className="flex items-center justify-between border-t bg-muted/30 px-5 py-2.5 text-xs text-muted-foreground">
         <span>{measuredLabel}</span>
-        <span className="tabular-nums">{measured}</span>
+        <span className="font-medium text-foreground/80 tabular-nums">
+          {measured}
+        </span>
       </div>
     </section>
   );

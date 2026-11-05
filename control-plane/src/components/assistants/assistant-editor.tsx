@@ -129,10 +129,10 @@ export function AssistantEditor({
       onValueChange={(v) => setTab(v as TabValue)}
       className="gap-0"
     >
-      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-        <div className="flex items-center justify-between gap-4 px-6 pt-4">
+      <header className="sticky top-0 z-10 border-b bg-background/85 backdrop-blur-md">
+        <div className="flex items-center justify-between gap-4 px-8 pt-5">
           <div className="min-w-0">
-            <h1 className="truncate text-lg font-semibold">{agent.name}</h1>
+            <h1 className="truncate text-xl font-semibold tracking-tight">{agent.name}</h1>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="font-mono">{agent.slug}</span>
               <span>·</span>
@@ -170,7 +170,7 @@ export function AssistantEditor({
             </Button>
           </div>
         </div>
-        <TabsList variant="line" className="mt-2 px-4">
+        <TabsList variant="line" className="mt-3 px-6">
           {TABS.map((t) => (
             <TabsTrigger
               key={t.value}
@@ -183,7 +183,7 @@ export function AssistantEditor({
         </TabsList>
       </header>
 
-      <div className="p-6">
+      <div className="mx-auto max-w-7xl p-8">
         <TabsContent value="assistant" keepMounted>
           <AssistantTab
             draft={draft}

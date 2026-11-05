@@ -19,11 +19,11 @@ export const STACKED_STAGES = [
   {
     key: "transcriptionDelayAvg",
     label: "Transcription",
-    color: "bg-amber-400",
+    color: "bg-chart-2",
   },
-  { key: "endpointingDelayAvg", label: "Endpointing", color: "bg-primary" },
-  { key: "llmTtftAvg", label: "LLM first token", color: "bg-sky-400" },
-  { key: "ttsTtfbAvg", label: "TTS first byte", color: "bg-neutral-300" },
+  { key: "endpointingDelayAvg", label: "Endpointing", color: "bg-chart-1" },
+  { key: "llmTtftAvg", label: "LLM first token", color: "bg-chart-3" },
+  { key: "ttsTtfbAvg", label: "TTS first byte", color: "bg-chart-4" },
 ] as const;
 
 export type StageKey = (typeof STACKED_STAGES)[number]["key"];
