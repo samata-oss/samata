@@ -1,6 +1,11 @@
 "use client";
 
-import { AudioLinesIcon, BrainIcon, MicIcon } from "lucide-react";
+import {
+  AudioLinesIcon,
+  BrainIcon,
+  EarIcon,
+  ScrollTextIcon,
+} from "lucide-react";
 import { Field, NumberField } from "@/components/assistants/fields";
 import type {
   AssistantCall,
@@ -13,6 +18,7 @@ import {
   ProviderSelect,
 } from "@/components/assistants/provider-select";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { fmtDuration, fmtMs, mean } from "@/lib/format";
 import { STACKED_STAGES as STAGES, stageValue } from "@/lib/latency-stages";
@@ -59,20 +65,20 @@ export function AssistantTab({
             <div className="text-xs font-medium text-muted-foreground">
               Latency (voice to voice)
             </div>
-            <div className="text-3xl font-semibold tracking-tight tabular-nums">
+            <div className="font-serif text-6xl leading-none font-normal tabular-nums">
               {voiceToVoice == null ? "—" : `~${fmtMs(voiceToVoice)}`}
             </div>
           </div>
           <div className="flex gap-8 text-right">
             <div>
               <div className="text-xs text-muted-foreground">Calls</div>
-              <div className="text-lg font-medium tabular-nums">
+              <div className="font-serif text-3xl font-normal tabular-nums">
                 {calls.length}
               </div>
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Avg duration</div>
-              <div className="text-lg font-medium tabular-nums">
+              <div className="font-serif text-3xl font-normal tabular-nums">
                 {fmtDuration(mean(calls.map((c) => c.durationSeconds)))}
               </div>
             </div>
@@ -103,10 +109,11 @@ export function AssistantTab({
         </p>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <ProviderCard
-          icon={<MicIcon className="size-3.5" />}
-          label="Transcriber"
+      <ol className="space-y-6">
+        <PipelineStage
+          icon={<EarIcon className="size-4" />}
+          title="Listen"
+          role="Transcriber"
           provider={STT_PRESETS[config.transcriber.provider].label}
           measured={fmtMs(transcription)}
           measuredLabel="Transcription delay"
@@ -164,6 +171,7 @@ export function AssistantTab({
             />
           </Field>
           <Field
+            className="md:col-span-2"
             label="Keyterms"
             htmlFor="stt-keyterms"
             hint="Comma-separated words to bias recognition toward."
@@ -185,11 +193,12 @@ export function AssistantTab({
               }
             />
           </Field>
-        </ProviderCard>
+        </PipelineStage>
 
-        <ProviderCard
-          icon={<BrainIcon className="size-3.5" />}
-          label="Model"
+        <PipelineStage
+          icon={<BrainIcon className="size-4" />}
+          title="Think"
+          role="Model"
           provider={LLM_PRESETS[config.model.provider].label}
           measured={fmtMs(latency.llmTtftAvg)}
           measuredLabel="Time to first token"
@@ -244,6 +253,7 @@ export function AssistantTab({
           </Field>
           {config.model.provider === "custom" && (
             <Field
+              className="md:col-span-2"
               label="Base URL"
               htmlFor="llm-base-url"
               hint="Any OpenAI-compatible endpoint: vLLM, Together, your own proxy."
@@ -277,11 +287,12 @@ export function AssistantTab({
               }
             />
           </Field>
-        </ProviderCard>
+        </PipelineStage>
 
-        <ProviderCard
-          icon={<AudioLinesIcon className="size-3.5" />}
-          label="Voice"
+        <PipelineStage
+          icon={<AudioLinesIcon className="size-4" />}
+          title="Speak"
+          role="Voice"
           provider={TTS_PRESETS[config.voice.provider].label}
           measured={fmtMs(latency.ttsTtfbAvg)}
           measuredLabel="Time to first byte"
@@ -344,10 +355,12 @@ export function AssistantTab({
             </Field>
           ) : (
             voice.voiceHint && (
-              <p className="text-xs text-muted-foreground">{voice.voiceHint}</p>
+              <p className="text-xs text-muted-foreground md:col-span-2">
+                {voice.voiceHint}
+              </p>
             )
           )}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4 md:col-span-2">
             {voice.hasLanguage && (
               <Field label="Language" htmlFor="tts-language">
                 <Input
@@ -381,78 +394,112 @@ export function AssistantTab({
               </Field>
             )}
           </div>
-        </ProviderCard>
-      </div>
+        </PipelineStage>
 
-      <section className="grid gap-5 rounded-xl border bg-card p-5">
-        <Field
-          label="First message"
-          htmlFor="first-message"
-          hint="Spoken as soon as the caller joins. Leave empty to wait for the caller to speak first."
+        <PipelineStage
+          last
+          icon={<ScrollTextIcon className="size-4" />}
+          title="Script"
+          role="Instructions"
         >
-          <Input
-            id="first-message"
-            value={config.firstMessage ?? ""}
-            onChange={(e) =>
-              updateConfig((c) => ({
-                ...c,
-                firstMessage: e.target.value || undefined,
-              }))
-            }
-          />
-        </Field>
-        <Field label="System prompt" htmlFor="system-prompt">
-          <Textarea
-            id="system-prompt"
-            rows={18}
-            className="min-h-64 font-mono text-xs leading-relaxed"
-            value={config.model.systemPrompt}
-            onChange={(e) =>
-              updateConfig((c) => ({
-                ...c,
-                model: { ...c.model, systemPrompt: e.target.value },
-              }))
-            }
-          />
-        </Field>
-      </section>
+          <Field
+            className="md:col-span-2"
+            label="First message"
+            htmlFor="first-message"
+            hint="Spoken as soon as the caller joins. Leave empty to wait for the caller to speak first."
+          >
+            <Input
+              id="first-message"
+              value={config.firstMessage ?? ""}
+              onChange={(e) =>
+                updateConfig((c) => ({
+                  ...c,
+                  firstMessage: e.target.value || undefined,
+                }))
+              }
+            />
+          </Field>
+          <Field
+            className="md:col-span-2"
+            label="System prompt"
+            htmlFor="system-prompt"
+          >
+            <Textarea
+              id="system-prompt"
+              rows={18}
+              className="min-h-64 font-mono text-xs leading-relaxed"
+              value={config.model.systemPrompt}
+              onChange={(e) =>
+                updateConfig((c) => ({
+                  ...c,
+                  model: { ...c.model, systemPrompt: e.target.value },
+                }))
+              }
+            />
+          </Field>
+        </PipelineStage>
+      </ol>
     </div>
   );
 }
 
-function ProviderCard({
+/**
+ * One step of the call pipeline, on a vertical rail: what the caller says is
+ * heard, thought about, then spoken back.
+ */
+function PipelineStage({
   icon,
-  label,
+  title,
+  role,
   provider,
   measured,
   measuredLabel,
+  last,
   children,
 }: {
   icon: React.ReactNode;
-  label: string;
-  provider: string;
-  measured: string;
-  measuredLabel: string;
+  title: string;
+  role: string;
+  provider?: string;
+  measured?: string;
+  measuredLabel?: string;
+  last?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col rounded-xl border bg-card">
-      <div className="flex items-center gap-2.5 border-b px-5 py-3.5 text-sm font-medium">
-        <span className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
-          {icon}
-        </span>
-        {label}
-        <span className="ml-auto text-xs font-normal text-muted-foreground">
-          {provider}
-        </span>
-      </div>
-      <div className="grid flex-1 content-start gap-4 p-5">{children}</div>
-      <div className="flex items-center justify-between border-t bg-muted/30 px-5 py-2.5 text-xs text-muted-foreground">
-        <span>{measuredLabel}</span>
-        <span className="font-medium text-foreground/80 tabular-nums">
-          {measured}
-        </span>
-      </div>
-    </section>
+    <li className="relative pl-14">
+      <span className="absolute top-3 left-0 flex size-10 items-center justify-center rounded-full border bg-card text-primary shadow-xs">
+        {icon}
+      </span>
+      {!last && (
+        <span className="absolute top-14 -bottom-6 left-5 w-px bg-gradient-to-b from-border to-transparent" />
+      )}
+      <section className="rounded-2xl border bg-card">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-6 pt-5">
+          <h2 className="font-serif text-3xl leading-none font-normal">
+            {title}
+          </h2>
+          <span className="text-sm text-muted-foreground">
+            {role}
+            {provider && <> · {provider}</>}
+          </span>
+          {measured && (
+            <span
+              className={cn(
+                "ml-auto flex items-baseline gap-2 rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground",
+              )}
+            >
+              {measuredLabel}
+              <span className="font-medium text-foreground tabular-nums">
+                {measured}
+              </span>
+            </span>
+          )}
+        </div>
+        <div className="grid content-start gap-4 p-6 md:grid-cols-2">
+          {children}
+        </div>
+      </section>
+    </li>
   );
 }

@@ -7,6 +7,10 @@ import { toast } from "sonner";
 import { updateAgentAction } from "@/app/actions";
 import { AdvancedTab } from "@/components/assistants/advanced-tab";
 import { AssistantTab } from "@/components/assistants/assistant-tab";
+import {
+  type AssistantOption,
+  AssistantSwitcher,
+} from "@/components/assistants/assistant-switcher";
 import { LogsTab } from "@/components/assistants/logs-tab";
 import { TestTab } from "@/components/assistants/test-tab";
 import {
@@ -54,11 +58,14 @@ function toDraft(agent: EditorAgent): Draft {
  */
 export function AssistantEditor({
   agent,
+  assistants,
   calls,
   libraryTools,
   configuredKeys,
 }: {
   agent: EditorAgent;
+  /** Every assistant in the workspace, for the switcher. */
+  assistants: AssistantOption[];
   calls: AssistantCall[];
   libraryTools: LibraryToolOption[];
   /** Providers the workspace has a key for. */
@@ -129,10 +136,18 @@ export function AssistantEditor({
       onValueChange={(v) => setTab(v as TabValue)}
       className="gap-0"
     >
-      <header className="sticky top-0 z-10 border-b bg-background/85 backdrop-blur-md">
-        <div className="flex items-center justify-between gap-4 px-8 pt-5">
+      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur-md">
+        <div className="mx-auto flex max-w-5xl items-end justify-between gap-4 px-8 pt-4">
           <div className="min-w-0">
-            <h1 className="truncate text-xl font-semibold tracking-tight">{agent.name}</h1>
+            <div className="flex items-center gap-1">
+              <h1 className="truncate font-serif text-4xl leading-tight font-normal tracking-tight">
+                {agent.name}
+              </h1>
+              <AssistantSwitcher
+                assistants={assistants}
+                currentSlug={agent.slug}
+              />
+            </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="font-mono">{agent.slug}</span>
               <span>·</span>
@@ -156,7 +171,8 @@ export function AssistantEditor({
           </div>
           <div className="flex items-center gap-2">
             {dirty && (
-              <span className="text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="size-1.5 rounded-full bg-chart-2" />
                 Unsaved changes
               </span>
             )}
@@ -170,20 +186,18 @@ export function AssistantEditor({
             </Button>
           </div>
         </div>
-        <TabsList variant="line" className="mt-3 px-6">
-          {TABS.map((t) => (
-            <TabsTrigger
-              key={t.value}
-              value={t.value}
-              className="flex-none px-3"
-            >
-              {t.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="mx-auto max-w-5xl px-8 py-4">
+          <TabsList>
+            {TABS.map((t) => (
+              <TabsTrigger key={t.value} value={t.value} className="px-4">
+                {t.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
       </header>
 
-      <div className="mx-auto max-w-7xl p-8">
+      <div className="mx-auto max-w-5xl px-8 pt-2 pb-12">
         <TabsContent value="assistant" keepMounted>
           <AssistantTab
             draft={draft}

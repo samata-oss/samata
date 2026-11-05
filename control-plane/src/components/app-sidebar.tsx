@@ -44,7 +44,7 @@ export function AppSidebar({
 }) {
   const groups: NavGroup[] = [
     {
-      label: "Build",
+      label: "Studio",
       items: [
         {
           title: "Assistants",
@@ -56,7 +56,7 @@ export function AppSidebar({
       ],
     },
     {
-      label: "Observe",
+      label: "Insights",
       items: [
         { title: "Logs", url: "/logs", icon: <ScrollTextIcon /> },
         {
@@ -68,7 +68,7 @@ export function AppSidebar({
       ],
     },
     {
-      label: "Integrations",
+      label: "Connections",
       items: [
         {
           title: "Provider Keys",
@@ -85,16 +85,16 @@ export function AppSidebar({
   ];
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible="icon" variant="inset" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" render={<a href="/assistants" />}>
-              <div className="flex aspect-square size-8 items-center justify-center rounded-xl bg-gradient-to-br from-sidebar-primary to-sky-400 text-sidebar-primary-foreground shadow-md shadow-sidebar-primary/20">
+              <div className="flex aspect-square size-8 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
                 <AudioLinesIcon className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate text-base font-semibold tracking-tight">
+                <span className="truncate font-serif text-2xl leading-none font-normal tracking-tight">
                   Samata
                 </span>
                 <span className="truncate text-xs text-sidebar-foreground/60">

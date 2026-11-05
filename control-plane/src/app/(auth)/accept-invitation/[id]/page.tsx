@@ -14,7 +14,7 @@ function Card({
 }) {
   return (
     <div className="space-y-4 rounded-xl border bg-card p-6">
-      <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
+      <h1 className="font-serif text-3xl font-normal tracking-tight">{title}</h1>
       {children}
     </div>
   );

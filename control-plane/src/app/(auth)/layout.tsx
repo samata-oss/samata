@@ -1,4 +1,5 @@
 import { AudioLinesIcon } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 // These pages read the database and the session on every request.
 export const dynamic = "force-dynamic";
@@ -10,13 +11,14 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <main className="flex min-h-svh items-center justify-center bg-[radial-gradient(60%_50%_at_50%_0%,color-mix(in_oklch,var(--primary)_14%,transparent),transparent)] p-6">
+    <main className="flex min-h-svh items-center justify-center bg-[radial-gradient(70%_55%_at_50%_0%,color-mix(in_oklch,var(--primary)_10%,transparent),transparent)] p-6">
+      <ThemeToggle className="fixed top-4 right-4" />
       <div className="w-full max-w-sm space-y-6">
         <div className="flex items-center justify-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-sky-400 text-primary-foreground shadow-lg shadow-primary/25">
+          <div className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <AudioLinesIcon className="size-5" />
           </div>
-          <span className="text-xl font-semibold tracking-tight">
+          <span className="font-serif text-3xl leading-none font-normal tracking-tight">
             Samata
           </span>
         </div>

@@ -40,16 +40,9 @@ export function CreateAssistantDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          <Button
-            variant="outline"
-            className="w-full border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
-          />
-        }
-      >
+      <DialogTrigger render={<Button />}>
         <PlusIcon />
-        Create Assistant
+        New assistant
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={submit} className="grid gap-4">

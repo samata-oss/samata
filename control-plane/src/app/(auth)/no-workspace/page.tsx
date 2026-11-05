@@ -11,7 +11,7 @@ export default async function NoWorkspacePage() {
 
   return (
     <div className="space-y-4 rounded-xl border bg-card p-6">
-      <h1 className="text-lg font-semibold tracking-tight">No workspace</h1>
+      <h1 className="font-serif text-3xl font-normal tracking-tight">No workspace</h1>
       <p className="text-sm text-muted-foreground">
         {user.email} isn't a member of any workspace yet. Ask a workspace admin
         to invite you, then open the invitation link.
