@@ -17,6 +17,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LLM_PRESETS, STT_PRESETS, TTS_PRESETS } from "@/lib/providers";
+
+/** What a new assistant starts with. Keep in sync with the defaults in `agentConfigSchema`. */
+const DEFAULT_PIPELINE = [
+  STT_PRESETS.deepgram.label,
+  LLM_PRESETS.openai.label,
+  TTS_PRESETS.cartesia.label,
+];
 
 export function CreateAssistantDialog() {
   const router = useRouter();
@@ -47,27 +55,44 @@ export function CreateAssistantDialog() {
       <DialogContent>
         <form onSubmit={submit} className="grid gap-4">
           <DialogHeader>
-            <DialogTitle>Create assistant</DialogTitle>
+            <DialogTitle className="text-base font-semibold">
+              New assistant
+            </DialogTitle>
             <DialogDescription>
-              Starts with the default Deepgram → OpenAI → Cartesia pipeline. You
-              can switch any of them afterwards. Calls use the keys on the
-              Provider Keys page.
+              Name it now. Everything else can change later.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-2">
-            <Label htmlFor="new-assistant-name">Name</Label>
+          <div className="grid gap-1.5">
+            <Label htmlFor="new-assistant-name" className="sr-only">
+              Name
+            </Label>
             <Input
               id="new-assistant-name"
               autoFocus
+              autoComplete="off"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Grand Horizon Concierge"
+              placeholder="e.g. Grand Horizon Concierge"
               maxLength={120}
+              className="h-9"
             />
           </div>
-          <DialogFooter>
+          <DialogFooter className="items-center sm:justify-between">
+            <span className="flex flex-wrap items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
+              {DEFAULT_PIPELINE.map((label, i) => (
+                <span key={label} className="contents">
+                  {i > 0 && <span className="text-primary">→</span>}
+                  {label}
+                </span>
+              ))}
+            </span>
             <Button type="submit" disabled={pending || !name.trim()}>
               {pending ? "Creating…" : "Create"}
+              {!pending && (
+                <kbd className="ml-1 rounded bg-primary-foreground/15 px-1 font-mono text-[10px]">
+                  ↵
+                </kbd>
+              )}
             </Button>
           </DialogFooter>
         </form>
