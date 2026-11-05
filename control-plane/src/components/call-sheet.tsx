@@ -158,8 +158,15 @@ function CallSheetBody({ id }: { id: string }) {
       </SheetHeader>
 
       <div className="flex-1 space-y-6 overflow-y-auto p-4">
-        {call.latency && <LatencySummary latency={call.latency} />}
-        <CallStats call={call} />
+        {call.latency ? (
+          <LatencySummary
+            latency={call.latency}
+            durationSeconds={call.durationSeconds}
+            toolCallCount={call.toolCallCount}
+          />
+        ) : (
+          <CallStats call={call} />
+        )}
         <AnalysisError call={call} />
         <div className="grid gap-6 xl:grid-cols-[1fr_20rem]">
           <section className="space-y-3">

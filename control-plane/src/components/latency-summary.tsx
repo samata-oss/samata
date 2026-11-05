@@ -6,13 +6,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { CallLatency } from "@/db/schema";
-import { fmtMs } from "@/lib/format";
+import { fmtDuration, fmtMs } from "@/lib/format";
 import {
   STACKED_STAGES,
   type StageKey,
   stageValue,
 } from "@/lib/latency-stages";
+import { cn } from "@/lib/utils";
 
 /** Vapi-style names and hints for each stage of a turn. */
 const STAGE_INFO: Record<StageKey, { label: string; hint: string }> = {
@@ -35,7 +41,16 @@ const STAGE_INFO: Record<StageKey, { label: string; hint: string }> = {
 };
 
 /** Latency for a call: summary tiles, a breakdown bar and a per-turn table. */
-export function LatencySummary({ latency }: { latency: CallLatency }) {
+export function LatencySummary({
+  latency,
+  durationSeconds,
+  toolCallCount,
+}: {
+  latency: CallLatency;
+  /** With `toolCallCount`, adds those tiles to the first row. */
+  durationSeconds?: number | null;
+  toolCallCount?: number;
+}) {
   const stages = STACKED_STAGES.map((s) => ({
     ...s,
     ...STAGE_INFO[s.key],
@@ -48,22 +63,55 @@ export function LatencySummary({ latency }: { latency: CallLatency }) {
     <section className="space-y-4">
       <h2 className="text-sm font-medium">Latency summary</h2>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Tile label="Turns" value={latency.turns} />
-        <Tile label="Avg turn" value={fmtMs(latency.voiceToVoiceAvg)} />
+        <Tile
+          label="Avg turn"
+          value={fmtMs(latency.voiceToVoiceAvg)}
+          hint={`p95 ${fmtMs(latency.voiceToVoiceP95)}`}
+        />
+        {toolCallCount !== undefined && (
+          <>
+            <Tile label="Duration" value={fmtDuration(durationSeconds)} />
+            <Tile label="Tool calls" value={toolCallCount} />
+          </>
+        )}
       </div>
 
       <div className="rounded-lg border bg-card p-4">
         <div className="text-xs text-muted-foreground">Latency breakdown</div>
-        <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-muted">
+        <div className="mt-3 flex h-2 rounded-full bg-muted">
           {total > 0 &&
-            stages.map((s) => (
-              <div
-                key={s.key}
-                className={s.color}
-                style={{ width: `${((s.value ?? 0) / total) * 100}%` }}
-              />
-            ))}
+            stages
+              .filter((s) => (s.value ?? 0) > 0)
+              .map((s) => (
+                <Tooltip key={s.key}>
+                  <TooltipTrigger
+                    aria-label={`${s.label}: ${fmtMs(s.value)}`}
+                    className={cn(
+                      "relative h-full outline-none transition-[filter] first:rounded-l-full last:rounded-r-full hover:brightness-125 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+                      // Widen the hover target past the drawn bar so thin
+                      // segments are still easy to hit.
+                      "before:absolute before:-inset-y-2 before:inset-x-0 before:content-['']",
+                      s.color,
+                    )}
+                    style={{ width: `${((s.value ?? 0) / total) * 100}%` }}
+                  />
+                  <TooltipContent
+                    side="top"
+                    className="flex-col items-start gap-0.5"
+                  >
+                    <span className="font-medium">{s.label}</span>
+                    <span className="font-mono tabular-nums">
+                      {fmtMs(s.value)}
+                      <span className="opacity-60">
+                        {" "}
+                        · {Math.round(((s.value ?? 0) / total) * 100)}% of total
+                      </span>
+                    </span>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
         </div>
       </div>
 
@@ -156,11 +204,22 @@ export function LatencySummary({ latency }: { latency: CallLatency }) {
   );
 }
 
-function Tile({ label, value }: { label: string; value: React.ReactNode }) {
+function Tile({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: React.ReactNode;
+  hint?: React.ReactNode;
+}) {
   return (
     <div className="rounded-lg border bg-card p-4">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 text-lg font-semibold tabular-nums">{value}</div>
+      {hint && (
+        <div className="mt-0.5 text-xs text-muted-foreground">{hint}</div>
+      )}
     </div>
   );
 }
