@@ -26,7 +26,7 @@ const STAGE_INFO: Record<StageKey, { label: string; hint: string }> = {
   },
   llmTtftAvg: {
     label: "LLM",
-    hint: "Time for the model to produce its first token.",
+    hint: "Time the model took to start answering after the turn was confirmed. With preemptive generation it starts earlier, on the transcript, so part of its first-token time is already counted in Endpointing.",
   },
   ttsTtfbAvg: {
     label: "Voice",
@@ -123,6 +123,7 @@ export function LatencySummary({ latency }: { latency: CallLatency }) {
                     transcriptionDelayAvg: t.transcription,
                     llmTtftAvg: t.llmTtft,
                     ttsTtfbAvg: t.ttsTtfb,
+                    overlapAvg: t.overlap,
                   };
                   return (
                     // biome-ignore lint/suspicious/noArrayIndexKey: turns have no id

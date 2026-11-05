@@ -248,7 +248,17 @@ export type CallLatency = {
   transcriptionDelayAvg?: number;
   llmTtftAvg?: number;
   ttsTtfbAvg?: number;
-  /** Rough voice-to-voice: end-of-turn + LLM TTFT + TTS TTFB. */
+  /**
+   * Seconds of LLM TTFT + TTS TTFB that ran before the turn was confirmed
+   * (preemptive generation), so they are already inside `endOfTurnDelayAvg`.
+   * Absent on calls recorded before this was tracked, which means none.
+   */
+  overlapAvg?: number;
+  /**
+   * Voice-to-voice: end of the caller's speech to the first audio frame. The
+   * stages overlap, so this is less than their plain sum when preemptive
+   * generation is on.
+   */
   voiceToVoiceAvg?: number;
   voiceToVoiceP95?: number;
   /** One entry per measured turn, in call order. Absent on older calls. */
@@ -261,6 +271,8 @@ export type TurnLatency = {
   transcription?: number;
   llmTtft: number;
   ttsTtfb: number;
+  /** Part of `llmTtft` + `ttsTtfb` already inside `endOfTurn`. See `CallLatency`. */
+  overlap?: number;
   total: number;
 };
 

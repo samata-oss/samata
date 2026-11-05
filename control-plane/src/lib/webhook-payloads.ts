@@ -66,6 +66,7 @@ export const endOfCallReportSchema = z.object({
         transcriptionDelayAvg: z.number().optional(),
         llmTtftAvg: z.number().optional(),
         ttsTtfbAvg: z.number().optional(),
+        overlapAvg: z.number().optional(),
         voiceToVoiceAvg: z.number().optional(),
         voiceToVoiceP95: z.number().optional(),
         turnDetails: z
@@ -75,6 +76,7 @@ export const endOfCallReportSchema = z.object({
               transcription: z.number().optional(),
               llmTtft: z.number(),
               ttsTtfb: z.number(),
+              overlap: z.number().optional(),
               total: z.number(),
             }),
           )

@@ -67,6 +67,10 @@ export function AssistantTab({
     ]),
   ) as Record<(typeof STAGES)[number]["key"], number | null>;
   const transcription = latency.transcriptionDelayAvg;
+  // The model and voice cards show each provider's own time. The bars above
+  // show only what each stage added to the caller's wait (see latency-stages).
+  const llmTtft = mean(calls.map((c) => c.latency?.llmTtftAvg));
+  const ttsTtfb = mean(calls.map((c) => c.latency?.ttsTtfbAvg));
   const voiceToVoice = mean(calls.map((c) => c.latency?.voiceToVoiceAvg));
   const total = STAGES.reduce((sum, s) => sum + (latency[s.key] ?? 0), 0);
   const measured = calls.filter((c) => c.latency).length;
@@ -348,7 +352,7 @@ export function AssistantTab({
                 .filter(Boolean)
                 .join(" · ")}
               missingKey={lacksKey(config.model.provider, configuredKeys)}
-              measured={fmtMs(latency.llmTtftAvg)}
+              measured={fmtMs(llmTtft)}
               measuredLabel="Time to first token"
             >
               <Field
@@ -456,7 +460,7 @@ export function AssistantTab({
                 .filter(Boolean)
                 .join(" · ")}
               missingKey={lacksKey(config.voice.provider, configuredKeys)}
-              measured={fmtMs(latency.ttsTtfbAvg)}
+              measured={fmtMs(ttsTtfb)}
               measuredLabel="Time to first byte"
             >
               <Field label="Provider" htmlFor="tts-provider">

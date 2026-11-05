@@ -3,6 +3,7 @@ import type { CallLatency } from "@/db/schema";
 /**
  * Stages of a voice-to-voice turn, shared by every latency chart. They run one
  * after another and sum to voice-to-voice latency (worker/samata_worker/report.py).
+ * Where they actually overlap, see "Overlap" below.
  *
  * The worker reports the wait after the caller stops speaking as one number,
  * "end of turn". The final transcript arrives *inside* that wait, so we split
@@ -14,6 +15,14 @@ import type { CallLatency } from "@/db/schema";
  *
  * Transcription + Endpointing always equals `endOfTurnDelayAvg`, so nothing is
  * counted twice. This works on stored data, so older calls are covered too.
+ *
+ * Overlap: with preemptive generation the model (and optionally the voice)
+ * starts on the final transcript, before the turn is confirmed, so part of
+ * their time passes *during* the end-of-turn wait. The worker measures that
+ * part (`overlapAvg`). Here it is taken off the LLM stage first, then the voice
+ * stage, so each stage shows only the time it added after the turn was
+ * confirmed and the stages sum to voice-to-voice. The model's own first-token
+ * time, which is what other platforms report, is `llmTtftAvg` as stored.
  */
 export const STACKED_STAGES = [
   {
@@ -35,7 +44,7 @@ export const STACKED_STAGES = [
     label: "LLM first token",
     color: "bg-chart-3",
     description:
-      "How long the language model takes to start answering: the time until its first word comes back.",
+      "How long after the turn was confirmed the language model took to start answering. With preemptive generation it starts on the transcript, so part of its first-token time already passed during endpointing and is not counted twice.",
   },
   {
     key: "ttsTtfbAvg",
@@ -61,7 +70,20 @@ export function stageValue(
       return eot == null || stt == null ? stt : Math.min(stt, eot);
     case "endpointingDelayAvg":
       return eot == null ? undefined : eot - Math.min(stt ?? 0, eot);
-    default:
-      return latency[key];
+    case "llmTtftAvg": {
+      const { llmTtftAvg: ttft, overlapAvg: overlap = 0 } = latency;
+      return ttft == null ? undefined : Math.max(0, ttft - overlap);
+    }
+    case "ttsTtfbAvg": {
+      const {
+        llmTtftAvg: ttft = 0,
+        ttsTtfbAvg: ttfb,
+        overlapAvg: overlap = 0,
+      } = latency;
+      // Overlap beyond the LLM's own time came out of the voice's.
+      return ttfb == null
+        ? undefined
+        : Math.max(0, ttfb - Math.max(0, overlap - ttft));
+    }
   }
 }
