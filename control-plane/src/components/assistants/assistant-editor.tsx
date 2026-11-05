@@ -219,7 +219,7 @@ export function AssistantEditor({
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-6 py-6">
+      <div className="mx-auto w-full max-w-7xl px-6 py-6">
         <TabsContent value="assistant" keepMounted>
           <AssistantTab
             draft={draft}

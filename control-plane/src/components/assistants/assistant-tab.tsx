@@ -596,20 +596,27 @@ function PipelineStage({
             )}
             <ChevronDownIcon
               className={cn(
-                "size-4 shrink-0 text-muted-foreground transition-transform",
+                "size-4 shrink-0 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none",
                 open && "rotate-180",
               )}
             />
           </button>
         </h2>
+        {/* 0fr -> 1fr animates to the content's natural height. `inert` keeps
+            the collapsed fields out of the tab order and the a11y tree. */}
         <div
           id={bodyId}
+          inert={!open}
           className={cn(
-            "grid content-start gap-4 border-t p-4 @md:grid-cols-2",
-            !open && "hidden",
+            "grid transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none",
+            open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
           )}
         >
-          {children}
+          <div className="min-h-0 overflow-hidden">
+            <div className="grid content-start gap-4 border-t p-4 @md:grid-cols-2">
+              {children}
+            </div>
+          </div>
         </div>
       </section>
     </li>
