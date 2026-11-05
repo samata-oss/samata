@@ -73,376 +73,15 @@ export function AssistantTab({
   ) as Record<(typeof STAGES)[number]["key"], number>;
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-lg border bg-card">
-        <div className="flex items-center gap-3 border-b px-4 py-3">
-          <ScrollTextIcon className="size-4 text-primary" />
-          <h2 className="text-sm font-semibold">Script</h2>
-          <p className="truncate text-xs text-muted-foreground">
-            How the assistant opens the call and how it behaves.
-          </p>
-        </div>
-        <div className="grid gap-5 p-4">
-          <Field
-            label="First message"
-            htmlFor="first-message"
-            hint="Spoken as soon as the caller joins. Leave empty to wait for the caller to speak first."
-          >
-            <Input
-              id="first-message"
-              value={config.firstMessage ?? ""}
-              onChange={(e) =>
-                updateConfig((c) => ({
-                  ...c,
-                  firstMessage: e.target.value || undefined,
-                }))
-              }
-            />
-          </Field>
-          <Field label="System prompt" htmlFor="system-prompt">
-            <Textarea
-              id="system-prompt"
-              rows={24}
-              className="min-h-96 font-mono text-xs leading-relaxed"
-              value={config.model.systemPrompt}
-              onChange={(e) =>
-                updateConfig((c) => ({
-                  ...c,
-                  model: { ...c.model, systemPrompt: e.target.value },
-                }))
-              }
-            />
-            <p className="text-right font-mono text-[11px] text-muted-foreground tabular-nums">
-              {config.model.systemPrompt.length.toLocaleString()} characters
-            </p>
-          </Field>
-        </div>
-      </section>
-
-      <div className="space-y-3">
-        <div className="flex items-baseline gap-3 px-0.5">
-          <h2 className="text-sm font-semibold">Voice stack</h2>
-          <p className="truncate text-xs text-muted-foreground">
-            Listen, think, then speak. Open a step to change its provider.
-          </p>
-        </div>
-        <ol className="space-y-3">
-          <PipelineStage
-            icon={<EarIcon className="size-4" />}
-            title="Listen"
-            summary={[
-              STT_PRESETS[config.transcriber.provider].label,
-              config.transcriber.model,
-              config.transcriber.language,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-            missingKey={lacksKey(config.transcriber.provider, configuredKeys)}
-            measured={fmtMs(transcription)}
-            measuredLabel="Transcription delay"
-          >
-            <Field label="Provider" htmlFor="stt-provider">
-              <ProviderSelect
-                id="stt-provider"
-                value={config.transcriber.provider}
-                options={STT_PROVIDERS}
-                configured={configuredKeys}
-                onChange={(provider) =>
-                  updateConfig((c) => ({
-                    ...c,
-                    transcriber: {
-                      ...c.transcriber,
-                      provider,
-                      model: STT_PRESETS[provider].model,
-                      language: STT_PRESETS[provider].language,
-                    },
-                  }))
-                }
-              />
-              <MissingKeyNotice
-                provider={config.transcriber.provider}
-                configured={configuredKeys}
-              />
-            </Field>
-            <Field label="Model" htmlFor="stt-model">
-              <ModelSelect
-                key={config.transcriber.provider}
-                id="stt-model"
-                models={STT_PRESETS[config.transcriber.provider].models}
-                placeholder={
-                  STT_PRESETS[config.transcriber.provider].modelPlaceholder
-                }
-                value={config.transcriber.model}
-                onChange={(model) =>
-                  updateConfig((c) => ({
-                    ...c,
-                    transcriber: { ...c.transcriber, model },
-                  }))
-                }
-              />
-            </Field>
-            <Field label="Language" htmlFor="stt-language">
-              <Input
-                id="stt-language"
-                value={config.transcriber.language}
-                onChange={(e) =>
-                  updateConfig((c) => ({
-                    ...c,
-                    transcriber: { ...c.transcriber, language: e.target.value },
-                  }))
-                }
-              />
-            </Field>
-            <Field
-              className="md:col-span-2"
-              label="Keyterms"
-              htmlFor="stt-keyterms"
-              hint="Comma-separated words to bias recognition toward."
-            >
-              <Input
-                id="stt-keyterms"
-                defaultValue={config.transcriber.keyterms.join(", ")}
-                onChange={(e) =>
-                  updateConfig((c) => ({
-                    ...c,
-                    transcriber: {
-                      ...c.transcriber,
-                      keyterms: e.target.value
-                        .split(",")
-                        .map((t) => t.trim())
-                        .filter(Boolean),
-                    },
-                  }))
-                }
-              />
-            </Field>
-          </PipelineStage>
-
-          <PipelineStage
-            icon={<BrainIcon className="size-4" />}
-            title="Think"
-            summary={[
-              LLM_PRESETS[config.model.provider].label,
-              config.model.model,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-            missingKey={lacksKey(config.model.provider, configuredKeys)}
-            measured={fmtMs(latency.llmTtftAvg)}
-            measuredLabel="Time to first token"
-          >
-            <Field
-              label="Provider"
-              htmlFor="llm-provider"
-              hint={
-                config.model.provider === "openrouter" ||
-                config.model.provider === "vercel-ai-gateway"
-                  ? "A gateway: one key for many models. Name models as vendor/model."
-                  : undefined
-              }
-            >
-              <ProviderSelect
-                id="llm-provider"
-                value={config.model.provider}
-                options={LLM_PROVIDERS}
-                configured={configuredKeys}
-                onChange={(provider) =>
-                  updateConfig((c) => ({
-                    ...c,
-                    model: {
-                      ...c.model,
-                      provider,
-                      model: LLM_PRESETS[provider].model,
-                      baseUrl:
-                        provider === "custom" ? c.model.baseUrl : undefined,
-                    },
-                  }))
-                }
-              />
-              <MissingKeyNotice
-                provider={config.model.provider}
-                configured={configuredKeys}
-              />
-            </Field>
-            <Field label="Model" htmlFor="llm-model">
-              <ModelSelect
-                key={config.model.provider}
-                id="llm-model"
-                models={LLM_PRESETS[config.model.provider].models}
-                placeholder={LLM_PRESETS[config.model.provider].modelPlaceholder}
-                value={config.model.model}
-                onChange={(model) =>
-                  updateConfig((c) => ({
-                    ...c,
-                    model: { ...c.model, model },
-                  }))
-                }
-              />
-            </Field>
-            {config.model.provider === "custom" && (
-              <Field
-                className="md:col-span-2"
-                label="Base URL"
-                htmlFor="llm-base-url"
-                hint="Any OpenAI-compatible endpoint: vLLM, Together, your own proxy."
-              >
-                <Input
-                  id="llm-base-url"
-                  placeholder="https://example.com/v1"
-                  value={config.model.baseUrl ?? ""}
-                  onChange={(e) =>
-                    updateConfig((c) => ({
-                      ...c,
-                      model: { ...c.model, baseUrl: e.target.value || undefined },
-                    }))
-                  }
-                />
-              </Field>
-            )}
-            <Field label="Temperature" htmlFor="llm-temperature">
-              <NumberField
-                id="llm-temperature"
-                min={0}
-                max={2}
-                step={0.1}
-                placeholder="Provider default"
-                value={config.model.temperature}
-                onChange={(temperature) =>
-                  updateConfig((c) => ({
-                    ...c,
-                    model: { ...c.model, temperature },
-                  }))
-                }
-              />
-            </Field>
-          </PipelineStage>
-
-          <PipelineStage
-            last
-            icon={<AudioLinesIcon className="size-4" />}
-            title="Speak"
-            summary={[
-              TTS_PRESETS[config.voice.provider].label,
-              config.voice.model,
-              config.voice.voiceId && config.voice.voiceId.length <= 24
-                ? config.voice.voiceId
-                : undefined,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-            missingKey={lacksKey(config.voice.provider, configuredKeys)}
-            measured={fmtMs(latency.ttsTtfbAvg)}
-            measuredLabel="Time to first byte"
-          >
-            <Field label="Provider" htmlFor="tts-provider">
-              <ProviderSelect
-                id="tts-provider"
-                value={config.voice.provider}
-                options={TTS_PROVIDERS}
-                configured={configuredKeys}
-                onChange={(provider) => {
-                  const preset = TTS_PRESETS[provider];
-                  updateConfig((c) => ({
-                    ...c,
-                    voice: {
-                      ...c.voice,
-                      provider,
-                      model: preset.model,
-                      voiceId: preset.voiceId,
-                      language: preset.language,
-                      // Speed ranges differ per provider; start from its default.
-                      speed: undefined,
-                    },
-                  }));
-                }}
-              />
-              <MissingKeyNotice
-                provider={config.voice.provider}
-                configured={configuredKeys}
-              />
-            </Field>
-            <Field label="Model" htmlFor="tts-model">
-              <ModelSelect
-                key={config.voice.provider}
-                id="tts-model"
-                models={TTS_PRESETS[config.voice.provider].models}
-                placeholder={TTS_PRESETS[config.voice.provider].modelPlaceholder}
-                value={config.voice.model}
-                onChange={(model) =>
-                  updateConfig((c) => ({
-                    ...c,
-                    voice: { ...c.voice, model },
-                  }))
-                }
-              />
-            </Field>
-            {voice.voiceLabel ? (
-              <Field label={voice.voiceLabel} htmlFor="tts-voice">
-                <Input
-                  id="tts-voice"
-                  className="font-mono text-xs"
-                  value={config.voice.voiceId}
-                  onChange={(e) =>
-                    updateConfig((c) => ({
-                      ...c,
-                      voice: { ...c.voice, voiceId: e.target.value },
-                    }))
-                  }
-                />
-              </Field>
-            ) : (
-              voice.voiceHint && (
-                <p className="text-xs text-muted-foreground md:col-span-2">
-                  {voice.voiceHint}
-                </p>
-              )
-            )}
-            <div className="grid grid-cols-2 gap-4 md:col-span-2">
-              {voice.hasLanguage && (
-                <Field label="Language" htmlFor="tts-language">
-                  <Input
-                    id="tts-language"
-                    value={config.voice.language}
-                    onChange={(e) =>
-                      updateConfig((c) => ({
-                        ...c,
-                        voice: { ...c.voice, language: e.target.value },
-                      }))
-                    }
-                  />
-                </Field>
-              )}
-              {voice.speed && (
-                <Field label="Speed" htmlFor="tts-speed">
-                  <NumberField
-                    id="tts-speed"
-                    min={voice.speed.min}
-                    max={voice.speed.max}
-                    step={0.1}
-                    placeholder="1.0"
-                    value={config.voice.speed}
-                    onChange={(speed) =>
-                      updateConfig((c) => ({
-                        ...c,
-                        voice: { ...c.voice, speed },
-                      }))
-                    }
-                  />
-                </Field>
-              )}
-            </div>
-          </PipelineStage>
-        </ol>
-      </div>
-
-      <section className="rounded-lg border bg-card">
-        <div className="flex items-end justify-between gap-6 border-b px-4 py-3.5">
+    <div className="space-y-6">
+      <section className="grid rounded-lg border bg-card lg:grid-cols-[17rem_minmax(0,1fr)]">
+        <div className="flex flex-col justify-between gap-4 border-b p-4 lg:border-r lg:border-b-0">
           <div>
             <div className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">
               Voice-to-voice latency
             </div>
             <div className="mt-1 flex items-baseline gap-1.5">
-              <span className="text-3xl font-semibold tracking-tight tabular-nums">
+              <span className="text-4xl font-semibold tracking-tight tabular-nums">
                 {voiceToVoice == null
                   ? "—"
                   : Math.round(voiceToVoice * 1000).toLocaleString()}
@@ -452,7 +91,7 @@ export function AssistantTab({
               </span>
             </div>
           </div>
-          <div className="flex gap-8 text-right">
+          <div className="flex gap-8">
             <div>
               <div className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">
                 Calls
@@ -471,44 +110,419 @@ export function AssistantTab({
             </div>
           </div>
         </div>
-        <div className="space-y-1.5 px-4 py-3.5">
-          {STAGES.map((s) => {
-            const value = latency[s.key] ?? 0;
-            const start = total > 0 ? (offsets[s.key] / total) * 100 : 0;
-            const width = total > 0 ? (value / total) * 100 : 0;
-            return (
-              <div
-                key={s.key}
-                className="grid grid-cols-[8.5rem_1fr_5.5rem] items-center gap-3 text-xs"
-              >
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <span className={`size-2 rounded-sm ${s.color}`} />
-                  {s.label}
-                </span>
-                <div className="relative h-4 rounded-sm bg-muted/60">
-                  {width > 0 && (
-                    <div
-                      className={`absolute inset-y-0 rounded-sm ${s.color}`}
-                      style={{
-                        left: `${start}%`,
-                        width: `max(${width}%, 3px)`,
-                      }}
-                    />
-                  )}
+        <div className="flex flex-col justify-between gap-3 p-4">
+          <div className="space-y-2">
+            {STAGES.map((s) => {
+              const value = latency[s.key] ?? 0;
+              const start = total > 0 ? (offsets[s.key] / total) * 100 : 0;
+              const width = total > 0 ? (value / total) * 100 : 0;
+              return (
+                <div
+                  key={s.key}
+                  className="grid grid-cols-[8.5rem_minmax(0,1fr)_5.5rem] items-center gap-3 text-xs"
+                >
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <span className={`size-2 rounded-sm ${s.color}`} />
+                    {s.label}
+                  </span>
+                  <div className="relative h-4 rounded-sm bg-muted/60">
+                    {width > 0 && (
+                      <div
+                        className={`absolute inset-y-0 rounded-sm ${s.color}`}
+                        style={{
+                          left: `${start}%`,
+                          width: `max(${width}%, 3px)`,
+                        }}
+                      />
+                    )}
+                  </div>
+                  <span className="text-right font-mono tabular-nums">
+                    {fmtMs(latency[s.key])}
+                  </span>
                 </div>
-                <span className="text-right font-mono tabular-nums">
-                  {fmtMs(latency[s.key])}
-                </span>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          <p className="font-mono text-[11px] text-muted-foreground">
+            {measured
+              ? `avg of last ${measured} call${measured === 1 ? "" : "s"} with latency data`
+              : "no call data yet · make a test call to see latency"}
+          </p>
         </div>
-        <p className="border-t px-4 py-2 font-mono text-[11px] text-muted-foreground">
-          {measured
-            ? `avg of last ${measured} call${measured === 1 ? "" : "s"} with latency data`
-            : "no call data yet · make a test call to see latency"}
-        </p>
       </section>
+
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_27rem]">
+        <section className="rounded-lg border bg-card">
+          <div className="flex items-center gap-3 border-b px-4 py-3">
+            <ScrollTextIcon className="size-4 text-primary" />
+            <h2 className="text-sm font-semibold">Script</h2>
+            <p className="truncate text-xs text-muted-foreground">
+              How the assistant opens the call and how it behaves.
+            </p>
+          </div>
+          <div className="grid gap-5 p-4">
+            <Field
+              label="First message"
+              htmlFor="first-message"
+              hint="Spoken as soon as the caller joins. Leave empty to wait for the caller to speak first."
+            >
+              <Input
+                id="first-message"
+                value={config.firstMessage ?? ""}
+                onChange={(e) =>
+                  updateConfig((c) => ({
+                    ...c,
+                    firstMessage: e.target.value || undefined,
+                  }))
+                }
+              />
+            </Field>
+            <Field label="System prompt" htmlFor="system-prompt">
+              <Textarea
+                id="system-prompt"
+                rows={28}
+                className="min-h-[32rem] font-mono text-xs leading-relaxed"
+                value={config.model.systemPrompt}
+                onChange={(e) =>
+                  updateConfig((c) => ({
+                    ...c,
+                    model: { ...c.model, systemPrompt: e.target.value },
+                  }))
+                }
+              />
+              <p className="text-right font-mono text-[11px] text-muted-foreground tabular-nums">
+                {config.model.systemPrompt.length.toLocaleString()} characters
+              </p>
+            </Field>
+          </div>
+        </section>
+
+        <div className="space-y-3 xl:sticky xl:top-32 xl:max-h-[calc(100svh-10rem)] xl:overflow-y-auto xl:pr-1">
+          <div className="flex items-baseline gap-3 px-0.5">
+            <h2 className="text-sm font-semibold">Voice stack</h2>
+            <p className="truncate text-xs text-muted-foreground">
+              Listen, think, then speak. Open a step to change its provider.
+            </p>
+          </div>
+          <ol className="space-y-3">
+            <PipelineStage
+              icon={<EarIcon className="size-4" />}
+              title="Listen"
+              summary={[
+                STT_PRESETS[config.transcriber.provider].label,
+                config.transcriber.model,
+                config.transcriber.language,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+              missingKey={lacksKey(config.transcriber.provider, configuredKeys)}
+              measured={fmtMs(transcription)}
+              measuredLabel="Transcription delay"
+            >
+              <Field label="Provider" htmlFor="stt-provider">
+                <ProviderSelect
+                  id="stt-provider"
+                  value={config.transcriber.provider}
+                  options={STT_PROVIDERS}
+                  configured={configuredKeys}
+                  onChange={(provider) =>
+                    updateConfig((c) => ({
+                      ...c,
+                      transcriber: {
+                        ...c.transcriber,
+                        provider,
+                        model: STT_PRESETS[provider].model,
+                        language: STT_PRESETS[provider].language,
+                      },
+                    }))
+                  }
+                />
+                <MissingKeyNotice
+                  provider={config.transcriber.provider}
+                  configured={configuredKeys}
+                />
+              </Field>
+              <Field label="Model" htmlFor="stt-model">
+                <ModelSelect
+                  key={config.transcriber.provider}
+                  id="stt-model"
+                  models={STT_PRESETS[config.transcriber.provider].models}
+                  placeholder={
+                    STT_PRESETS[config.transcriber.provider].modelPlaceholder
+                  }
+                  value={config.transcriber.model}
+                  onChange={(model) =>
+                    updateConfig((c) => ({
+                      ...c,
+                      transcriber: { ...c.transcriber, model },
+                    }))
+                  }
+                />
+              </Field>
+              <Field label="Language" htmlFor="stt-language">
+                <Input
+                  id="stt-language"
+                  value={config.transcriber.language}
+                  onChange={(e) =>
+                    updateConfig((c) => ({
+                      ...c,
+                      transcriber: {
+                        ...c.transcriber,
+                        language: e.target.value,
+                      },
+                    }))
+                  }
+                />
+              </Field>
+              <Field
+                className="@md:col-span-2"
+                label="Keyterms"
+                htmlFor="stt-keyterms"
+                hint="Comma-separated words to bias recognition toward."
+              >
+                <Input
+                  id="stt-keyterms"
+                  defaultValue={config.transcriber.keyterms.join(", ")}
+                  onChange={(e) =>
+                    updateConfig((c) => ({
+                      ...c,
+                      transcriber: {
+                        ...c.transcriber,
+                        keyterms: e.target.value
+                          .split(",")
+                          .map((t) => t.trim())
+                          .filter(Boolean),
+                      },
+                    }))
+                  }
+                />
+              </Field>
+            </PipelineStage>
+
+            <PipelineStage
+              icon={<BrainIcon className="size-4" />}
+              title="Think"
+              summary={[
+                LLM_PRESETS[config.model.provider].label,
+                config.model.model,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+              missingKey={lacksKey(config.model.provider, configuredKeys)}
+              measured={fmtMs(latency.llmTtftAvg)}
+              measuredLabel="Time to first token"
+            >
+              <Field
+                label="Provider"
+                htmlFor="llm-provider"
+                hint={
+                  config.model.provider === "openrouter" ||
+                  config.model.provider === "vercel-ai-gateway"
+                    ? "A gateway: one key for many models. Name models as vendor/model."
+                    : undefined
+                }
+              >
+                <ProviderSelect
+                  id="llm-provider"
+                  value={config.model.provider}
+                  options={LLM_PROVIDERS}
+                  configured={configuredKeys}
+                  onChange={(provider) =>
+                    updateConfig((c) => ({
+                      ...c,
+                      model: {
+                        ...c.model,
+                        provider,
+                        model: LLM_PRESETS[provider].model,
+                        baseUrl:
+                          provider === "custom" ? c.model.baseUrl : undefined,
+                      },
+                    }))
+                  }
+                />
+                <MissingKeyNotice
+                  provider={config.model.provider}
+                  configured={configuredKeys}
+                />
+              </Field>
+              <Field label="Model" htmlFor="llm-model">
+                <ModelSelect
+                  key={config.model.provider}
+                  id="llm-model"
+                  models={LLM_PRESETS[config.model.provider].models}
+                  placeholder={
+                    LLM_PRESETS[config.model.provider].modelPlaceholder
+                  }
+                  value={config.model.model}
+                  onChange={(model) =>
+                    updateConfig((c) => ({
+                      ...c,
+                      model: { ...c.model, model },
+                    }))
+                  }
+                />
+              </Field>
+              {config.model.provider === "custom" && (
+                <Field
+                  className="@md:col-span-2"
+                  label="Base URL"
+                  htmlFor="llm-base-url"
+                  hint="Any OpenAI-compatible endpoint: vLLM, Together, your own proxy."
+                >
+                  <Input
+                    id="llm-base-url"
+                    placeholder="https://example.com/v1"
+                    value={config.model.baseUrl ?? ""}
+                    onChange={(e) =>
+                      updateConfig((c) => ({
+                        ...c,
+                        model: {
+                          ...c.model,
+                          baseUrl: e.target.value || undefined,
+                        },
+                      }))
+                    }
+                  />
+                </Field>
+              )}
+              <Field label="Temperature" htmlFor="llm-temperature">
+                <NumberField
+                  id="llm-temperature"
+                  min={0}
+                  max={2}
+                  step={0.1}
+                  placeholder="Provider default"
+                  value={config.model.temperature}
+                  onChange={(temperature) =>
+                    updateConfig((c) => ({
+                      ...c,
+                      model: { ...c.model, temperature },
+                    }))
+                  }
+                />
+              </Field>
+            </PipelineStage>
+
+            <PipelineStage
+              last
+              icon={<AudioLinesIcon className="size-4" />}
+              title="Speak"
+              summary={[
+                TTS_PRESETS[config.voice.provider].label,
+                config.voice.model,
+                config.voice.voiceId && config.voice.voiceId.length <= 24
+                  ? config.voice.voiceId
+                  : undefined,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+              missingKey={lacksKey(config.voice.provider, configuredKeys)}
+              measured={fmtMs(latency.ttsTtfbAvg)}
+              measuredLabel="Time to first byte"
+            >
+              <Field label="Provider" htmlFor="tts-provider">
+                <ProviderSelect
+                  id="tts-provider"
+                  value={config.voice.provider}
+                  options={TTS_PROVIDERS}
+                  configured={configuredKeys}
+                  onChange={(provider) => {
+                    const preset = TTS_PRESETS[provider];
+                    updateConfig((c) => ({
+                      ...c,
+                      voice: {
+                        ...c.voice,
+                        provider,
+                        model: preset.model,
+                        voiceId: preset.voiceId,
+                        language: preset.language,
+                        // Speed ranges differ per provider; start from its default.
+                        speed: undefined,
+                      },
+                    }));
+                  }}
+                />
+                <MissingKeyNotice
+                  provider={config.voice.provider}
+                  configured={configuredKeys}
+                />
+              </Field>
+              <Field label="Model" htmlFor="tts-model">
+                <ModelSelect
+                  key={config.voice.provider}
+                  id="tts-model"
+                  models={TTS_PRESETS[config.voice.provider].models}
+                  placeholder={
+                    TTS_PRESETS[config.voice.provider].modelPlaceholder
+                  }
+                  value={config.voice.model}
+                  onChange={(model) =>
+                    updateConfig((c) => ({
+                      ...c,
+                      voice: { ...c.voice, model },
+                    }))
+                  }
+                />
+              </Field>
+              {voice.voiceLabel ? (
+                <Field label={voice.voiceLabel} htmlFor="tts-voice">
+                  <Input
+                    id="tts-voice"
+                    className="font-mono text-xs"
+                    value={config.voice.voiceId}
+                    onChange={(e) =>
+                      updateConfig((c) => ({
+                        ...c,
+                        voice: { ...c.voice, voiceId: e.target.value },
+                      }))
+                    }
+                  />
+                </Field>
+              ) : (
+                voice.voiceHint && (
+                  <p className="text-xs text-muted-foreground @md:col-span-2">
+                    {voice.voiceHint}
+                  </p>
+                )
+              )}
+              <div className="grid grid-cols-2 gap-4 @md:col-span-2">
+                {voice.hasLanguage && (
+                  <Field label="Language" htmlFor="tts-language">
+                    <Input
+                      id="tts-language"
+                      value={config.voice.language}
+                      onChange={(e) =>
+                        updateConfig((c) => ({
+                          ...c,
+                          voice: { ...c.voice, language: e.target.value },
+                        }))
+                      }
+                    />
+                  </Field>
+                )}
+                {voice.speed && (
+                  <Field label="Speed" htmlFor="tts-speed">
+                    <NumberField
+                      id="tts-speed"
+                      min={voice.speed.min}
+                      max={voice.speed.max}
+                      step={0.1}
+                      placeholder="1.0"
+                      value={config.voice.speed}
+                      onChange={(speed) =>
+                        updateConfig((c) => ({
+                          ...c,
+                          voice: { ...c.voice, speed },
+                        }))
+                      }
+                    />
+                  </Field>
+                )}
+              </div>
+            </PipelineStage>
+          </ol>
+        </div>
+      </div>
     </div>
   );
 }
@@ -557,7 +571,7 @@ function PipelineStage({
       {!last && (
         <span className="absolute top-10 -bottom-3 left-3.5 w-px bg-border" />
       )}
-      <section className="rounded-lg border bg-card">
+      <section className="@container rounded-lg border bg-card">
         <h2>
           <button
             type="button"
@@ -591,7 +605,7 @@ function PipelineStage({
         <div
           id={bodyId}
           className={cn(
-            "grid content-start gap-4 border-t p-4 md:grid-cols-2",
+            "grid content-start gap-4 border-t p-4 @md:grid-cols-2",
             !open && "hidden",
           )}
         >

@@ -150,7 +150,7 @@ export function AssistantEditor({
       className="gap-0"
     >
       <header className="sticky top-0 z-10 border-b bg-background/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 pt-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 pt-4">
           <div className="min-w-0">
             <div className="flex items-center gap-1">
               <h1 className="truncate text-xl font-semibold tracking-tight">
@@ -204,10 +204,14 @@ export function AssistantEditor({
             </Button>
           </div>
         </div>
-        <div className="mx-auto max-w-5xl px-5">
+        <div className="mx-auto max-w-7xl px-5">
           <TabsList variant="line" className="mt-2">
             {TABS.map((t) => (
-              <TabsTrigger key={t.value} value={t.value} className="flex-none px-2.5">
+              <TabsTrigger
+                key={t.value}
+                value={t.value}
+                className="flex-none px-2.5"
+              >
                 {t.label}
               </TabsTrigger>
             ))}
@@ -215,7 +219,7 @@ export function AssistantEditor({
         </div>
       </header>
 
-      <div className="mx-auto max-w-5xl px-6 py-6">
+      <div className="mx-auto max-w-7xl px-6 py-6">
         <TabsContent value="assistant" keepMounted>
           <AssistantTab
             draft={draft}
