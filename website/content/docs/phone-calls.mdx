@@ -1,0 +1,132 @@
+---
+title: Phone calls (SIP)
+description: Import a Telnyx number and assign it to an assistant.
+icon: Phone
+---
+
+Inbound calls reach an assistant like this:
+
+```text
+caller ─► Telnyx number ─► Telnyx SIP connection ─► your SIP server (LiveKit SIP, :5060)
+       ─► LiveKit inbound trunk + dispatch rule ─► room ─► Samata worker
+       ─► control plane picks the assistant assigned to the dialed number
+```
+
+The production compose runs the SIP server (`sip`) alongside LiveKit. Telnyx has
+to be able to reach it, so it needs a public address.
+
+## Set up
+
+<Steps>
+<Step>
+
+### Open the ports
+
+Open `5060/tcp`, `5060/udp` and `10000-10100/udp` on the machine running it. The
+production compose already points DNS and `SAMATA_SIP_HOST` at `LIVEKIT_DOMAIN`.
+
+</Step>
+<Step>
+
+### Set `SAMATA_SIP_HOST`
+
+Set it on the control plane to that address: a hostname, `host:port`, or IPv4.
+
+</Step>
+<Step>
+
+### Import the number
+
+On the **Phone Numbers** page choose **Import number**, enter a Telnyx API key and
+a number from the same Telnyx account (E.164, for example `+14155550123`).
+
+</Step>
+</Steps>
+
+When you import a number, Samata:
+
+1. checks with Telnyx that the key is valid and the number is active on it, and stores the key encrypted;
+2. creates a LiveKit inbound trunk for the number that accepts calls only from Telnyx's published signaling addresses (override with `SAMATA_SIP_ALLOWED_ADDRESSES`), and a dispatch rule that gives each caller their own room and dispatches the worker;
+3. creates a Telnyx SIP connection pointing at `SAMATA_SIP_HOST` and attaches the number to it. If the number was on another connection, it is put back there when you remove the number.
+
+Choose the assistant for the number in the same table. Reassigning only changes
+which assistant answers, so it's instant and never touches Telnyx or LiveKit. A
+call to an imported number with no assistant is hung up (or goes to
+`SAMATA_DEFAULT_AGENT` if set).
+
+If connecting fails (for example `SAMATA_SIP_HOST` isn't set yet) the number stays
+imported as **Not connected**, and **Connect** retries it. Removing a number
+undoes the Telnyx and LiveKit setup.
+
+## LiveKit Cloud
+
+Running your own SIP server needs a public address, which a laptop doesn't have
+(and a tunnel like ngrok can't carry the UDP audio). To test real phone calls from
+your laptop, use a [LiveKit Cloud](https://cloud.livekit.io) project for the media
+side instead of the local one.
+
+<Callout type="info">
+While you test phone calls this way, the local LiveKit server and SIP server are
+not used. Your worker and control plane keep running on your machine; only where
+they connect changes.
+</Callout>
+
+<Steps>
+<Step>
+
+### Get your project's details
+
+In your LiveKit Cloud project, copy the project URL (`wss://<project>.livekit.cloud`),
+create an API key under Settings, and find the project's SIP address
+(`<id>.sip.livekit.cloud`).
+
+</Step>
+<Step>
+
+### Point both services at it
+
+Switch **both** `control-plane/.env` and `worker/.env`. They must point at the
+same LiveKit, or calls will ring and nobody will answer:
+
+```bash
+LIVEKIT_URL=wss://<project>.livekit.cloud
+LIVEKIT_API_KEY=<key>
+LIVEKIT_API_SECRET=<secret>
+```
+
+and in `control-plane/.env` only:
+
+```bash
+SAMATA_SIP_HOST=<id>.sip.livekit.cloud
+```
+
+</Step>
+<Step>
+
+### Restart and import
+
+Restart the control plane and the worker. Optionally stop the local LiveKit and
+SIP servers (`docker compose stop livekit sip`), but **keep Postgres running**
+since it holds your data. Then on the Phone Numbers page, **Import number** (or
+press **Connect** on one you already imported).
+
+</Step>
+</Steps>
+
+The worker needs no public address: it connects out to Cloud, which hands it each
+call. `SAMATA_CONTROL_PLANE_URL` stays `http://localhost:3000`.
+
+To go back to fully local, restore the original `LIVEKIT_*` values in both files,
+clear `SAMATA_SIP_HOST`, restart, and `docker compose up -d`. A number imported
+against one setup shows **Needs reconnect** after you switch: press **Connect**
+and Samata rebuilds its trunk on the LiveKit you're now using.
+
+<Callout type="warn">
+If several people share one Cloud project, a call can land on anyone's worker.
+Use a project each, or give each worker a unique `SAMATA_AGENT_NAME` (matching
+`SAMATA_WORKER_AGENT_NAME` in their control plane).
+</Callout>
+
+The worker reads `sip.trunkPhoneNumber` and `sip.phoneNumber` from the caller's
+participant attributes. To wire a trunk by hand instead, use the
+[`lk` CLI](https://docs.livekit.io/sip/).

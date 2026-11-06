@@ -1,0 +1,63 @@
+---
+title: Accounts and workspaces
+description: Sign-up rules, workspaces, and API keys.
+icon: Users
+---
+
+The dashboard has real accounts (email and password, plus optional Google), built
+on [Better Auth](https://better-auth.com).
+
+## Sign-up
+
+- **The first account becomes the owner.** Sign up as soon as you deploy, because whoever gets there first owns the install.
+- **After that, sign-up is invitation-only.** Samata spends your workspace's provider keys on every call, so open registration would let anyone on the internet run up your bill.
+
+Invite people from **Team**. Samata doesn't send email, so creating an invitation
+gives you a link to share; the link is what lets them create their account.
+
+## Workspaces
+
+Everything belongs to a workspace. Assistants and call logs carry an
+`organization_id`, and every dashboard and API query is scoped to it. A fresh
+install, or an upgrade, has a single `default` workspace holding all existing
+data.
+
+<Callout type="info">
+Creating more workspaces and managing teams across them is intentionally not in
+this repo yet.
+</Callout>
+
+## Configuration
+
+Set `BETTER_AUTH_SECRET` (`openssl rand -hex 32`) and, in production,
+`BETTER_AUTH_URL` (the compose file derives it from `SAMATA_DOMAIN`).
+
+For Google sign-in set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, with the
+redirect URI `https://<your-domain>/api/auth/callback/google`.
+
+## API keys
+
+The management API takes `Authorization: Bearer <key>`. Create keys on the
+dashboard's **API Keys** page (owners and admins). The secret, `smt_…`, is shown
+once and only its hash is stored. A key acts on its own workspace and can be
+revoked there.
+
+The `SAMATA_API_KEY` environment variable still works as a key for the default
+workspace.
+
+The dashboard calls the same API with its session cookie, except `/api/tools` and
+`/api/tool-server`, which accept only an API key.
+
+## Dashboard pages
+
+| Page               | What it shows                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Assistants         | Edit an agent's model, voice, transcriber, prompt, tools, VAD and analysis plan. Talk to it from the browser. |
+| Tools              | The tool server, the workspace tool library (pushed from code), and which assistants use each tool.           |
+| Phone Numbers      | Import a number from Telnyx (API key + number), then assign it to any assistant.                              |
+| Logs               | Every call, with transcript, summary, structured data and latency.                                            |
+| Structured Outputs | Data extracted by each assistant's analysis plan.                                                             |
+| Metrics            | Call volume and the latency breakdown (end of turn, STT, LLM, TTS).                                           |
+| Provider Keys      | Your keys for OpenAI, Deepgram, Cartesia, OpenRouter, ... Stored encrypted, never shown again.                |
+| API Keys           | Keys for the management API, which settings are configured, and the API and webhook endpoints.                |
+| Team               | Who is in the workspace. Invite people, remove them.                                                          |

@@ -1,0 +1,60 @@
+---
+title: Environment variables
+description: Configuration for the control plane, the worker, and the production compose file.
+icon: Settings
+---
+
+The control plane reads `control-plane/.env` in development. The worker reads
+`worker/.env`. In production, one `.env` next to `deploy/docker-compose.yml`
+feeds both. Model provider keys are **not** environment variables: add them on
+the dashboard's Provider Keys page.
+
+## Control plane
+
+| Variable                       | Description                                                                                                                 |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                 | Postgres connection string.                                                                                                 |
+| `SAMATA_WEBHOOK_SECRET`        | Shared secret the worker sends as `x-samata-secret`. Must match the worker's. Webhooks refuse all requests if it is unset.   |
+| `BETTER_AUTH_SECRET`           | Signs dashboard sessions. Generate with `openssl rand -hex 32`.                                                             |
+| `BETTER_AUTH_URL`              | Public URL of the dashboard, used for invitation links and cookies. Unset in dev. The production compose derives it from `SAMATA_DOMAIN`. |
+| `SAMATA_PUBLIC_URL`            | Fallback for `BETTER_AUTH_URL`.                                                                                             |
+| `SAMATA_ENCRYPTION_KEY`        | Encrypts provider keys and imported phone number keys. Defaults to `BETTER_AUTH_SECRET`. Changing either makes stored keys unreadable, so re-enter them. Set it separately so rotating the auth secret doesn't break them. |
+| `LIVEKIT_URL`                  | LiveKit server URL, for example `ws://localhost:7880`.                                                                      |
+| `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | LiveKit credentials. Used to mint browser tokens and manage SIP trunks. Must match `infra/livekit/livekit.yaml` locally.       |
+| `SAMATA_API_KEY`               | Optional fixed bearer key for the default workspace. Prefer keys created on the API Keys page.                              |
+| `SAMATA_DEFAULT_AGENT`         | Agent (id or slug) for calls that match nothing else.                                                                       |
+| `SAMATA_ANALYSIS_MODEL`        | Model for post-call analysis. Defaults to the provider's small default model. An assistant's `analysisPlan.model` overrides it. |
+| `SAMATA_SIP_HOST`              | Public address of your SIP server: a hostname, `host:port`, or IPv4. Required to connect phone numbers.                     |
+| `SAMATA_SIP_ALLOWED_ADDRESSES` | Comma-separated IPs or CIDRs allowed to send SIP calls. Defaults to Telnyx's published signaling addresses.                 |
+| `SAMATA_WORKER_AGENT_NAME`     | Agent name workers register under (explicit dispatch). Defaults to `samata`. Must match the worker's `SAMATA_AGENT_NAME`.   |
+| `SAMATA_AUTO_MIGRATE`          | Set to `0` to skip applying migrations on boot.                                                                             |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Enable "Continue with Google". Redirect URI: `https://<domain>/api/auth/callback/google`.                       |
+
+## Worker
+
+| Variable                        | Description                                                                                                       |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `LIVEKIT_URL`                   | LiveKit server URL. Must be the same LiveKit as the control plane.                                                |
+| `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | LiveKit credentials.                                                                                      |
+| `SAMATA_CONTROL_PLANE_URL`      | Where the control plane is reachable from the worker, for example `http://localhost:3000`.                        |
+| `SAMATA_WEBHOOK_SECRET`         | Must match the control plane's.                                                                                   |
+| `SAMATA_AGENT_NAME`             | Agent name the worker registers under. Must match `SAMATA_WORKER_AGENT_NAME` and your SIP dispatch rules.        |
+
+## Production compose
+
+These are read by `deploy/docker-compose.yml` from `.env`.
+
+| Variable              | Description                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------- |
+| `SAMATA_IMAGE_PREFIX` | Registry and owner the images are pulled from, for example `ghcr.io/your-org`.        |
+| `SAMATA_VERSION`      | Image tag. Defaults to `latest`; pin a release in production.                         |
+| `SAMATA_DOMAIN`       | Hostname for the dashboard and API. Caddy gets a certificate for it.                  |
+| `LIVEKIT_DOMAIN`      | Hostname for LiveKit and SIP.                                                         |
+| `LIVEKIT_PUBLIC_URL`  | Override when using LiveKit Cloud, for example `wss://<project>.livekit.cloud`.        |
+| `POSTGRES_PASSWORD`   | Database password.                                                                    |
+| `SAMATA_WORKER_REPLICAS` | Number of worker containers. Defaults to `1`.                                      |
+
+<Callout type="warn">
+The keys in `infra/livekit/*.yaml` and `.env.example` files are development
+placeholders. Rotate all of them before you expose anything.
+</Callout>

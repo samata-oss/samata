@@ -467,6 +467,7 @@ deploy/                   Production compose (prebuilt images + Caddy) and .env.
 infra/livekit/            Dev livekit.yaml, sip.yaml (dev keys: devkey / samata_dev_secret_…)
 control-plane/            Next.js 16, Hono under /api, Drizzle (agent, call_log), Dockerfile
 worker/                   livekit-agents 1.8 worker, Dockerfile
+website/                  Landing page and docs (Next.js + Fumadocs): `pnpm site:dev`
 .github/workflows/        Multi-arch image builds, published to GHCR
 ```
 

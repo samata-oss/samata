@@ -1,0 +1,24 @@
+{
+  "title": "Samata",
+  "pages": [
+    "index",
+    "quickstart",
+    "---Concepts---",
+    "architecture",
+    "call-lifecycle",
+    "---Guides---",
+    "deploy",
+    "agents",
+    "models",
+    "tools",
+    "phone-calls",
+    "browser-calls",
+    "accounts",
+    "---Reference---",
+    "agent-config",
+    "environment",
+    "api",
+    "---Project---",
+    "contributing"
+  ]
+}

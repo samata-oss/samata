@@ -1,0 +1,30 @@
+---
+title: Sessions
+description: Start a browser call.
+---
+
+## `POST /api/session/start`
+
+Creates a room, dispatches a worker into it, and returns what a browser needs to
+join. See [Browser calls](/docs/browser-calls).
+
+```bash
+curl -X POST localhost:3000/api/session/start \
+  -H "authorization: Bearer $SAMATA_API_KEY" \
+  -H "content-type: application/json" \
+  -d '{"assistantId": "receptionist"}'
+```
+
+| Body field    | Description                |
+| ------------- | -------------------------- |
+| `assistantId` | An agent's id or slug.     |
+
+Response:
+
+```json
+{ "url": "ws://localhost:7880", "token": "…", "roomName": "call_ab12cd34ef56" }
+```
+
+The token is scoped to that room only. Pass `url` and `token` to `livekit-client`,
+or paste them into the [agents playground](https://agents-playground.livekit.io).
+`POST /api/agents/:ref/test-token` does the same, addressed by agent.

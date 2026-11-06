@@ -1,0 +1,63 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+/* Samata brand: the dashboard's indigo on near-black with hairline borders. */
+:root {
+  --color-fd-primary: oklch(0.55 0.215 277);
+  --color-fd-primary-foreground: oklch(0.99 0 0);
+  --color-fd-ring: oklch(0.55 0.215 277 / 45%);
+}
+
+.dark {
+  --color-fd-background: oklch(0.15 0.005 270);
+  --color-fd-card: oklch(0.18 0.006 270);
+  --color-fd-popover: oklch(0.205 0.007 270);
+  --color-fd-muted: oklch(0.22 0.007 270);
+  --color-fd-secondary: oklch(0.235 0.008 270);
+  --color-fd-accent: oklch(0.255 0.01 272);
+  --color-fd-border: oklch(1 0 0 / 8%);
+  --color-fd-primary: oklch(0.66 0.2 277);
+  --color-fd-primary-foreground: oklch(0.99 0 0);
+  --color-fd-ring: oklch(0.66 0.2 277 / 55%);
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+/* Stop the page shifting when a dialog locks scroll. Needs !important to beat the lock's inline style. */
+html > body[data-scroll-locked] {
+  /* biome-ignore lint/complexity/noImportantStyles: overrides an inline style */
+  margin-right: 0px !important;
+  /* biome-ignore lint/complexity/noImportantStyles: overrides an inline style */
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+::selection {
+  background: oklch(0.6 0.2 277 / 30%);
+}
+
+/* Landing page: a faint grid that fades out toward the edges. */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, oklch(1 0 0 / 5%) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(1 0 0 / 5%) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(
+    ellipse 70% 60% at 50% 0%,
+    black 30%,
+    transparent 80%
+  );
+}
+
+:root:not(.dark) .bg-grid {
+  background-image:
+    linear-gradient(to right, oklch(0 0 0 / 6%) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0 0 0 / 6%) 1px, transparent 1px);
+}

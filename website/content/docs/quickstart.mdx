@@ -1,0 +1,93 @@
+---
+title: Quickstart
+description: Run the whole stack on your laptop and talk to an agent in the browser.
+icon: Rocket
+---
+
+This runs everything locally with no accounts, except the model providers you
+choose for your agent. You need Docker, Node.js with [pnpm](https://pnpm.io), and
+Python 3.
+
+<Steps>
+<Step>
+
+### Clone the repo and start the infra
+
+LiveKit and Postgres run in Docker. Redis is only needed for local phone calls, so it is left out here.
+
+```bash
+git clone https://github.com/samata-oss/samata.git
+cd samata
+docker compose up -d livekit postgres
+```
+
+</Step>
+<Step>
+
+### Start the control plane
+
+```bash
+pnpm install
+cp control-plane/.env.example control-plane/.env
+pnpm db:migrate && pnpm db:seed
+pnpm dev                                    # http://localhost:3000
+```
+
+`db:seed` creates a sample `receptionist` agent. Open [localhost:3000](http://localhost:3000)
+and sign up: **the first account becomes the owner**.
+
+</Step>
+<Step>
+
+### Add a model provider key
+
+Samata uses your keys, not ours. On the dashboard open **Provider Keys** and add
+an OpenAI key. One OpenAI key covers the model, the transcriber and the voice
+(select OpenAI for each on the assistant), or use Deepgram and Cartesia, which
+the sample agent defaults to. See [Bring your own models](/docs/models).
+
+</Step>
+<Step>
+
+### Start the worker
+
+```bash
+cd worker
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+cp .env.example .env
+.venv/bin/python main.py dev
+```
+
+The worker needs no provider keys of its own. It gets the right ones from the
+control plane for each call.
+
+</Step>
+<Step>
+
+### Talk to your agent
+
+Open an assistant on the dashboard and use its **Test** tab. Or start a session
+yourself and paste the returned `url` and `token` into the
+[LiveKit agents playground](https://agents-playground.livekit.io):
+
+```bash
+curl -X POST localhost:3000/api/session/start \
+  -H "authorization: Bearer dev-api-key-change-me" \
+  -H "content-type: application/json" \
+  -d '{"assistantId": "receptionist"}'
+```
+
+</Step>
+</Steps>
+
+<Callout type="info">
+Want to see the webhook lifecycle without any audio? Run `pnpm simulate:call`.
+</Callout>
+
+## Next steps
+
+<Cards>
+  <Card title="Define your own agent" href="/docs/agents" />
+  <Card title="Give it tools" href="/docs/tools" />
+  <Card title="Deploy to a server" href="/docs/deploy" />
+</Cards>

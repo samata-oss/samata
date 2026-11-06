@@ -1,0 +1,61 @@
+---
+title: Introduction
+description: Samata is an open-source, self-hosted, declarative voice AI orchestrator. A Vapi alternative you run yourself.
+icon: BookOpen
+---
+
+Samata runs voice agents on infrastructure you control. You describe an agent as
+JSON (its model, voice, transcriber, tools and post-call analysis), and Samata
+runs it on phone calls and in the browser.
+
+It keeps real-time media separate from agent logic:
+
+- **[LiveKit](https://livekit.io)** carries the audio over WebRTC and SIP and dispatches each call to a worker.
+- **The worker** is a stateless Python process. For each call it asks the control plane for the agent's config and your provider keys, builds the speech-to-text, LLM and text-to-speech pipeline, and reports back when the call ends.
+- **The control plane** is a Next.js app that stores agents and call logs, runs tools, and does post-call analysis. It also serves the dashboard and the management API.
+
+Your own logic never goes in the Samata repo. Agents are JSON you send to the API,
+and your tools and post-call handling run on your own servers, which Samata
+calls over HTTP.
+
+## Features
+
+<Cards>
+  <Card title="Declarative agents" href="/docs/agents">
+    Agents are plain JSON. Create them over the API, version them in git, and
+    push them on every deploy.
+  </Card>
+  <Card title="Bring your own models" href="/docs/models">
+    OpenAI, OpenRouter, Vercel AI Gateway, Groq or any OpenAI-compatible
+    endpoint for the LLM. Deepgram, AssemblyAI, ElevenLabs and Cartesia for speech.
+  </Card>
+  <Card title="Tools on your server" href="/docs/tools">
+    One webhook server holds all your tool endpoints. Define tools in code and
+    push them with a single idempotent call.
+  </Card>
+  <Card title="Phone numbers" href="/docs/phone-calls">
+    Import a Telnyx number and assign it to an assistant. Samata wires the SIP
+    trunk and dispatch rule for you.
+  </Card>
+  <Card title="Browser calls" href="/docs/browser-calls">
+    Start a session from your backend and join it from a browser with a
+    room-scoped token.
+  </Card>
+  <Card title="Workspaces and teams" href="/docs/accounts">
+    Real accounts, an owner, invitation-only sign-up, and API keys scoped to a workspace.
+  </Card>
+</Cards>
+
+## Where to go next
+
+<Cards>
+  <Card title="Quickstart" href="/docs/quickstart">
+    Get the stack running on your laptop and talk to an agent.
+  </Card>
+  <Card title="Deploy" href="/docs/deploy">
+    Run Samata on a server from prebuilt images with automatic TLS.
+  </Card>
+  <Card title="API reference" href="/docs/api">
+    Every endpoint of the management API.
+  </Card>
+</Cards>

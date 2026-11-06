@@ -1,0 +1,52 @@
+---
+title: API overview
+description: The management API for agents, tools, calls and sessions.
+---
+
+The management API is served by the control plane under `/api`. Everything it
+accepts and returns is JSON.
+
+## Authentication
+
+Send a workspace API key as a bearer token:
+
+```bash
+curl localhost:3000/api/agents \
+  -H "authorization: Bearer $SAMATA_API_KEY"
+```
+
+Create keys on the dashboard's **API Keys** page (owners and admins). A key acts
+on its own workspace, and every query is scoped to it. The secret (`smt_…`) is
+shown once and only its hash is stored. `SAMATA_API_KEY` in the environment also
+works, for the default workspace.
+
+A wrong key is a `401`, even if a session cookie is also present. The dashboard
+uses the same API with its session cookie, except for `/api/tools` and
+`/api/tool-server`, which accept only an API key.
+
+## Endpoints
+
+| Area                       | Endpoints                                                                  |
+| -------------------------- | -------------------------------------------------------------------------- |
+| [Agents](/docs/api/agents) | `GET/POST/PUT /api/agents`, `GET/PATCH/DELETE /api/agents/:ref`, `POST /api/agents/:ref/test-token` |
+| [Tools](/docs/api/tools)   | `PUT/GET /api/tools`, `GET/PUT/DELETE /api/tools/:name`, `GET/PUT/DELETE /api/tool-server` |
+| [Calls](/docs/api/calls)   | `GET /api/calls`, `GET /api/calls/:id`                                     |
+| [Sessions](/docs/api/sessions) | `POST /api/session/start`                                              |
+| [Webhooks](/docs/api/webhooks) | `POST /api/webhooks/*`, called by the worker                           |
+
+`GET /api/health` returns `{ "ok": true }` and needs no authentication.
+
+## Errors
+
+Errors are a JSON body with an `error` string and an HTTP status:
+
+```json
+{ "error": "Not found" }
+```
+
+| Status | Meaning                                                             |
+| ------ | ------------------------------------------------------------------- |
+| `400`  | The body failed validation. `error` says which field.               |
+| `401`  | Missing or invalid API key.                                         |
+| `404`  | The resource doesn't exist in your workspace.                       |
+| `409`  | A slug or phone number is already taken.                            |

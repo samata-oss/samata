@@ -1,0 +1,35 @@
+---
+title: Calls
+description: List calls and fetch one with its transcript and analysis.
+---
+
+| Endpoint              | Does                                                                      |
+| --------------------- | ------------------------------------------------------------------------- |
+| `GET /api/calls`      | Recent calls, newest first: `{ "calls": [...] }`. `limit` defaults to 50, max 200. |
+| `GET /api/calls/:id`  | One call, plus `agentName` and `agentSlug` (null once the agent is deleted). |
+
+```bash
+curl "localhost:3000/api/calls?limit=10" \
+  -H "authorization: Bearer $SAMATA_API_KEY"
+```
+
+## The call object
+
+| Field              | Description                                                                 |
+| ------------------ | --------------------------------------------------------------------------- |
+| `id`               | Call id.                                                                    |
+| `agentId`          | The agent that answered. Null if it has been deleted.                       |
+| `roomName`         | The LiveKit room, like `call_ab12cd34ef56`.                                 |
+| `type`             | `inbound`, `outbound` or `web`.                                             |
+| `customerNumber`   | The caller's number, for phone calls.                                       |
+| `status`           | `in-progress`, `ended` or `failed`.                                         |
+| `endedReason`      | Why the call ended.                                                         |
+| `startedAt`, `endedAt`, `durationSeconds` | Timing.                                              |
+| `transcript`       | The full transcript as text.                                                |
+| `messages`         | The conversation as `{ role, content, time, interrupted?, toolName? }`.     |
+| `latency`          | Turn counts and averages for end of turn, transcription, LLM, TTS, and voice-to-voice, with p95 and per-turn details. |
+| `usage`            | Raw model usage from livekit-agents: tokens, characters, audio seconds.     |
+| `summary`          | Post-call summary.                                                          |
+| `structuredData`   | The object extracted with the agent's `analysisPlan.structuredDataSchema`.  |
+| `analysisError`    | Set if post-call analysis failed.                                           |
+| `toolCallCount`    | How many tools the LLM called.                                              |

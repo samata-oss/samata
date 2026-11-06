@@ -1,0 +1,37 @@
+---
+title: Call lifecycle
+description: The webhooks between the worker and the control plane, and how an agent is chosen.
+icon: PhoneCall
+---
+
+The worker talks to the control plane with Vapi-style `{ "message": { "type", ... } }`
+envelopes. Every request carries `x-samata-secret: $SAMATA_WEBHOOK_SECRET`.
+
+| Webhook                                 | When                       | Control plane does                                                                                                                                                           |
+| --------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/webhooks/assistant-request`  | A participant joins a room | Picks the agent, opens a `call_log` row, returns `{ call: { id }, assistant }`. Returns `{ error }` with 404 to reject the call, and the worker then hangs up.               |
+| `POST /api/webhooks/tool-calls`         | The LLM calls a tool       | Runs a built-in tool or forwards it to your [tool server](/docs/tools), then returns `{ results: [{ toolCallId, result \| error }] }`.                                       |
+| `POST /api/webhooks/end-of-call-report` | The room closes            | Saves the transcript, messages, latency and usage. After responding, it runs the summary and structured-data extraction and forwards the report to the agent's `server.url`. |
+
+## Choosing the agent
+
+On `assistant-request`, the control plane picks the agent in this order:
+
+1. `agentId` (an id or a slug) from the dispatch metadata or the room metadata
+2. The dialed number (`sip.trunkPhoneNumber`), matched against `agent.phone_number`
+3. `SAMATA_DEFAULT_AGENT`
+
+If nothing matches, the call is rejected and the worker hangs up.
+
+## What your server receives
+
+If an agent has a `server.url`, the control plane forwards lifecycle events to it
+after handling them, including the `end-of-call-report` with the transcript,
+latency and the structured data from your analysis plan. The secret you set on
+the server arrives as the `x-samata-secret` header. See the
+[webhooks reference](/docs/api/webhooks) for payloads.
+
+## Starting a browser call
+
+The browser never talks to LiveKit's API and never holds `LIVEKIT_API_SECRET`. See
+[Browser calls](/docs/browser-calls).

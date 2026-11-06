@@ -1,0 +1,63 @@
+---
+title: Bring your own models
+description: Each assistant picks its own transcriber, model and voice, and calls use your keys.
+icon: Cpu
+---
+
+Each assistant picks its own transcriber, model and voice, and calls use **your
+workspace's key** for whichever it chose. Add keys on the dashboard's
+**Provider Keys** page (owners and admins only).
+
+Keys are:
+
+- encrypted at rest (AES-256-GCM, keyed from `SAMATA_ENCRYPTION_KEY`, falling back to `BETTER_AUTH_SECRET`),
+- shown only as their last four characters, and
+- sent to the worker only when it takes a call. The workers need no provider keys of their own.
+
+A call whose assistant uses a provider you haven't added a key for is refused up
+front, with the reason in Logs and in the Test tab.
+
+## Providers
+
+| Layer       | Providers                                                                                                      |
+| ----------- | -------------------------------------------------------------------------------------------------------------- |
+| Model       | OpenAI, [OpenRouter](https://openrouter.ai), Vercel AI Gateway, Groq, or any custom OpenAI-compatible endpoint |
+| Transcriber | Deepgram, AssemblyAI, ElevenLabs, OpenAI                                                                       |
+| Voice       | Cartesia, ElevenLabs, Deepgram, OpenAI                                                                         |
+
+One OpenAI key covers all three layers. For the model, OpenRouter and Vercel AI
+Gateway give one key for many vendors' models (name them `vendor/model`, like
+`anthropic/claude-sonnet-4.5`); call a provider directly when latency matters
+most. Speech has no equivalent gateway, so each speech provider needs its own key.
+
+## Choosing providers in a config
+
+Set `provider` (and the provider's own `model` / `voiceId`) on `model`,
+`transcriber` and `voice`. Omitted fields take that provider's defaults. Keys are
+never part of the config:
+
+```json
+"model": { "provider": "openrouter", "model": "anthropic/claude-sonnet-4.5", "systemPrompt": "..." },
+"transcriber": { "provider": "assemblyai" },
+"voice": { "provider": "elevenlabs", "voiceId": "hpp4J3VqNfWAUOO0d1Us" }
+```
+
+### Custom endpoints
+
+`provider: "custom"` takes a `baseUrl` and an optional key, for any server that
+speaks the OpenAI chat API (vLLM, Ollama, your own gateway):
+
+```json
+"model": { "provider": "custom", "baseUrl": "https://llm.internal/v1", "model": "my-model", "systemPrompt": "..." }
+```
+
+## Post-call analysis
+
+Analysis runs on the assistant's model provider with the same key, using the
+provider's small default model unless `analysisPlan.model` says otherwise.
+
+<Callout type="warn">
+An assistant that pointed `openai` at another host with `baseUrl` is now treated
+as `custom`, because its OpenAI key was never meant for that host. Switch it to
+the provider's own entry if there is one.
+</Callout>

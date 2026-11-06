@@ -1,0 +1,5 @@
+{
+  "title": "API",
+  "icon": "Braces",
+  "pages": ["index", "agents", "tools", "calls", "sessions", "webhooks"]
+}

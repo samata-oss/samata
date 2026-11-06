@@ -1,0 +1,41 @@
+---
+title: Browser calls
+description: Start a session from your backend and join it from a browser.
+icon: Globe
+---
+
+The browser never talks to LiveKit's API and never holds `LIVEKIT_API_SECRET`.
+Your backend asks Samata to start a session and hands the result to the browser.
+
+```text
+Browser ── POST /api/session/start { assistantId } ──► Control plane
+   ▲                                                     │ 1. load the assistant
+   │◄──────────── { url, token, roomName } ──────────────┤ 2. create room "call_…"
+   │                                                     │ 3. dispatch the worker (agentId in metadata)
+   │                                                     ▼ 4. mint a token for that room only
+   └── WebRTC (token) ──► LiveKit SFU ──job──► pre-warmed worker ──assistant-request──► Control plane
+```
+
+## Start a session
+
+```bash
+curl -X POST localhost:3000/api/session/start \
+  -H "authorization: Bearer $SAMATA_API_KEY" \
+  -H "content-type: application/json" \
+  -d '{"assistantId": "receptionist"}'
+# -> { "url": "ws://localhost:7880", "token": "...", "roomName": "call_ab12cd34ef56" }
+```
+
+`assistantId` is an agent id or slug. Join the room with
+[`livekit-client`](https://github.com/livekit/client-sdk-js) using the `url` and
+`token`, or paste them into the
+[agents playground](https://agents-playground.livekit.io) to try it quickly.
+
+The token is scoped to that one room. The dispatch is created server-side, so the
+browser can't change which agent runs. Inbound SIP calls use the same dispatch to
+the same worker; only the dispatch rule differs.
+
+<Callout type="info">
+Call this from **your** backend with an API key. Don't ship the key to the
+browser.
+</Callout>

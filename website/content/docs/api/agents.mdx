@@ -1,0 +1,41 @@
+---
+title: Agents
+description: Create, update, list and delete agents.
+---
+
+`:ref` in a path is an agent's `id` or its `slug`. See
+[Agents](/docs/agents) for a walkthrough and the
+[config reference](/docs/agent-config) for the shape of `config`.
+
+An agent looks like this:
+
+```json
+{
+  "id": "…",
+  "slug": "support",
+  "name": "Support",
+  "phoneNumber": "+14155550100",
+  "config": { "…": "…" },
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "updatedAt": "2026-01-01T00:00:00.000Z"
+}
+```
+
+| Endpoint                         | Does                                                                                                                                              |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/agents`                | List agents in the workspace, newest first: `{ "agents": [...] }`.                                                                                |
+| `POST /api/agents`               | Create. `201` with the agent; `409` if the slug or phone number is taken. `slug` is optional and defaults to one derived from `name`.             |
+| `PUT /api/agents`                | Create or replace by `slug` (idempotent, good for config-as-code). `409` if the slug belongs to another workspace.                                |
+| `GET /api/agents/:ref`           | Fetch one.                                                                                                                                        |
+| `PATCH /api/agents/:ref`         | Partial update. Top-level keys of `config` you send replace the stored ones; the rest are kept. The merged config is validated in full.           |
+| `DELETE /api/agents/:ref`        | Delete. Its calls stay in the logs.                                                                                                               |
+| `POST /api/agents/:ref/test-token` | Start a session on this agent. Same response as [`POST /api/session/start`](/docs/api/sessions).                                                |
+
+## Body
+
+| Field         | Type   | Notes                                                           |
+| ------------- | ------ | --------------------------------------------------------------- |
+| `slug`        | string | Lowercase letters, digits and `-`, 1 to 64 characters.          |
+| `name`        | string | 1 to 120 characters.                                            |
+| `phoneNumber` | string | Optional, E.164 like `+14155550123`. `null` clears it.          |
+| `config`      | object | The [agent config](/docs/agent-config).                         |

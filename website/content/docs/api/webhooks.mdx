@@ -1,0 +1,57 @@
+---
+title: Webhooks
+description: What the worker sends the control plane, and what your server receives.
+---
+
+There are two directions of webhook. Every payload is a Vapi-style
+`{ "message": { "type", ... } }` envelope.
+
+## Worker to control plane
+
+The worker calls these. You don't, unless you are replacing the worker. Every
+request carries `x-samata-secret: $SAMATA_WEBHOOK_SECRET`; without it (or if the
+secret is unset on the control plane) the request is refused.
+
+| Endpoint                                | Body `message.type` | Response                                                                 |
+| --------------------------------------- | ------------------- | ------------------------------------------------------------------------ |
+| `POST /api/webhooks/assistant-request`  | `assistant-request` | `{ call: { id }, assistant }`. `404` rejects the call; `422` if a provider key is missing. |
+| `POST /api/webhooks/tool-calls`         | `tool-calls`        | `{ results: [{ toolCallId, result \| error }] }`                         |
+| `POST /api/webhooks/end-of-call-report` | `end-of-call-report`| `{ ok: true }`                                                           |
+
+See [Call lifecycle](/docs/call-lifecycle) for when each is sent and how the agent
+is chosen.
+
+## Control plane to your server
+
+### `tool-calls`
+
+Sent to the tool's server when the LLM calls a tool. Your server answers with the
+results. See [Tools and your webhook server](/docs/tools#answer-tool-calls) for the
+shape.
+
+### `end-of-call-report`
+
+Sent to the agent's `server.url` after the call is saved and analyzed. A failure
+here is logged and does not affect the call.
+
+```json
+{
+  "message": {
+    "type": "end-of-call-report",
+    "call": { "id": "…", "agentId": "…" },
+    "endedReason": "customer-ended-call",
+    "startedAt": 1767225600,
+    "endedAt": 1767225660,
+    "transcript": "…",
+    "messages": [{ "role": "assistant", "content": "Hi! How can I help?", "time": 0.4 }],
+    "latency": { "turns": 3, "voiceToVoiceAvg": 0.9 },
+    "usage": [],
+    "toolCallCount": 1,
+    "analysis": { "summary": "…", "structuredData": { "intent": "order-status" } }
+  }
+}
+```
+
+`startedAt` and `endedAt` are seconds since the epoch. `analysis` is `null` if
+analysis didn't run. The secret configured on the server is sent as
+`x-samata-secret`; always verify it.

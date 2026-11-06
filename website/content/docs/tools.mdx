@@ -1,0 +1,106 @@
+---
+title: Tools and your webhook server
+description: Define tools in code, push them to Samata, and answer tool calls from your own server.
+icon: Wrench
+---
+
+Like Vapi, you run one webhook server that holds all your tool endpoints, and you
+define the tools in code. Samata calls it when an assistant uses a tool. The
+`examples/webhook-server` directory in the repo does all three steps below.
+
+<Steps>
+<Step>
+
+### Push your tools
+
+Create an API key on the **API Keys** page first; `/api/tools` requires one.
+`PUT /api/tools` is idempotent, so run it on every deploy. It creates new tools,
+updates changed ones and leaves the rest. They show up on the dashboard's Tools
+page.
+
+```bash
+curl -X PUT localhost:3000/api/tools \
+  -H "authorization: Bearer $SAMATA_API_KEY" -H "content-type: application/json" \
+  -d '{
+    "server": { "url": "https://example.com/samata", "secret": "…" },
+    "tools": [{
+      "name": "lookup_order_status",
+      "description": "Look up the shipping status of an order.",
+      "parameters": { "type": "object", "properties": { "orderNumber": { "type": "string" } }, "required": ["orderNumber"] },
+      "messageOnStart": "One moment while I look that up."
+    }]
+  }'
+# -> { created: [...], updated: [...], unchanged: [...], deleted: [...], tools: [...] }
+```
+
+`server` registers your webhook server as the **tool server**: where every tool
+without its own `server` is sent. It replaces the stored one, secret included.
+
+Add `"prune": true` to delete library tools missing from the push, so the library
+mirrors your code (`deleted[].usedBy` names assistants that still used them).
+Without it a partial push never deletes anything.
+
+</Step>
+<Step>
+
+### Give tools to assistants
+
+Turn them on in an assistant's Tools tab, or list them by name in its config:
+
+```json
+{ "config": { "toolNames": ["lookup_order_status"] } }
+```
+
+Tools defined directly in `config.tools` still work, and win over a library tool
+of the same name.
+
+</Step>
+<Step>
+
+### Answer tool calls
+
+Samata POSTs to your server:
+
+```json
+{
+  "message": {
+    "type": "tool-calls",
+    "call": {
+      "id": "…",
+      "agentId": "…",
+      "type": "inbound",
+      "customer": { "number": "+1415…" }
+    },
+    "toolCallList": [
+      {
+        "id": "call_1",
+        "name": "lookup_order_status",
+        "arguments": { "orderNumber": "A1234" }
+      }
+    ]
+  }
+}
+```
+
+and expects:
+
+```json
+{ "results": [{ "toolCallId": "call_1", "result": "Shipped, arrives Friday." }] }
+```
+
+Send `"error"` instead of `"result"` if the tool failed. The `result` string goes
+to the LLM. Your secret arrives as the `x-samata-secret` header, so check it.
+
+</Step>
+</Steps>
+
+## Which server gets a call
+
+Most specific first:
+
+1. the tool's own `server`
+2. a built-in of that name (`get_current_time`), run inside Samata
+3. the assistant's `server` (the same URL that gets `end-of-call-report`)
+4. the workspace tool server
+
+See the [tools API](/docs/api/tools) for every endpoint.

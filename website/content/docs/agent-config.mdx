@@ -1,0 +1,148 @@
+---
+title: Agent config
+description: Every field of an agent's config and its default.
+icon: FileCode
+---
+
+An agent's `config` is declarative JSON. The schema is
+`control-plane/src/lib/agent-config.ts` in the repo, and the worker mirrors it in
+`worker/samata_worker/config.py`. Fields you leave out take the defaults below.
+
+```json
+{
+  "firstMessage": "Hi! How can I help?",
+  "model": { "provider": "openai", "model": "gpt-4.1-mini", "systemPrompt": "You are a helpful voice assistant." },
+  "voice": { "provider": "cartesia", "voiceId": "…" },
+  "transcriber": { "provider": "deepgram", "keyterms": ["Acme"] },
+  "vad": { "activationThreshold": 0.5 },
+  "interruption": { "enabled": true },
+  "toolNames": ["lookup_order_status"],
+  "maxDurationSeconds": 600,
+  "analysisPlan": { "structuredDataSchema": { "type": "object" } },
+  "server": { "url": "https://example.com/samata-events" }
+}
+```
+
+## Top level
+
+| Field                | Type    | Default | Description                                                                  |
+| -------------------- | ------- | ------- | ---------------------------------------------------------------------------- |
+| `firstMessage`       | string  | none    | Spoken as soon as the caller joins. Omit to wait for the caller to speak.    |
+| `model`              | object  |         | The LLM. See [`model`](#model).                                              |
+| `voice`              | object  |         | Text-to-speech. See [`voice`](#voice).                                       |
+| `transcriber`        | object  |         | Speech-to-text. See [`transcriber`](#transcriber).                           |
+| `vad`                | object  |         | Voice activity detection. See [`vad`](#vad).                                 |
+| `interruption`       | object  |         | Barge-in. See [`interruption`](#interruption).                               |
+| `endpointing`        | object  |         | End-of-turn delays. See [`endpointing`](#endpointing).                       |
+| `preemptiveGeneration` | object |        | Start the LLM before the turn is confirmed. See [below](#preemptivegeneration). |
+| `tools`              | array   | `[]`    | Tools defined on this assistant alone. See [`tools`](#tools).                |
+| `toolNames`          | array   | `[]`    | Names of [library tools](/docs/tools). An inline tool of the same name wins. A name with no library tool is skipped. |
+| `endCallEnabled`     | boolean | `true`  | Let the LLM hang up when the caller is done.                                 |
+| `maxDurationSeconds` | integer | `600`   | Hard limit on call length.                                                   |
+| `analysisPlan`       | object  |         | Post-call analysis. See [`analysisPlan`](#analysisplan).                     |
+| `server`             | object  | none    | Your server, which receives forwarded lifecycle events. See [`server`](#server). |
+
+## `model`
+
+Every provider speaks the OpenAI chat API, so gateways and self-hosted servers
+work alongside OpenAI itself. The API key is the workspace's key for `provider`
+(Provider Keys page), never part of the config.
+
+| Field          | Type   | Default                                    | Description                                      |
+| -------------- | ------ | ------------------------------------------ | ------------------------------------------------ |
+| `provider`     | enum   | `openai`                                   | `openai`, `openrouter`, `vercel-ai-gateway`, `groq`, `custom`. |
+| `model`        | string | the provider's default                     | Model name. Gateways use `vendor/model`.         |
+| `systemPrompt` | string | `You are a helpful voice assistant.`       | The system prompt. Required if `model` is given. |
+| `temperature`  | number | provider default                           | `0` to `2`.                                      |
+| `baseUrl`      | URL    | none                                       | Only for `custom`, where it is required.         |
+
+## `voice`
+
+| Field      | Type   | Default                | Description                                                                                  |
+| ---------- | ------ | ---------------------- | -------------------------------------------------------------------------------------------- |
+| `provider` | enum   | `cartesia`             | `cartesia`, `elevenlabs`, `deepgram`, `openai`.                                              |
+| `voiceId`  | string | the provider's default | The provider's own identifier (Cartesia or ElevenLabs voice id, OpenAI voice name). Deepgram ignores it because its voice is part of `model`. |
+| `model`    | string | the provider's default | Provider model.                                                                              |
+| `language` | string | the provider's default | Language code.                                                                               |
+| `speed`    | number | provider default       | Multiplier from `0.25` to `4`. The worker clamps it to what the provider accepts.            |
+
+## `transcriber`
+
+| Field      | Type     | Default                | Description                                  |
+| ---------- | -------- | ---------------------- | -------------------------------------------- |
+| `provider` | enum     | `deepgram`             | `deepgram`, `assemblyai`, `elevenlabs`, `openai`. |
+| `model`    | string   | the provider's default | Provider model.                              |
+| `language` | string   | the provider's default | Language code.                               |
+| `keyterms` | string[] | `[]`                   | Words to bias recognition toward, like product names. |
+
+## `vad`
+
+Silero voice activity detection.
+
+| Field                | Type   | Default | Description                                                                                       |
+| -------------------- | ------ | ------- | ------------------------------------------------------------------------------------------------- |
+| `activationThreshold`| number | `0.5`   | `0` to `1`. Higher means less sensitive.                                                          |
+| `minSpeechDuration`  | number | `0.05`  | Seconds of speech before it counts.                                                               |
+| `minSilenceDuration` | number | `0.3`   | Seconds of silence that end speech. Values under `0.25` are raised to `0.25`, the lowest LiveKit's turn detector accepts. |
+
+## `interruption`
+
+Barge-in. On by default, like every phone-quality voice agent.
+
+| Field                     | Type    | Default | Description                                                  |
+| ------------------------- | ------- | ------- | ------------------------------------------------------------ |
+| `enabled`                 | boolean | `true`  | Let the caller interrupt the agent.                          |
+| `minDuration`             | number  | `0.5`   | Seconds of speech before it counts as an interruption.       |
+| `minWords`                | integer | `0`     | Words required before it counts.                             |
+| `resumeFalseInterruption` | boolean | `true`  | Resume speaking if the interruption turns out to be noise.   |
+
+## `endpointing`
+
+| Field      | Type   | Default | Description                         |
+| ---------- | ------ | ------- | ----------------------------------- |
+| `minDelay` | number | `0.3`   | Minimum seconds to wait after speech. |
+| `maxDelay` | number | `1`     | Maximum seconds to wait.            |
+
+## `preemptiveGeneration`
+
+Start the LLM on the caller's final transcript before the turn is confirmed,
+hiding endpointing delay.
+
+| Field     | Type    | Default | Description                                                                                         |
+| --------- | ------- | ------- | --------------------------------------------------------------------------------------------------- |
+| `enabled` | boolean | `true`  | Start the LLM early.                                                                                |
+| `tts`     | boolean | `false` | Also start speech synthesis early. Faster, but synthesizes replies that may be discarded.           |
+
+## `tools`
+
+Tools defined on this assistant alone. Prefer [library tools](/docs/tools) and
+`toolNames` for anything shared.
+
+| Field            | Type   | Description                                                                         |
+| ---------------- | ------ | ----------------------------------------------------------------------------------- |
+| `name`           | string | 1 to 64 characters: letters, digits, `_` and `-`.                                   |
+| `description`    | string | What the tool does. The LLM reads this.                                             |
+| `parameters`     | object | JSON Schema for the arguments, as sent to the LLM. Defaults to an empty object schema. |
+| `server`         | object | Where this tool call is forwarded. Omit to use a built-in or the tool server.       |
+| `messageOnStart` | string | Spoken while the tool runs, so the caller doesn't hear dead air.                    |
+
+## `analysisPlan`
+
+Post-call analysis, run by the control plane after the call. It uses the
+assistant's own LLM provider and key.
+
+| Field                  | Type   | Description                                                                                  |
+| ---------------------- | ------ | -------------------------------------------------------------------------------------------- |
+| `model`                | string | Defaults to the provider's small default model, not `model.model`.                           |
+| `summaryPrompt`        | string | Instructions for the call summary.                                                           |
+| `structuredDataSchema` | object | JSON Schema. The extracted object is saved on the call as `structuredData`.                  |
+
+## `server`
+
+A webhook target.
+
+| Field            | Type   | Default | Description                                                         |
+| ---------------- | ------ | ------- | ------------------------------------------------------------------- |
+| `url`            | URL    |         | Required.                                                           |
+| `secret`         | string | none    | Sent as the `x-samata-secret` header.                               |
+| `timeoutSeconds` | number | `10`    | Up to `60`.                                                         |

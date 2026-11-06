@@ -1,0 +1,55 @@
+---
+title: Architecture
+description: How LiveKit, the worker and the control plane fit together.
+icon: Network
+---
+
+```text
+ PSTN / SIP ──► LiveKit SIP ─┐
+                             ├─► LiveKit Server (Go SFU) ◄──► Python worker(s)
+ Browser (WebRTC) ───────────┘        │  Redis                (livekit-agents,
+                                      │                        stateless)
+                                      ▼                            │
+                              Next.js control plane ◄── webhooks ──┘
+                              (agents, call logs, tools)   Postgres
+```
+
+## The three pieces
+
+### LiveKit
+
+LiveKit Server carries the audio, for both WebRTC (browsers) and SIP (phone
+calls, via LiveKit SIP), and dispatches rooms to workers. You can run it
+yourself or use [LiveKit Cloud](/docs/phone-calls#livekit-cloud).
+
+### The worker
+
+The worker (`/worker`) is a [livekit-agents](https://docs.livekit.io/agents/)
+process that stores nothing about any agent. For each call it:
+
+1. asks the control plane for the agent's config and the workspace's provider keys,
+2. builds the speech-to-text → LLM → text-to-speech pipeline from them,
+3. runs the conversation, and
+4. reports the transcript, latency and usage when the call ends.
+
+Because workers are stateless and already registered with LiveKit, a call costs a
+job assignment, not a container start. Scale them horizontally with
+`docker compose up -d --scale worker=N`.
+
+### The control plane
+
+The control plane (`/control-plane`) is a Next.js app with a Hono API under
+`/api` and Drizzle on Postgres. It:
+
+- stores agent configs and call logs,
+- serves the dashboard and the management API,
+- decides which agent answers a call,
+- runs tools (built-in ones itself, the rest by forwarding to your server), and
+- runs post-call analysis.
+
+## Your code stays yours
+
+Nothing custom lives in this repo. Agents are JSON, tools are HTTP endpoints on a
+server you run, and call events are forwarded to a URL you choose. The same
+`{ "message": { "type", ... } }` envelope Vapi uses carries every event, so
+existing Vapi webhook handlers port over with small changes.

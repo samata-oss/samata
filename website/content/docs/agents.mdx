@@ -1,0 +1,72 @@
+---
+title: Agents
+description: Create and update agents as declarative JSON over the API, or from the dashboard.
+icon: Bot
+---
+
+An agent is a JSON config plus a name, a slug and an optional phone number. The
+config says everything the stateless worker needs to run a call. Any field you
+leave out gets a default. The full schema is in the
+[agent config reference](/docs/agent-config).
+
+## Create an agent
+
+```bash
+curl -X POST localhost:3000/api/agents \
+  -H "authorization: Bearer $SAMATA_API_KEY" -H "content-type: application/json" \
+  -d '{
+    "slug": "support", "name": "Support", "phoneNumber": "+14155550100",
+    "config": {
+      "firstMessage": "Hi! How can I help?",
+      "model": { "model": "gpt-4.1-mini", "systemPrompt": "You are a concise support agent." },
+      "voice": { "voiceId": "f786b574-daa5-4673-aa0c-cbe3e8534c02" },
+      "vad": { "activationThreshold": 0.6 },
+      "interruption": { "enabled": true, "minDuration": 0.4 },
+      "tools": [{
+        "name": "lookup_order_status",
+        "description": "Look up an order.",
+        "parameters": { "type": "object", "properties": { "orderNumber": { "type": "string" } } },
+        "server": { "url": "https://example.com/tools" }
+      }],
+      "analysisPlan": { "structuredDataSchema": { "type": "object", "properties": { "intent": { "type": "string" } } } },
+      "server": { "url": "https://example.com/samata-events" }
+    }
+  }'
+```
+
+It returns `201` with the agent and its `id`, or `409` if the slug or phone number
+is already taken. `slug` is optional and defaults to one derived from `name`.
+
+## Change one part of it
+
+`PATCH` merges at the top level of `config`: the keys you send replace the stored
+ones, and the rest are kept. The merged result is validated in full.
+
+```bash
+curl -X PATCH localhost:3000/api/agents/support \
+  -H "authorization: Bearer $SAMATA_API_KEY" -H "content-type: application/json" \
+  -d '{ "config": { "firstMessage": "Thanks for calling Support!" } }'
+```
+
+## Config as code
+
+`PUT /api/agents` creates or replaces an agent by slug, and is idempotent. Run it
+from CI on every deploy so your repo is the source of truth:
+
+```bash
+curl -X PUT localhost:3000/api/agents \
+  -H "authorization: Bearer $SAMATA_API_KEY" -H "content-type: application/json" \
+  -d @agents/support.json
+```
+
+<Callout type="info">
+Barge-in is on by default; the `interruption` block tunes it. `server` URLs and
+secrets are never sent to the worker, and secrets stored on an agent are never
+sent to the browser.
+</Callout>
+
+## Which agent answers a call
+
+An agent can be reached by its id or slug (browser sessions, dispatch metadata),
+by the phone number assigned to it, or as the install's default agent. See
+[Call lifecycle](/docs/call-lifecycle#choosing-the-agent).

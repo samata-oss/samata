@@ -18,6 +18,8 @@
     "db:seed": "pnpm --filter control-plane db:seed",
     "db:reset": "pnpm --filter control-plane db:reset",
     "simulate:call": "pnpm --filter control-plane simulate:call",
+    "site:dev": "pnpm --filter website dev",
+    "site:build": "pnpm --filter website build",
     "example:webhooks": "pnpm --filter webhook-server dev"
   },
   "devDependencies": {

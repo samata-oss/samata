@@ -1,0 +1,42 @@
+---
+title: Tools
+description: Push tools and the tool server, and read what is stored.
+---
+
+These endpoints accept **only an API key**, not a dashboard session. See
+[Tools and your webhook server](/docs/tools) for the full flow.
+
+| Endpoint                          | Does                                                           |
+| --------------------------------- | -------------------------------------------------------------- |
+| `PUT /api/tools`                  | Push many: `{ tools, prune?, server? }`. Returns what changed. |
+| `GET /api/tools[/:name]`          | List / fetch, with `usedBy` (assistant slugs). No secrets.     |
+| `PUT /api/tools/:name`            | Create or replace one tool.                                    |
+| `DELETE /api/tools/:name`         | Delete. Assistants that listed it just skip it.                |
+| `GET/PUT/DELETE /api/tool-server` | Read, set or clear the workspace tool server.                  |
+
+## Push many
+
+```bash
+curl -X PUT localhost:3000/api/tools \
+  -H "authorization: Bearer $SAMATA_API_KEY" -H "content-type: application/json" \
+  -d '{
+    "server": { "url": "https://example.com/samata", "secret": "…" },
+    "prune": true,
+    "tools": [{
+      "name": "lookup_order_status",
+      "description": "Look up the shipping status of an order.",
+      "parameters": { "type": "object", "properties": { "orderNumber": { "type": "string" } } },
+      "messageOnStart": "One moment while I look that up."
+    }]
+  }'
+```
+
+| Field    | Description                                                                                       |
+| -------- | ------------------------------------------------------------------------------------------------- |
+| `tools`  | The tools to create or update. See [`tools`](/docs/agent-config#tools) for a tool's fields.        |
+| `server` | Optional. Replaces the workspace tool server, secret included.                                    |
+| `prune`  | Optional. Delete library tools that are not in `tools`.                                           |
+
+The response lists `created`, `updated`, `unchanged` and `deleted` tools, plus the
+resulting `tools`. Each entry of `deleted` has a `usedBy` list of assistants that
+still referenced it.
