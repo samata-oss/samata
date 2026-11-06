@@ -60,7 +60,7 @@ export function CallScrubber() {
     <nav
       aria-label="Sections"
       className={cn(
-        "pointer-events-none fixed right-5 top-1/2 z-20 hidden -translate-y-1/2 transition-opacity duration-300 min-[1360px]:block",
+        "pointer-events-none fixed right-5 top-1/2 z-20 hidden -translate-y-1/2 transition-opacity duration-300 xl:block",
         active < 0 && "opacity-0",
       )}
     >

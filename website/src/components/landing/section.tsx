@@ -16,7 +16,7 @@ export function Moment({
   const { time, label } = getMoment(id);
   return (
     <section id={id} className="scroll-mt-12 border-t border-white/[0.08]">
-      <div className="grid gap-6 px-6 py-16 sm:px-10 md:grid-cols-[9rem_minmax(0,1fr)] md:gap-10 md:py-20">
+      <div className="mx-auto grid max-w-5xl gap-6 px-6 py-16 md:grid-cols-[9rem_minmax(0,1fr)] md:gap-10 md:py-20">
         <div className="md:sticky md:top-24 md:self-start">
           <p className="font-mono text-xs tabular-nums text-fd-primary">
             {time}

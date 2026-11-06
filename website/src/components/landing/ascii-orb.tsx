@@ -1,195 +1,321 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { cn } from "@/lib/cn";
 
-const CHAR_W = 6; // px, at 10px mono
-const CHAR_H = 11; // px, the line height
-const RAMP = " .:-=+*#%@";
-// 4x4 ordered-dither thresholds, for the pixel-art banding on the planet.
-const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-// Craters in planet-disk coordinates (-1..1): x, y, radius.
-const CRATERS = [
-  [-0.38, -0.32, 0.22],
-  [0.32, -0.5, 0.15],
-  [0.5, 0.08, 0.2],
-  [-0.08, 0.34, 0.26],
-  [-0.6, 0.18, 0.12],
-  [0.14, -0.08, 0.09],
-  [0.26, 0.62, 0.13],
-  [-0.34, 0.66, 0.1],
+/* ---------------------------------------------------------------- */
+/* Geometry. Everything is in fractions of the square's side, so the  */
+/* canvas and the HTML chips that ride the rings always agree.        */
+
+type Ring = {
+  /** Semi-major axis. */
+  a: number;
+  /** Squash: semi-minor axis = a * k. */
+  k: number;
+  /** Tilt, radians. */
+  tilt: number;
+};
+
+const RING_A: Ring = { a: 0.46, k: 0.3, tilt: -0.38 };
+const RING_B: Ring = { a: 0.4, k: 0.22, tilt: 1.0 };
+const SPHERE = 0.27;
+
+const RAMP = " .,:;-=+*#%@";
+
+type Chip = {
+  label: string;
+  meta: string;
+  ring: Ring;
+  /** Radians per second, and where on the ring it starts. */
+  speed: number;
+  phase: number;
+  tool?: boolean;
+};
+
+const CHIPS: Chip[] = [
+  { label: "stt", meta: "150ms", ring: RING_A, speed: 0.42, phase: 0.2 },
+  { label: "llm", meta: "350ms", ring: RING_A, speed: 0.42, phase: 2.3 },
+  { label: "tts", meta: "100ms", ring: RING_A, speed: 0.42, phase: 4.4 },
+  {
+    label: "tool_call",
+    meta: "118ms",
+    ring: RING_B,
+    speed: -0.3,
+    phase: 1.4,
+    tool: true,
+  },
 ];
-const TILT = -0.38; // ring tilt, radians
-const COS = Math.cos(TILT);
-const SIN = Math.sin(TILT);
 
-type Size = { cols: number; rows: number };
-
-function hash(x: number, y: number): number {
-  let h = Math.imul(x, 73856093) ^ Math.imul(y, 19349663);
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return (h ^ (h >>> 16)) >>> 0;
+/** A point on a ring, in fractions of the square, plus whether it is near. */
+function onRing(ring: Ring, phi: number) {
+  const u = ring.a * Math.cos(phi);
+  const v = ring.a * ring.k * Math.sin(phi);
+  const c = Math.cos(ring.tilt);
+  const s = Math.sin(ring.tilt);
+  return {
+    x: 0.5 + u * c - v * s,
+    y: 0.5 + u * s + v * c,
+    near: Math.sin(phi) > 0,
+  };
 }
+
+function chipStyle(chip: Chip, t: number) {
+  const p = onRing(chip.ring, chip.phase + chip.speed * t);
+  return {
+    left: `${(p.x * 100).toFixed(2)}%`,
+    top: `${(p.y * 100).toFixed(2)}%`,
+    near: p.near,
+  };
+}
+
+const hash = (a: number, b: number) => {
+  const h = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453;
+  return h - Math.floor(h);
+};
+
+// Colour ramp: deep indigo, through periwinkle, up to white-hot.
+const STOPS: [number, number, number][] = [
+  [67, 56, 202],
+  [99, 102, 241],
+  [165, 180, 252],
+  [255, 255, 255],
+];
+function colorAt(k: number) {
+  const x = Math.min(0.999, Math.max(0, k)) * (STOPS.length - 1);
+  const i = Math.floor(x);
+  const f = x - i;
+  const [r0, g0, b0] = STOPS[i];
+  const [r1, g1, b1] = STOPS[i + 1];
+  return `rgb(${Math.round(r0 + (r1 - r0) * f)},${Math.round(g0 + (g1 - g0) * f)},${Math.round(b0 + (b1 - b0) * f)})`;
+}
+const LUT = Array.from({ length: 24 }, (_, i) => colorAt(i / 23));
 
 /**
- * One frame of the scene as text: a dithered, cratered planet with a tilted
- * ring, an orbiting node, and a twinkling star field. The planet's edge
- * ripples with a simulated voice level. Pure function of time and size.
+ * The hero art: a voice drawn as ASCII. A shaded sphere whose surface bands
+ * pulse with a voice level, two tilted rings around it, a starfield, and the
+ * stages of a call riding the rings as labels.
  */
-function frame(t: number, { cols, rows }: Size): string {
-  const s = Math.min(cols * CHAR_W, rows * CHAR_H);
-  const R = s * 0.27;
-  const ringA = R * 1.8;
-  const ringB = R * 0.42;
-  const voice = Math.max(
-    0.15,
-    0.5 + 0.5 * Math.sin(t * 1.7) * Math.sin(t * 0.6 + 1),
-  );
-
-  // The orbiting node, in screen pixels relative to the centre.
-  const u = t * 0.75;
-  const nrx = ringA * Math.cos(u);
-  const nry = ringB * Math.sin(u);
-  const nodeX = nrx * COS + nry * SIN;
-  const nodeY = -nrx * SIN + nry * COS;
-  const nodeFront = Math.sin(u) > 0;
-
-  // Light direction.
-  const lx = -0.5 + 0.1 * Math.sin(t * 0.4);
-  const ly = -0.55;
-  const lz = 0.67;
-  const ll = Math.hypot(lx, ly, lz);
-
-  let out = "";
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < cols; x++) {
-      const px = (x + 0.5 - cols / 2) * CHAR_W;
-      const py = (y + 0.5 - rows / 2) * CHAR_H;
-      const r = Math.hypot(px, py);
-      const theta = Math.atan2(py, px);
-      const edge = R * (1 + 0.022 * voice * Math.sin(6 * theta + t * 2.4));
-      const inPlanet = r < edge;
-
-      // Ring, in its own tilted frame.
-      const rx = px * COS - py * SIN;
-      const ry = px * SIN + py * COS;
-      const f = Math.sqrt((rx / ringA) ** 2 + (ry / ringB) ** 2);
-      const grad =
-        Math.hypot(rx / ringA ** 2, ry / ringB ** 2) / Math.max(f, 1e-6);
-      const ringDist = Math.abs(f - 1) / Math.max(grad, 1e-6);
-      const onRing = ringDist < 5.5;
-      const ringFront = ry > 0;
-
-      // The node.
-      const nd = Math.hypot(px - nodeX, py - nodeY);
-      if (nd < 8 && (nodeFront || !inPlanet)) {
-        out += "@";
-        continue;
-      }
-      if (nd < 14 && (nodeFront || !inPlanet)) {
-        out += nd < 11 ? "O" : "o";
-        continue;
-      }
-
-      if (onRing && (ringFront || !inPlanet)) {
-        out += ringFront ? "#" : "=";
-        continue;
-      }
-
-      if (inPlanet) {
-        const nx = px / edge;
-        const ny = py / edge;
-        const z = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
-        let b = Math.max(0, (nx * lx + ny * ly + z * lz) / ll);
-        b = 0.2 + 0.8 * b ** 1.15;
-
-        for (const [cx, cy, cr] of CRATERS) {
-          const dd = Math.hypot(nx - cx, ny - cy) / cr;
-          if (dd < 0.8) b *= 0.28 + 0.5 * dd * dd;
-          else if (dd < 1) b = Math.min(1, b + 0.25);
-        }
-
-        b += (BAYER[(y % 4) * 4 + (x % 4)] / 16 - 0.5) * 0.1;
-        b = Math.min(1, Math.max(0, b));
-        out += RAMP[Math.floor(b * (RAMP.length - 1))];
-        continue;
-      }
-
-      // A thin, dithered atmosphere.
-      if (r < edge * 1.03) {
-        out += ":";
-        continue;
-      }
-      if (r < edge * 1.09 && BAYER[(y % 4) * 4 + (x % 4)] < 8) {
-        out += ".";
-        continue;
-      }
-
-      // Stars.
-      const h = hash(x, y);
-      const roll = h % 1000;
-      if (roll < 16) {
-        const tw = Math.sin(t * 1.6 + ((h >>> 10) % 628) / 100);
-        if (roll < 3) out += tw > 0.2 ? "*" : "+";
-        else if (roll < 7) out += tw > -0.2 ? "+" : ".";
-        else out += tw > 0 ? "." : " ";
-        continue;
-      }
-      out += " ";
-    }
-    out += "\n";
-  }
-  return out;
-}
-
 export function AsciiOrb({ className }: { className?: string }) {
-  const box = useRef<HTMLDivElement>(null);
-  const pre = useRef<HTMLPreElement>(null);
-  const [size, setSize] = useState<Size | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chipRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Fit the grid to the box.
   useEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    const measure = () =>
-      setSize({
-        cols: Math.max(24, Math.floor(el.clientWidth / CHAR_W)),
-        rows: Math.max(14, Math.floor(el.clientHeight / CHAR_H)),
-      });
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
 
-  // Draw it. Text is written straight to the node; React never renders its
-  // children, so the two never fight.
-  useEffect(() => {
-    const el = pre.current;
-    if (!el || !size) return;
-    el.textContent = frame(2, size);
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const reduce = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
 
-    let raf = 0;
-    let last = 0;
-    const loop = (time: number) => {
-      // ~30 fps is plenty for text.
-      if (time - last > 33) {
-        el.textContent = frame(time / 1000 + 2, size);
-        last = time;
+    let size = 0;
+    let cellW = 7;
+    let cellH = 12.5;
+    let cols = 0;
+    let rows = 0;
+    let fontFamily = "monospace";
+
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      size = canvas.clientWidth;
+      canvas.width = Math.floor(size * dpr);
+      canvas.height = Math.floor(size * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cols = Math.max(24, Math.round(size / 7));
+      cellW = size / cols;
+      const fontSize = cellW / 0.6;
+      cellH = fontSize * 1.12;
+      rows = Math.floor(size / cellH);
+      fontFamily = getComputedStyle(canvas).fontFamily || "monospace";
+      ctx.font = `${fontSize}px ${fontFamily}`;
+      ctx.textBaseline = "top";
+    };
+
+    const draw = (t: number) => {
+      ctx.clearRect(0, 0, size, size);
+      const voice = Math.max(
+        0.2,
+        0.55 + 0.45 * Math.sin(t * 1.7) * Math.sin(t * 0.6 + 1),
+      );
+      const R = size * SPHERE;
+      const yOff = (size - rows * cellH) / 2;
+
+      // Light swings slowly around the sphere.
+      const la = t * 0.45;
+      const lx = Math.cos(la) * 0.75;
+      const ly = -0.5;
+      const lz = 0.7;
+      const ll = Math.hypot(lx, ly, lz);
+
+      const rings = [RING_A, RING_B];
+      let lastColor = -1;
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const px = (c + 0.5) * cellW - size / 2;
+          const py = (r + 0.5) * cellH + yOff - size / 2;
+          const dist = Math.hypot(px, py);
+          const theta = Math.atan2(py, px);
+          const edge =
+            R *
+            (1 +
+              0.1 * voice * Math.sin(5 * theta + t * 2.2) +
+              0.04 * Math.sin(3 * theta - t * 1.3));
+          const inside = dist < edge;
+
+          let ch = " ";
+          let k = 0;
+
+          if (inside) {
+            const d = dist / edge;
+            const z = Math.sqrt(Math.max(0, 1 - d * d));
+            const light =
+              Math.max(0, ((px / edge) * lx + (py / edge) * ly + z * lz) / ll) *
+              0.95;
+            // Equalizer-like bands running across the surface.
+            const band = 0.14 * voice * Math.sin((py / R) * 9 - t * 2.6);
+            const b = Math.min(1, Math.max(0, light + 0.12 * z + band));
+            ch = RAMP[Math.floor(b * (RAMP.length - 1))];
+            k = 0.25 + b * 0.75;
+          } else if (dist < edge * 1.14) {
+            // A soft halo hugging the sphere.
+            const f = 1 - (dist - edge) / (edge * 0.14);
+            ch = f > 0.55 ? ":" : ".";
+            k = 0.1 + f * 0.35;
+          }
+
+          // Rings: bright on the near half, dim on the far half, and hidden
+          // where the sphere is in front of them.
+          for (let i = 0; i < rings.length; i++) {
+            const ring = rings[i];
+            const cs = Math.cos(-ring.tilt);
+            const sn = Math.sin(-ring.tilt);
+            const u = px * cs - py * sn;
+            const v = px * sn + py * cs;
+            const a = ring.a * size;
+            const bb = a * ring.k;
+            const e = Math.hypot(u / a, v / bb);
+            const grad = Math.hypot(u / (a * a), v / (bb * bb)) / e;
+            if (grad > 0 && Math.abs(e - 1) / grad < cellH * 0.42) {
+              const near = v > 0;
+              if (!near && inside) continue;
+              const phi = Math.atan2(v / bb, u / a);
+              const pulse =
+                0.5 + 0.5 * Math.sin(phi * 3 - t * 2 * (i ? -1 : 1));
+              ch = near ? (pulse > 0.6 ? "=" : "-") : ".";
+              k = near ? 0.7 + pulse * 0.3 : 0.25 + pulse * 0.2;
+            }
+          }
+
+          // Stars, only out in the dark.
+          if (ch === " ") {
+            const h = hash(c, r);
+            if (h < 0.02) {
+              const tw = 0.5 + 0.5 * Math.sin(t * 2 + h * 400);
+              ch = h < 0.004 ? "+" : ".";
+              k = 0.08 + tw * 0.4;
+            }
+          }
+
+          if (ch === " ") continue;
+          const idx = Math.min(
+            LUT.length - 1,
+            Math.max(0, Math.round(k * (LUT.length - 1))),
+          );
+          if (idx !== lastColor) {
+            ctx.fillStyle = LUT[idx];
+            lastColor = idx;
+          }
+          ctx.fillText(ch, c * cellW, r * cellH + yOff);
+        }
       }
+
+      // Move the labels with the rings.
+      CHIPS.forEach((chip, i) => {
+        const el = chipRefs.current[i];
+        if (!el) return;
+        const s = chipStyle(chip, t);
+        el.style.left = s.left;
+        el.style.top = s.top;
+        el.style.opacity = s.near ? "1" : "0.4";
+        el.style.zIndex = s.near ? "20" : "5";
+      });
+    };
+
+    resize();
+    let raf = 0;
+    let running = false;
+    const loop = (time: number) => {
+      draw(time / 1000 + 2);
       raf = requestAnimationFrame(loop);
     };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [size]);
+    const start = () => {
+      if (running || reduce) return;
+      running = true;
+      raf = requestAnimationFrame(loop);
+    };
+    const stop = () => {
+      running = false;
+      cancelAnimationFrame(raf);
+    };
+
+    if (reduce) draw(2);
+    else start();
+
+    const ro = new ResizeObserver(() => {
+      resize();
+      if (reduce) draw(2);
+    });
+    ro.observe(canvas);
+
+    // Don't burn frames while the hero is scrolled out of view.
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) start();
+      else stop();
+    });
+    io.observe(canvas);
+
+    return () => {
+      stop();
+      ro.disconnect();
+      io.disconnect();
+    };
+  }, []);
 
   return (
-    <div ref={box} aria-hidden="true" className={className}>
-      <pre
-        ref={pre}
-        className="mx-auto w-fit select-none whitespace-pre bg-gradient-to-b from-white via-indigo-200 to-indigo-500 bg-clip-text font-mono text-[10px] leading-[11px] text-transparent transition-opacity duration-700"
-        style={{ opacity: size ? 1 : 0 }}
+    <div
+      aria-hidden="true"
+      className={cn("relative aspect-square w-full", className)}
+    >
+      {/* Bloom behind the art. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-[8%] rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.55),rgba(139,92,246,0.18)_55%,transparent_72%)] blur-3xl"
       />
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 size-full font-mono drop-shadow-[0_0_14px_rgba(129,140,248,0.45)]"
+      />
+      {CHIPS.map((chip, i) => {
+        const s = chipStyle(chip, 2);
+        return (
+          <div
+            key={chip.label}
+            ref={(el) => {
+              chipRefs.current[i] = el;
+            }}
+            className="absolute hidden -translate-x-1/2 -translate-y-1/2 items-baseline gap-1.5 whitespace-nowrap border border-white/25 bg-black/80 px-2 py-1 font-mono text-[10px] backdrop-blur sm:flex"
+            style={{ left: s.left, top: s.top, opacity: s.near ? 1 : 0.4 }}
+          >
+            <span
+              className={chip.tool ? "text-amber-300" : "text-fd-foreground"}
+            >
+              {chip.label}
+            </span>
+            <span className="text-fd-muted-foreground">{chip.meta}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
