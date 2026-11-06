@@ -1,0 +1,42 @@
+# Adds a local SIP server (real phone calls) to the base stack. LiveKit and the
+# SIP bridge talk over Redis, so this also starts Redis and switches LiveKit to
+# a config that uses it.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.sip.yml up -d
+
+services:
+  livekit:
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./infra/livekit/livekit.sip.yaml:/etc/livekit.yaml:ro
+
+  sip:
+    image: livekit/sip:v1.22
+    restart: unless-stopped
+    depends_on:
+      - livekit
+      - redis
+    ports:
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      - "10000-10100:10000-10100/udp"
+    volumes:
+      - ./infra/livekit/sip.yaml:/sip/config.yaml:ro
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data:

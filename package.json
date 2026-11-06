@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "infra:up": "docker compose up -d",
+    "infra:up:sip": "docker compose -f docker-compose.yml -f docker-compose.sip.yml up -d",
     "infra:up:cloud": "docker compose up -d postgres",
     "infra:down": "docker compose down",
     "dev": "pnpm --filter control-plane dev",

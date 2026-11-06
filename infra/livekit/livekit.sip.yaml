@@ -1,0 +1,28 @@
+# LiveKit Server config for SIP mode: same as livekit.yaml plus Redis, which the
+# SIP bridge uses to talk to the server. Used by docker-compose.sip.yml.
+# LiveKit Server development config. NOT for production: the API key/secret
+# below are placeholders and must match LIVEKIT_API_KEY / LIVEKIT_API_SECRET
+# in control-plane/.env and worker/.env.
+port: 7880
+bind_addresses:
+  - ""
+rtc:
+  tcp_port: 7881
+  # A narrow UDP range keeps the docker port mapping small. Widen in prod.
+  port_range_start: 50000
+  port_range_end: 50100
+  # In docker on macOS/Windows the container can't see the host's LAN IP;
+  # node_ip is what LiveKit advertises in ICE candidates to browsers.
+  use_external_ip: false
+  node_ip: 127.0.0.1
+redis:
+  address: redis:6379
+keys:
+  # Secret must be at least 32 characters.
+  devkey: samata_dev_secret_change_me_0123456789
+room:
+  auto_create: true
+  empty_timeout: 30
+  departure_timeout: 10
+logging:
+  level: info

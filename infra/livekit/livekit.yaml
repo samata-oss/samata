@@ -13,8 +13,6 @@ rtc:
   # node_ip is what LiveKit advertises in ICE candidates to browsers.
   use_external_ip: false
   node_ip: 127.0.0.1
-redis:
-  address: redis:6379
 keys:
   # Secret must be at least 32 characters.
   devkey: samata_dev_secret_change_me_0123456789
