@@ -135,10 +135,12 @@ export function Monolith({ className }: { className?: string }) {
         depth: c.x * sy + c.z * cy,
       })).sort((a, b) => b.depth - a.depth);
 
+      const flares: { x: number; y: number; hot: number }[] = [];
+
       for (const { idx } of order) {
         const c = COLS[idx];
         const h = heights[idx];
-        const hot = smooth((h - 3) / 1.8);
+        const hot = smooth((h - 2.4) / 1.6);
 
         // Sides that face the camera.
         for (const side of SIDES) {
@@ -203,10 +205,58 @@ export function Monolith({ className }: { className?: string }) {
         ctx.fillStyle = `rgb(${Math.round(v * (1 - 0.18 * hot))},${Math.round(v * (1 - 0.1 * hot))},${v})`;
         ctx.fill();
         ctx.shadowBlur = 0;
+        if (hot > 0.3) flares.push({ x: cx, y: (t0.y + t2.y) / 2, hot });
         ctx.strokeStyle = `rgba(255,255,255,${0.16 + 0.35 * spec + 0.3 * hot})`;
         ctx.lineWidth = 1;
         ctx.stroke();
       }
+
+      // Light blooms and anamorphic streaks off the loudest columns, added on
+      // top so they glow over everything behind them.
+      ctx.globalCompositeOperation = "lighter";
+      for (const f of flares) {
+        const r = size * 0.11 * f.hot;
+        const glow = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r);
+        glow.addColorStop(0, `rgba(165,180,252,${0.55 * f.hot})`);
+        glow.addColorStop(1, "rgba(99,102,241,0)");
+        ctx.fillStyle = glow;
+        ctx.fillRect(f.x - r, f.y - r, r * 2, r * 2);
+
+        const len = size * 0.3 * f.hot;
+        const streak = ctx.createLinearGradient(f.x - len, f.y, f.x + len, f.y);
+        streak.addColorStop(0, "rgba(165,180,252,0)");
+        streak.addColorStop(0.5, `rgba(224,231,255,${0.75 * f.hot})`);
+        streak.addColorStop(1, "rgba(165,180,252,0)");
+        ctx.fillStyle = streak;
+        ctx.fillRect(f.x - len, f.y - 0.7, len * 2, 1.4);
+
+        const vlen = size * 0.07 * f.hot;
+        const vert = ctx.createLinearGradient(f.x, f.y - vlen, f.x, f.y + vlen);
+        vert.addColorStop(0, "rgba(165,180,252,0)");
+        vert.addColorStop(0.5, `rgba(224,231,255,${0.6 * f.hot})`);
+        vert.addColorStop(1, "rgba(165,180,252,0)");
+        ctx.fillStyle = vert;
+        ctx.fillRect(f.x - 0.6, f.y - vlen, 1.2, vlen * 2);
+      }
+
+      // Motes of sound drifting up off the disc.
+      for (let m = 0; m < 56; m++) {
+        const seed = m * 7.13;
+        const life = (t * (0.05 + 0.04 * ((m * 37) % 5)) + seed) % 1;
+        const angle = seed * 12.9898;
+        const rad = 3 + (((m * 53) % 100) / 100) * 5;
+        const p = project(
+          Math.cos(angle) * rad,
+          0.6 + life * 7,
+          Math.sin(angle) * rad,
+        );
+        const fade = Math.sin(life * Math.PI) ** 1.5;
+        const tw = 0.6 + 0.4 * Math.sin(t * 3 + m);
+        ctx.fillStyle = `rgba(199,210,254,${0.65 * fade * tw})`;
+        const sz = m % 7 === 0 ? 2 : 1.2;
+        ctx.fillRect(p.x, p.y, sz, sz);
+      }
+      ctx.globalCompositeOperation = "source-over";
     };
 
     resize();

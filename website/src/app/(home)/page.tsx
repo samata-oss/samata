@@ -257,8 +257,12 @@ function Hero() {
         }}
       />
 
+      <div
+        aria-hidden="true"
+        className="grain pointer-events-none absolute inset-0 opacity-[0.07]"
+      />
       <div className="relative mx-auto flex max-w-6xl flex-col px-6 py-16 sm:px-10 lg:min-h-[calc(100svh-3rem)] lg:flex-row lg:items-center lg:py-10">
-        <div className="relative z-10 min-w-0 lg:max-w-[34rem]">
+        <div className="relative z-10 min-w-0 lg:max-w-[40rem]">
           <a
             href={githubUrl}
             className="mb-9 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-fd-muted-foreground transition-colors hover:border-white/20 hover:text-fd-foreground"
@@ -267,9 +271,36 @@ function Hero() {
             Apache 2.0 · Self-hosted · Built on LiveKit
             <ArrowRight className="size-3" />
           </a>
-          <h1 className="font-display bg-gradient-to-b from-white from-30% to-zinc-500 bg-clip-text text-[3.4rem] leading-[0.96] tracking-tight text-transparent sm:text-7xl xl:text-[5.6rem]">
-            The <em className="pr-1">open source</em> voice orchestration
-            platform
+          <h1 className="font-display bg-gradient-to-b from-white from-35% to-zinc-400 bg-clip-text text-[2.9rem] font-semibold leading-[0.98] tracking-[-0.045em] text-transparent sm:text-6xl xl:text-[4rem]">
+            The{" "}
+            <span className="relative inline-block">
+              <span className="shimmer bg-gradient-to-r from-indigo-300 via-violet-400 to-indigo-300 bg-clip-text text-transparent">
+                open source
+              </span>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 200 14"
+                preserveAspectRatio="none"
+                className="absolute -bottom-2.5 left-0 h-3 w-full overflow-visible"
+              >
+                <path
+                  d="M2 9 C 38 2, 76 13, 118 6 S 178 3, 198 8"
+                  fill="none"
+                  stroke="url(#underline)"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  className="draw"
+                />
+                <defs>
+                  <linearGradient id="underline" x1="0" x2="1">
+                    <stop offset="0" stopColor="#a5b4fc" />
+                    <stop offset="1" stopColor="#c4b5fd" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </span>
+            <br className="max-sm:hidden" /> voice orchestration
+            <br className="max-sm:hidden" /> platform
           </h1>
           <p className="mt-8 max-w-md text-[17px] leading-relaxed text-fd-muted-foreground">
             Declarative agents, tools that are plain HTTP, and every call, key
