@@ -1,11 +1,12 @@
-import { and, desc, eq, sql } from "drizzle-orm";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { CallsTable } from "@/components/calls-table";
 import { UrlSelect } from "@/components/filter-form";
 import { EmptyState, PageShell } from "@/components/page-shell";
+import { RefreshButton } from "@/components/refresh-button";
 import { db } from "@/db";
 import { agent, CALL_STATUSES, callLog } from "@/db/schema";
 import { requireWorkspaceSession } from "@/server/workspace";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 const PAGE_SIZE = 50;
 
@@ -50,7 +51,10 @@ export default async function LogsPage({
       .where(where)
       .orderBy(desc(callLog.startedAt))
       .limit(limit),
-    db.select({ total: sql<number>`count(*)::int` }).from(callLog).where(where),
+    db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(callLog)
+      .where(where),
   ]);
 
   return (
@@ -69,6 +73,7 @@ export default async function LogsPage({
             allLabel="All statuses"
             options={CALL_STATUSES.map((s) => ({ value: s, label: s }))}
           />
+          <RefreshButton />
         </>
       }
     >
