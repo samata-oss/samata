@@ -1,9 +1,9 @@
 import { ServerCodeBlock } from "fumadocs-ui/components/codeblock.rsc";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { CallCard } from "@/components/landing/call-card";
+import { AsciiOrb } from "@/components/landing/ascii-orb";
 import { CallScrubber } from "@/components/landing/call-scrubber";
-import { HalftoneWave } from "@/components/landing/halftone-wave";
+import { HeroCommand } from "@/components/landing/hero-command";
 import { InstallTabs } from "@/components/landing/install-tabs";
 import { Lede, Moment } from "@/components/landing/section";
 import { TerminalHero } from "@/components/landing/terminal-hero";
@@ -155,18 +155,19 @@ export default async function HomePage() {
   return (
     <div className="relative flex flex-1 flex-col">
       <Nav stars={stars} />
-      <Hero />
-      <WaveBand />
-      <Install />
-      <Pipeline />
-      <Loop />
-      <Agents useCases={useCases} />
-      <Api />
-      <Tools />
-      <Latency />
-      <Architecture />
-      <SelfHost />
-      <Footer />
+      <div className="mx-auto w-full max-w-6xl flex-1 border-x border-white/[0.08]">
+        <Hero />
+        <Install />
+        <Pipeline />
+        <Loop />
+        <Agents useCases={useCases} />
+        <Api />
+        <Tools />
+        <Latency />
+        <Architecture />
+        <SelfHost />
+        <Footer />
+      </div>
       <CallScrubber />
     </div>
   );
@@ -210,7 +211,7 @@ function Chip({
 function Nav({ stars }: { stars: number | null }) {
   return (
     <header className="sticky top-0 z-30 h-12 border-b border-white/[0.08] bg-fd-background/80 backdrop-blur">
-      <div className="mx-auto flex h-full max-w-5xl items-center justify-between px-6">
+      <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2">
           <LogoMark className="size-5" />
           <span className="font-mono text-[11px] uppercase tracking-[0.18em]">
@@ -244,74 +245,88 @@ function Nav({ stars }: { stars: number | null }) {
 
 function Hero() {
   return (
-    <div className="mx-auto grid w-full max-w-5xl gap-12 px-6 pb-16 pt-16 sm:pt-20 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-center">
-      <div className="min-w-0">
-        <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.2em] text-fd-muted-foreground">
-          Open source · Apache 2.0 · Self-hosted
-        </p>
-        <h1 className="text-balance text-5xl font-medium leading-[1.04] tracking-tight sm:text-6xl">
-          Voice agents,
-          <br />
-          as code.
-        </h1>
-        <p className="mt-6 max-w-md text-[15px] leading-relaxed text-fd-muted-foreground">
-          Agents are JSON. Tools are plain HTTP. Every call, key and transcript
-          stays on your infrastructure. Built on LiveKit.
-        </p>
-        <div className="mt-8 flex items-center gap-3">
-          <Link
-            href="/docs/quickstart"
-            className="inline-flex h-10 items-center bg-white px-5 text-sm font-medium text-black transition-colors hover:bg-white/85"
-          >
-            Get Started
-          </Link>
-          <Link
-            href="/docs"
-            className="inline-flex h-10 items-center border border-white/15 px-5 text-sm transition-colors hover:bg-white/[0.06]"
-          >
-            Read the docs
-          </Link>
+    <div className="relative overflow-hidden">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-24 top-1/2 size-[44rem] -translate-y-1/2 rounded-full bg-fd-primary/25 blur-[130px]"
+      />
+      <div className="relative grid items-center gap-10 px-6 py-14 sm:px-10 lg:min-h-[calc(100svh-3rem-1rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)] lg:py-12">
+        <div className="min-w-0">
+          <p className="mb-6 inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.2em] text-fd-muted-foreground">
+            <span className="size-1.5 rounded-full bg-emerald-400" />
+            Open source · Apache 2.0 · Self-hosted
+          </p>
+          <h1 className="text-balance text-6xl font-medium leading-[1.02] tracking-tight sm:text-7xl">
+            Voice agents,
+            <br />
+            <span className="bg-gradient-to-r from-indigo-200 via-fd-primary to-violet-400 bg-clip-text text-transparent">
+              as code.
+            </span>
+          </h1>
+          <p className="mt-7 max-w-md text-base leading-relaxed text-fd-muted-foreground">
+            Agents are JSON. Tools are plain HTTP. Every call, key and
+            transcript stays on your infrastructure.
+          </p>
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Link
+              href="/docs/quickstart"
+              className="inline-flex h-11 shrink-0 items-center justify-center bg-fd-primary px-6 text-sm font-medium text-white shadow-[0_0_32px_-6px] shadow-fd-primary transition-colors hover:brightness-110"
+            >
+              Get started
+            </Link>
+            <HeroCommand
+              command={`git clone ${githubUrl}.git`}
+              className="sm:max-w-80"
+            />
+          </div>
+          <p className="mt-6 max-w-md font-mono text-[11px] leading-relaxed text-fd-muted-foreground">
+            Built on LiveKit · Runs with OpenAI, Deepgram, ElevenLabs, Cartesia
+            and Telnyx
+          </p>
+        </div>
+
+        <div className="relative mx-auto aspect-square w-full max-w-lg">
+          <AsciiOrb className="absolute inset-0" />
+          <Tag className="left-0 top-[58%]">LiveKit</Tag>
+          <Tag className="right-0 top-[72%]">Worker</Tag>
+          <Tag className="left-[8%] top-[22%]">Tools ↗</Tag>
+          <div className="absolute right-0 top-[5%] max-w-[13rem] border border-white/20 bg-[#ece8da] px-3 py-2 font-mono text-[11px] leading-snug text-black shadow-[3px_3px_0_0] shadow-fd-primary/60">
+            Hi, where's my order A1234?
+          </div>
         </div>
       </div>
-      <CallCard />
+      <Ruler />
     </div>
   );
 }
 
-/** The recording itself: a waveform with a playhead and a timecode ruler. */
-function WaveBand() {
+function Tag({ className, children }: { className: string; children: string }) {
   return (
-    <div className="relative h-44 overflow-hidden border-y border-white/[0.08]">
-      <HalftoneWave className="absolute inset-x-0 top-3 h-32" />
-      <div
-        aria-hidden="true"
-        className="absolute inset-y-0 left-[38%] w-px bg-fd-primary/70"
-      />
-      <span
-        aria-hidden="true"
-        className="absolute left-[38%] top-2 ml-1.5 font-mono text-[10px] tabular-nums text-fd-primary"
-      >
-        00:04
-      </span>
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 bottom-0 h-6 border-t border-white/[0.08] bg-black/30"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(to right, rgba(255,255,255,0.22) 0 1px, transparent 1px 28px)",
-          backgroundSize: "100% 6px",
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "top",
-        }}
-      />
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 bottom-0 flex justify-between px-6 pb-0.5 font-mono text-[9px] tabular-nums text-fd-muted-foreground/60"
-      >
-        <span>00:00</span>
-        <span>02:47</span>
-      </div>
-    </div>
+    <span
+      className={cn(
+        "absolute border border-white/20 bg-black/70 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-fd-foreground backdrop-blur",
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** Tick marks along the bottom edge of the hero, like a measuring rule. */
+function Ruler() {
+  return (
+    <div
+      aria-hidden="true"
+      className="h-4 border-t border-white/[0.08]"
+      style={{
+        backgroundImage:
+          "repeating-linear-gradient(to right, rgba(255,255,255,0.25) 0 1px, transparent 1px 12px), repeating-linear-gradient(to right, rgba(255,255,255,0.55) 0 1px, transparent 1px 96px)",
+        backgroundSize: "100% 5px, 100% 10px",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "top",
+      }}
+    />
   );
 }
 
@@ -678,7 +693,7 @@ function SelfHost() {
 function Footer() {
   return (
     <footer className="border-t border-white/[0.08]">
-      <div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-3 px-6 py-6 font-mono text-[11px] text-fd-muted-foreground sm:flex-row sm:items-center">
+      <div className="flex flex-col items-start justify-between gap-3 px-6 py-6 sm:px-10 font-mono text-[11px] text-fd-muted-foreground sm:flex-row sm:items-center">
         <p>02:47 · end of call · © 2026 Samata · Apache-2.0</p>
         <nav className="flex gap-5">
           <Link href="/docs" className="hover:text-fd-foreground">
