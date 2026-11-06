@@ -32,6 +32,12 @@ html {
   scrollbar-gutter: stable;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 /* Stop the page shifting when a dialog locks scroll. Needs !important to beat the lock's inline style. */
 html > body[data-scroll-locked] {
   /* biome-ignore lint/complexity/noImportantStyles: overrides an inline style */

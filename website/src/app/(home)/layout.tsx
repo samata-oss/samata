@@ -1,8 +1,8 @@
 export default function Layout({ children }: LayoutProps<"/">) {
-  // The landing page is dark-only: it is drawn with hairlines and glows that
-  // only work on near-black, so pin the dark palette whatever the docs theme is.
+  // The marketing site is black, with hairline rules. Pin dark so the docs
+  // theme cannot lighten it.
   return (
-    <div className="dark flex min-h-screen flex-col bg-fd-background text-fd-foreground">
+    <div className="dark flex min-h-screen flex-col bg-black text-white">
       {children}
     </div>
   );

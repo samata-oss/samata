@@ -1,10 +1,11 @@
 import { ServerCodeBlock } from "fumadocs-ui/components/codeblock.rsc";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { CallScrubber } from "@/components/landing/call-scrubber";
-import { Monolith } from "@/components/landing/monolith";
+import type { ReactNode } from "react";
 import { InstallTabs } from "@/components/landing/install-tabs";
-import { Lede, Moment } from "@/components/landing/section";
+import { GrainMark } from "@/components/landing/grain-mark";
+import { SectionNav } from "@/components/landing/section-nav";
+import { ProductCards } from "@/components/landing/surfaces";
 import { TerminalHero } from "@/components/landing/terminal-hero";
 import { UseCaseTabs } from "@/components/landing/use-case-tabs";
 import { LogoMark } from "@/components/logo";
@@ -38,10 +39,10 @@ const installTabs = [
 ];
 
 const stages = [
-  { name: "end_of_turn", ms: 300, color: "oklch(0.8 0.1 290)" },
-  { name: "transcription", ms: 150, color: "oklch(0.72 0.16 285)" },
-  { name: "llm_ttft", ms: 350, color: "oklch(0.64 0.2 277)" },
-  { name: "tts_ttfb", ms: 100, color: "oklch(0.52 0.22 275)" },
+  { name: "end_of_turn", ms: 300, color: "#d4d4d8" },
+  { name: "transcription", ms: 150, color: "#a5b4fc" },
+  { name: "llm_ttft", ms: 350, color: "#818cf8" },
+  { name: "tts_ttfb", ms: 100, color: "#4f46e5" },
 ];
 
 const endpoints = [
@@ -102,6 +103,81 @@ const providers = [
   { layer: "voice", names: ["cartesia", "elevenlabs", "deepgram", "openai"] },
 ];
 
+const worksWith = [
+  "OpenAI",
+  "Groq",
+  "Deepgram",
+  "Cartesia",
+  "ElevenLabs",
+  "AssemblyAI",
+  "Telnyx",
+];
+
+const features = [
+  {
+    title: "Declarative agents",
+    body: "Model, voice, tools, barge-in and analysis in one JSON document.",
+  },
+  {
+    title: "Tools on your server",
+    body: "One webhook server for all your tools, in any language.",
+  },
+  {
+    title: "Real phone numbers",
+    body: "Import a Telnyx number. Samata wires the LiveKit SIP trunk and dispatch rule.",
+  },
+  {
+    title: "Browser calls",
+    body: "Start a session from your backend, join over WebRTC with a one-room token.",
+  },
+  {
+    title: "Post-call analysis",
+    body: "A summary and structured data from every call, on your own model key.",
+  },
+  {
+    title: "Observability built in",
+    body: "Transcripts, usage and per-turn latency for every call.",
+  },
+  {
+    title: "Workspaces and API keys",
+    body: "Real accounts, invitation-only sign-up, keys scoped to a workspace.",
+  },
+  {
+    title: "Yours to host",
+    body: "One compose file with prebuilt images. Scale workers with a flag.",
+  },
+];
+
+const pipeline = [
+  {
+    step: "01",
+    name: "LiveKit",
+    note: "Carries the audio in and out.",
+    chips: ["pstn", "sip", "webrtc"],
+  },
+  {
+    step: "02",
+    name: "Transcriber",
+    note: "Speech to text.",
+    layer: "transcriber",
+    ms: 150,
+  },
+  {
+    step: "03",
+    name: "Model",
+    note: "Decides what to say and which tool to call.",
+    layer: "model",
+    ms: 350,
+  },
+  {
+    step: "04",
+    name: "Voice",
+    note: "Text to speech.",
+    layer: "voice",
+    ms: 100,
+  },
+];
+
 const toolHandler = `import { Hono } from "hono";
 
 const app = new Hono();
@@ -147,567 +223,476 @@ Browser (WebRTC) ───────────┘        │  Redis         
                              Next.js control plane ◄── webhooks ──┘
                              (agents, call logs, tools)   Postgres`;
 
+const questions = [
+  {
+    q: "What is Samata?",
+    a: "An open-source voice orchestration platform. You define an agent in JSON. Samata runs speech-to-text, the model and text-to-speech on LiveKit, and calls tools on an HTTP server you run.",
+  },
+  {
+    q: "Where does call data live?",
+    a: "On infrastructure you host. API keys are encrypted at rest and shown only as their last four characters. Transcripts, usage and call logs sit in your Postgres.",
+  },
+  {
+    q: "Do I install an SDK?",
+    a: "No. Agents, tools and calls are HTTP. Push config with curl from CI, and start a browser call from your own backend.",
+  },
+  {
+    q: "Can I bring my own models?",
+    a: "Yes. Pick a transcriber, a model and a voice per agent. OpenAI, Groq, Deepgram, Cartesia, ElevenLabs, AssemblyAI, OpenRouter, or a custom endpoint.",
+  },
+  {
+    q: "How do tools work?",
+    a: "When the model calls a tool, Samata POSTs to your server. The message envelope matches Vapi, so an existing handler ports over with small changes.",
+  },
+  {
+    q: "How do I deploy it?",
+    a: "One compose file with prebuilt images: the control plane, a stateless worker, LiveKit, SIP, Redis, Postgres, and Caddy for TLS.",
+  },
+];
+
 export default async function HomePage() {
   const stars = await getStars();
   const useCases = await buildUseCases();
 
   return (
-    <div className="relative flex flex-1 flex-col">
+    <div className="flex min-h-screen flex-col bg-black text-white">
       <Nav stars={stars} />
-      <Hero />
-      <Install />
-      <Pipeline />
-      <Loop />
-      <Agents useCases={useCases} />
-      <Api />
-      <Tools />
-      <Latency />
-      <Architecture />
-      <SelfHost />
+      <div className="lg:grid lg:grid-cols-[minmax(18rem,26rem)_minmax(0,1fr)] lg:items-start">
+        <aside className="relative flex flex-col gap-8 overflow-hidden border-b border-white/10 px-6 py-8 sm:px-8 lg:sticky lg:top-12 lg:h-[calc(100svh-3rem)] lg:justify-between lg:gap-6 lg:overflow-y-auto lg:border-r lg:border-b-0 lg:px-10 lg:py-6">
+          <div
+            aria-hidden="true"
+            className="grain pointer-events-none absolute inset-0 opacity-[0.18]"
+          />
+          <div className="relative">
+            <GrainMark />
+            <a
+              href={githubUrl}
+              className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-400 transition-colors hover:border-white/25 hover:text-white"
+            >
+              <span className="size-1.5 rounded-full bg-emerald-400" />
+              Apache 2.0 · Self-hosted
+            </a>
+            <h1 className="font-display mt-4 text-[2.35rem] font-medium leading-[0.96] tracking-[-0.045em] sm:text-5xl lg:text-[2.55rem]">
+              The open source
+              <br />
+              voice platform
+            </h1>
+            <p className="mt-4 max-w-xs text-[15px] leading-relaxed text-zinc-400">
+              Declarative agents, tools over HTTP, and every transcript on
+              infrastructure you run.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <Link
+                href="/docs/quickstart"
+                className="inline-flex h-10 items-center rounded-md bg-white px-4 text-sm font-medium text-black transition-colors hover:bg-zinc-200"
+              >
+                Get started
+              </Link>
+              <a
+                href={githubUrl}
+                className="inline-flex h-10 items-center rounded-md border border-white/15 px-4 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-white"
+              >
+                GitHub
+              </a>
+            </div>
+          </div>
+          <SectionNav className="relative" />
+        </aside>
+
+        <main className="min-w-0">
+          <section
+            id="product"
+            className="scroll-mt-14 px-6 py-14 sm:px-8 lg:px-12 lg:py-16"
+          >
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+              Readme
+            </p>
+            <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-300">
+              Samata is an open-source voice orchestration platform. Clone it,
+              push an agent as JSON, and take the call over the phone or the
+              browser. A worker turns speech into text, asks a model, calls
+              tools on a server you run, and speaks the reply. Your keys and
+              your call logs stay in your Postgres.
+            </p>
+            <div className="mt-8">
+              <InstallTabs tabs={installTabs} />
+            </div>
+            <div className="mt-8">
+              <ProductCards />
+            </div>
+            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-5 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-600">
+              <span className="text-zinc-500">Works with</span>
+              {worksWith.map((name) => (
+                <span key={name}>{name}</span>
+              ))}
+            </div>
+          </section>
+
+          <Block
+            id="features"
+            kicker="Features"
+            title="Everything a call needs, in the repo."
+          >
+            <div className="grid grid-cols-1 gap-px bg-white/10 sm:grid-cols-2">
+              {features.map((feature) => (
+                <div key={feature.title} className="bg-black p-4">
+                  <h3 className="flex items-center gap-2 text-sm font-medium">
+                    <span className="font-mono text-xs text-zinc-500">+</span>
+                    {feature.title}
+                  </h3>
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-400">
+                    {feature.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </Block>
+
+          <Block
+            id="pipeline"
+            kicker="Pipeline"
+            title="You pick every stage of the call."
+            lede="A transcriber, a model and a voice, per agent. Calls use your workspace keys, encrypted at rest and handed to a worker only when it takes a call."
+          >
+            <div className="grid grid-cols-1 gap-px bg-white/10 sm:grid-cols-2">
+              {pipeline.map((stage) => {
+                const names =
+                  "layer" in stage
+                    ? (providers.find((item) => item.layer === stage.layer)
+                        ?.names ?? [])
+                    : stage.chips;
+                return (
+                  <div
+                    key={stage.name}
+                    className="flex flex-col gap-3 bg-black p-4"
+                  >
+                    <div className="flex items-baseline justify-between font-mono text-[10px] text-zinc-500">
+                      <span>{stage.step}</span>
+                      {"ms" in stage ? (
+                        <span className="tabular-nums">{stage.ms} ms</span>
+                      ) : null}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium">{stage.name}</h3>
+                      <p className="mt-1 text-[13px] leading-relaxed text-zinc-400">
+                        {stage.note}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {names.map((name) => (
+                        <span
+                          key={name}
+                          className="rounded-sm border border-white/10 px-1.5 py-0.5 font-mono text-[10px] text-zinc-400"
+                        >
+                          {name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="border border-t-0 border-white/10 bg-black px-4 py-3">
+              <p className="font-mono text-[10px] text-amber-200/90">
+                ↳ tool-calls
+              </p>
+              <p className="mt-1 text-[13px] leading-relaxed text-zinc-400">
+                POST to your own server, in any language.
+              </p>
+            </div>
+            <Latency />
+            <More href="/docs/models">Bring your own models</More>
+          </Block>
+
+          <Block
+            id="agents"
+            kicker="Agents"
+            title="An agent is a JSON file."
+            lede="Pick one to see its config next to the call log it produces."
+          >
+            <UseCaseTabs items={useCases} />
+            <More href="/docs/agent-config">Agent config reference</More>
+          </Block>
+
+          <Block
+            id="api"
+            kicker="API"
+            title="The dashboard calls the same API you do."
+            lede="Script agents and calls from CI. JSON in, JSON out, one bearer key per workspace."
+          >
+            <ul className="divide-y divide-white/10 border border-white/10 font-mono text-[13px]">
+              {endpoints.map((endpoint) => (
+                <li key={endpoint.method + endpoint.path}>
+                  <Link
+                    href={endpoint.href}
+                    className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.03]"
+                  >
+                    <span
+                      className={cn(
+                        "w-14 shrink-0 rounded-sm px-1.5 py-0.5 text-center text-[10px] font-semibold",
+                        methodColor[endpoint.method],
+                      )}
+                    >
+                      {endpoint.method}
+                    </span>
+                    <span className="shrink-0 text-zinc-200">
+                      {endpoint.path}
+                    </span>
+                    <span className="hidden min-w-0 flex-1 truncate text-xs text-zinc-500 md:block">
+                      {endpoint.body}
+                    </span>
+                    <ArrowRight className="ml-auto size-3.5 shrink-0 text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-6">
+              <TerminalHero />
+            </div>
+            <div className="mt-3 flex min-w-0 flex-col gap-3">
+              <ServerCodeBlock
+                lang="ts"
+                code={toolHandler}
+                codeblock={{
+                  title: "server.ts",
+                  className: "my-0 rounded-none",
+                }}
+              />
+              <ServerCodeBlock
+                lang="bash"
+                code={pushCommand}
+                codeblock={{
+                  title: "deploy.sh",
+                  className: "my-0 rounded-none",
+                }}
+              />
+            </div>
+            <More href="/docs/api">API reference</More>
+          </Block>
+
+          <Block
+            id="deploy"
+            kicker="Deploy"
+            title="One compose file, prebuilt images."
+            lede="You don't need to clone or fork the repo to run it. Every release ships a control plane image and a worker image. The compose file adds Caddy, LiveKit, SIP, Redis and Postgres."
+          >
+            <ServerCodeBlock
+              lang="bash"
+              code={deployScript}
+              codeblock={{ title: "deploy", className: "my-0 rounded-none" }}
+            />
+            <div className="relative mt-3 border border-white/10 bg-black">
+              <pre className="overflow-x-auto p-4 font-mono text-[11px] leading-[1.65] text-zinc-500">
+                {diagram}
+              </pre>
+            </div>
+            <div className="mt-3 grid gap-px bg-white/10 sm:grid-cols-3">
+              {parts.map((part) => (
+                <div key={part.name} className="bg-black p-4">
+                  <h3 className="font-mono text-xs text-zinc-300">
+                    {part.name}
+                  </h3>
+                  <p className="mt-2 text-[13px] leading-relaxed text-zinc-400">
+                    {part.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <More href="/docs/deploy">Deployment guide</More>
+
+            <div className="mt-14">
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+                Questions
+              </p>
+              <div className="mt-4 border-t border-white/10">
+                {questions.map((item) => (
+                  <details
+                    key={item.q}
+                    className="group border-b border-white/10"
+                  >
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-4 text-sm [&::-webkit-details-marker]:hidden">
+                      {item.q}
+                      <span className="font-mono text-zinc-500 transition-transform group-open:rotate-45">
+                        +
+                      </span>
+                    </summary>
+                    <p className="max-w-2xl pb-4 text-sm leading-relaxed text-zinc-400">
+                      {item.a}
+                    </p>
+                  </details>
+                ))}
+              </div>
+            </div>
+          </Block>
+        </main>
+      </div>
       <Footer />
-      <CallScrubber />
     </div>
   );
 }
 
-function TextLink({ href, children }: { href: string; children: string }) {
-  return (
-    <Link
-      href={href}
-      className="inline-flex items-center gap-1.5 font-mono text-xs text-fd-primary hover:underline"
-    >
-      {children} <ArrowRight className="size-3.5" />
-    </Link>
-  );
-}
-
-function Chip({
-  children,
-  accent,
-}: {
-  children: React.ReactNode;
-  accent?: boolean;
-}) {
-  return (
-    <span
-      className={cn(
-        "rounded-sm border px-1.5 py-0.5 font-mono text-[10px]",
-        accent
-          ? "border-fd-primary/30 bg-fd-primary/10 text-fd-primary"
-          : "border-white/10 bg-white/[0.03] text-fd-muted-foreground",
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
-/* ---------------------------------------------------------------- */
-/* Top: nav and hero                                                  */
+const parts = [
+  {
+    name: "LiveKit",
+    body: "Carries WebRTC and SIP audio and dispatches each call to a worker. Self-host it or use LiveKit Cloud.",
+  },
+  {
+    name: "Worker",
+    body: "Builds the speech-to-text, model and voice pipeline from the config it is handed. Stateless, so you scale it horizontally.",
+  },
+  {
+    name: "Control plane",
+    body: "Stores agents and call logs, runs tools, does post-call analysis, and serves the dashboard and the API.",
+  },
+];
 
 function Nav({ stars }: { stars: number | null }) {
+  const links = [
+    { href: "/docs", label: "Docs" },
+    { href: "/docs/api", label: "API" },
+    { href: "/docs/deploy", label: "Deploy" },
+  ];
   return (
-    <header className="sticky top-0 z-30 h-12 border-b border-white/[0.08] bg-fd-background/80 backdrop-blur">
-      <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6 sm:px-10">
-        <Link href="/" className="flex items-center gap-2">
-          <LogoMark className="size-5" />
-          <span className="font-mono text-[11px] uppercase tracking-[0.18em]">
-            Samata
-          </span>
-        </Link>
-        <nav className="flex items-center gap-5 font-mono text-[11px] uppercase tracking-[0.16em] text-fd-muted-foreground">
-          <Link href="/docs" className="hover:text-fd-foreground">
-            Docs
-          </Link>
-          <Link href="/docs/api" className="hover:text-fd-foreground">
-            API
-          </Link>
+    <header className="sticky top-0 z-40 flex h-12 border-b border-white/10 bg-black">
+      <Link
+        href="/"
+        className="flex items-center gap-2 border-r border-white/10 px-4 sm:px-5"
+      >
+        <LogoMark className="size-4 rounded-[3px]" />
+        <span className="font-mono text-[11px] uppercase tracking-[0.2em]">
+          Samata
+        </span>
+      </Link>
+      <nav className="flex min-w-0 flex-1 items-stretch font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500">
+        {links.map((link) => (
           <Link
-            href="/docs/deploy"
-            className="hidden hover:text-fd-foreground sm:block"
+            key={link.href}
+            href={link.href}
+            className={cn(
+              "items-center border-r border-white/10 px-4 transition-colors hover:bg-white/[0.03] hover:text-white",
+              link.label === "Deploy" ? "hidden sm:flex" : "flex",
+            )}
           >
-            Deploy
+            {link.label}
           </Link>
-          <a
-            href={githubUrl}
-            className="border border-white/15 px-2.5 py-1 text-fd-foreground transition-colors hover:bg-white/[0.06]"
-          >
-            GitHub{stars !== null && stars >= 10 ? ` ★ ${stars}` : " ↗"}
-          </a>
-        </nav>
-      </div>
+        ))}
+        <div className="flex-1 border-r border-white/10" />
+        <a
+          href={githubUrl}
+          className="flex items-center px-4 text-white transition-colors hover:bg-white/[0.04]"
+        >
+          GitHub
+          {stars !== null && stars >= 10 ? (
+            <span className="ml-2 text-zinc-500">★ {stars}</span>
+          ) : null}
+        </a>
+      </nav>
     </header>
   );
 }
 
-function Hero() {
+function Block({
+  id,
+  kicker,
+  title,
+  lede,
+  children,
+}: {
+  id: string;
+  kicker: string;
+  title: string;
+  lede?: string;
+  children: ReactNode;
+}) {
   return (
-    <section className="relative overflow-hidden border-b border-white/[0.08]">
-      {/* A pool of light, and a long arc of it low across the frame. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_72%_42%,rgba(255,255,255,0.07),transparent_70%)]"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -left-[10%] bottom-[8%] h-[34rem] w-[130%] -rotate-[7deg] rounded-[50%] border-t border-white/[0.12] shadow-[0_-30px_80px_-30px_rgba(255,255,255,0.12)]"
-        style={{
-          maskImage:
-            "linear-gradient(to right, transparent, black 30%, black 70%, transparent)",
-        }}
-      />
-
-      <div
-        aria-hidden="true"
-        className="grain pointer-events-none absolute inset-0 opacity-[0.07]"
-      />
-      <div className="relative mx-auto flex max-w-6xl flex-col px-6 py-16 sm:px-10 lg:min-h-[calc(100svh-3rem)] lg:flex-row lg:items-center lg:py-10">
-        <div className="relative z-10 min-w-0 lg:max-w-[40rem]">
-          <a
-            href={githubUrl}
-            className="mb-9 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-fd-muted-foreground transition-colors hover:border-white/20 hover:text-fd-foreground"
-          >
-            <span className="size-1.5 rounded-full bg-emerald-400" />
-            Apache 2.0 · Self-hosted · Built on LiveKit
-            <ArrowRight className="size-3" />
-          </a>
-          <h1 className="font-display bg-gradient-to-b from-white from-35% to-zinc-400 bg-clip-text text-[2.9rem] font-semibold leading-[0.98] tracking-[-0.045em] text-transparent sm:text-6xl xl:text-[4rem]">
-            The{" "}
-            <span className="relative inline-block">
-              <span className="shimmer bg-gradient-to-r from-indigo-300 via-violet-400 to-indigo-300 bg-clip-text text-transparent">
-                open source
-              </span>
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 200 14"
-                preserveAspectRatio="none"
-                className="absolute -bottom-2.5 left-0 h-3 w-full overflow-visible"
-              >
-                <path
-                  d="M2 9 C 38 2, 76 13, 118 6 S 178 3, 198 8"
-                  fill="none"
-                  stroke="url(#underline)"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  className="draw"
-                />
-                <defs>
-                  <linearGradient id="underline" x1="0" x2="1">
-                    <stop offset="0" stopColor="#a5b4fc" />
-                    <stop offset="1" stopColor="#c4b5fd" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </span>
-            <br className="max-sm:hidden" /> voice orchestration
-            <br className="max-sm:hidden" /> platform
-          </h1>
-          <p className="mt-8 max-w-md text-[17px] leading-relaxed text-fd-muted-foreground">
-            Declarative agents, tools that are plain HTTP, and every call, key
-            and transcript on your own infrastructure.
-          </p>
-          <div className="mt-10 flex items-center gap-3">
-            <Link
-              href="/docs/quickstart"
-              className="inline-flex h-11 items-center rounded-lg border border-white/15 bg-white/[0.07] px-6 text-sm font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-colors hover:bg-white/[0.12]"
-            >
-              Get started
-            </Link>
-            <Link
-              href="/docs"
-              className="inline-flex h-11 items-center px-4 text-sm text-fd-muted-foreground transition-colors hover:text-fd-foreground"
-            >
-              Documentation
-            </Link>
-          </div>
-        </div>
-
-        <Monolith className="relative mx-auto mt-10 w-full max-w-[30rem] lg:absolute lg:-right-24 lg:top-1/2 lg:mx-0 lg:mt-0 lg:w-[50rem] lg:max-w-none lg:-translate-y-[53%]" />
-      </div>
+    <section
+      id={id}
+      className="scroll-mt-14 border-t border-white/10 px-6 py-14 sm:px-8 lg:px-12 lg:py-16"
+    >
+      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+        {kicker}
+      </p>
+      <h2 className="mt-3 max-w-xl text-xl font-medium tracking-tight sm:text-[1.65rem]">
+        {title}
+      </h2>
+      {lede ? (
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400">
+          {lede}
+        </p>
+      ) : null}
+      <div className="mt-8">{children}</div>
     </section>
   );
 }
 
-/* ---------------------------------------------------------------- */
-/* Moments                                                            */
-
-function Install() {
+function More({ href, children }: { href: string; children: string }) {
   return (
-    <Moment id="install" title="Four commands to a live agent.">
-      <Lede>
-        Clone the repo, start LiveKit and Postgres, push an agent, start a call.
-        No SDK to install and no flow builder to learn.
-      </Lede>
-      <InstallTabs tabs={installTabs} />
-    </Moment>
-  );
-}
-
-const pipeline = [
-  {
-    step: "01",
-    name: "LiveKit",
-    note: "Carries the audio in and out.",
-    chips: ["pstn", "sip", "webrtc"],
-  },
-  {
-    step: "02",
-    name: "Transcriber",
-    note: "Speech to text.",
-    layer: "transcriber",
-    ms: 150,
-    color: stages[1].color,
-  },
-  {
-    step: "03",
-    name: "Model",
-    note: "Decides what to say and which tool to call.",
-    layer: "model",
-    ms: 350,
-    color: stages[2].color,
-  },
-  {
-    step: "04",
-    name: "Voice",
-    note: "Text to speech.",
-    layer: "voice",
-    ms: 100,
-    color: stages[3].color,
-  },
-];
-
-function Pipeline() {
-  return (
-    <Moment
-      id="pipeline"
-      title="Every call runs the same pipeline. You pick each stage."
+    <Link
+      href={href}
+      className="mt-4 inline-flex items-center gap-1.5 font-mono text-xs text-zinc-400 transition-colors hover:text-white"
     >
-      <Lede>
-        Choose a transcriber, a model and a voice per agent. Calls use your
-        workspace's keys, which are encrypted at rest, shown only as their last
-        four characters, and handed to a worker only when it takes a call.
-      </Lede>
-      <div className="border border-white/[0.08]">
-        <div className="grid gap-px bg-white/[0.08] md:grid-cols-4">
-          {pipeline.map((p, i) => {
-            const names =
-              "layer" in p
-                ? (providers.find((x) => x.layer === p.layer)?.names ?? [])
-                : p.chips;
-            return (
-              <div
-                key={p.name}
-                className="relative flex flex-col gap-3 bg-fd-background p-4"
-              >
-                <div className="flex items-baseline justify-between font-mono text-[10px] text-fd-muted-foreground">
-                  <span>{p.step}</span>
-                  {"ms" in p ? (
-                    <span className="tabular-nums">{p.ms} ms</span>
-                  ) : null}
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium">{p.name}</h3>
-                  <p className="mt-1 text-[13px] leading-relaxed text-fd-muted-foreground">
-                    {p.note}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {names.map((n) => (
-                    <Chip key={n} accent={"layer" in p}>
-                      {n}
-                    </Chip>
-                  ))}
-                </div>
-                {"color" in p ? (
-                  <div
-                    className="mt-auto h-0.5"
-                    style={{ background: p.color }}
-                  />
-                ) : null}
-                {i < pipeline.length - 1 ? (
-                  <span
-                    aria-hidden="true"
-                    className="absolute -right-2 top-3.5 z-10 hidden bg-fd-background px-0.5 font-mono text-xs text-fd-primary md:block"
-                  >
-                    →
-                  </span>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-        <div className="border-t border-white/[0.08] bg-fd-background p-4 md:ml-[50%] md:w-1/4 md:border-x">
-          <p className="font-mono text-[10px] text-amber-300/90">
-            ↳ tool-calls
-          </p>
-          <p className="mt-1 text-[13px] leading-relaxed text-fd-muted-foreground">
-            POST to your own server, in any language.
-          </p>
-        </div>
-      </div>
-
-      <dl className="grid gap-x-10 gap-y-6 pt-4 sm:grid-cols-2">
-        {features.map((f) => (
-          <div key={f.title}>
-            <dt className="flex gap-2 text-sm font-medium">
-              <span className="font-mono text-fd-primary">+</span>
-              {f.title}
-            </dt>
-            <dd className="mt-1 pl-4 text-[13px] leading-relaxed text-fd-muted-foreground">
-              {f.body}
-            </dd>
-          </div>
-        ))}
-      </dl>
-      <TextLink href="/docs/models">Bring your own models</TextLink>
-    </Moment>
-  );
-}
-
-const features = [
-  {
-    title: "Declarative agents",
-    body: "Model, voice, tools, barge-in and analysis in one JSON document.",
-  },
-  {
-    title: "Tools on your server",
-    body: "One webhook server for all your tools, in any language.",
-  },
-  {
-    title: "Real phone numbers",
-    body: "Import a Telnyx number. Samata wires the LiveKit SIP trunk and dispatch rule.",
-  },
-  {
-    title: "Browser calls",
-    body: "Start a session from your backend, join over WebRTC with a one-room token.",
-  },
-  {
-    title: "Post-call analysis",
-    body: "A summary and structured data from every call, on your own model key.",
-  },
-  {
-    title: "Observability built in",
-    body: "Transcripts, usage and per-turn latency for every call.",
-  },
-  {
-    title: "Workspaces and API keys",
-    body: "Real accounts, invitation-only sign-up, keys scoped to a workspace.",
-  },
-  {
-    title: "Yours to host",
-    body: "One compose file with prebuilt images. Scale workers with a flag.",
-  },
-];
-
-function Loop() {
-  return (
-    <Moment id="loop" title="The whole loop is three HTTP requests.">
-      <Lede>Define an agent, start a call, read back what happened.</Lede>
-      <TerminalHero />
-    </Moment>
-  );
-}
-
-function Agents({
-  useCases,
-}: {
-  useCases: Awaited<ReturnType<typeof buildUseCases>>;
-}) {
-  return (
-    <Moment id="agents" title="An agent is a JSON file.">
-      <Lede>Pick one to see its config next to the call log it produces.</Lede>
-      <UseCaseTabs items={useCases} />
-      <TextLink href="/docs/agent-config">Agent config reference</TextLink>
-    </Moment>
-  );
-}
-
-function Api() {
-  return (
-    <Moment id="api" title="The dashboard calls the same API you do.">
-      <Lede>
-        Script agents and calls from CI, call it from your backend. JSON in,
-        JSON out, one bearer key per workspace.
-      </Lede>
-      <ul className="divide-y divide-white/[0.08] border border-white/[0.08] font-mono text-sm">
-        {endpoints.map((e) => (
-          <li key={e.method + e.path}>
-            <Link
-              href={e.href}
-              className="group flex items-center gap-4 px-4 py-3 transition-colors hover:bg-white/[0.03]"
-            >
-              <span
-                className={cn(
-                  "w-14 shrink-0 rounded-sm px-1.5 py-0.5 text-center text-[0.7rem] font-semibold",
-                  methodColor[e.method],
-                )}
-              >
-                {e.method}
-              </span>
-              <span className="shrink-0">{e.path}</span>
-              <span className="hidden min-w-0 flex-1 truncate text-xs text-fd-muted-foreground md:block">
-                {e.body}
-              </span>
-              <ArrowRight className="ml-auto size-3.5 shrink-0 text-fd-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-            </Link>
-          </li>
-        ))}
-      </ul>
-      <TextLink href="/docs/api">API reference</TextLink>
-    </Moment>
-  );
-}
-
-function Tools() {
-  return (
-    <Moment id="tools" title="Tools are HTTP endpoints on a server you run.">
-      <Lede>
-        Same message envelope as Vapi, so existing handlers port over with small
-        changes. Agents and tools are idempotent PUTs, so your repo stays the
-        source of truth.
-      </Lede>
-      <div className="flex min-w-0 flex-col gap-3">
-        <ServerCodeBlock
-          lang="ts"
-          code={toolHandler}
-          codeblock={{ title: "server.ts", className: "my-0 rounded-none" }}
-        />
-        <ServerCodeBlock
-          lang="bash"
-          code={pushCommand}
-          codeblock={{ title: "deploy.sh", className: "my-0 rounded-none" }}
-        />
-      </div>
-      <TextLink href="/docs/tools">Tools and your webhook server</TextLink>
-    </Moment>
+      {children}
+      <ArrowRight className="size-3.5" />
+    </Link>
   );
 }
 
 function Latency() {
-  const total = stages.reduce((n, s) => n + s.ms, 0);
+  const total = stages.reduce((sum, stage) => sum + stage.ms, 0);
   return (
-    <Moment id="latency" title="See which stage is slow.">
-      <Lede>
-        Every call is logged with its transcript, summary, structured data and
-        model usage. Latency is broken down per turn, so you tune what is
-        actually slow.
-      </Lede>
-      <div className="border border-white/[0.08] bg-black/30 p-5 font-mono">
-        <div className="flex items-baseline justify-between text-xs text-fd-muted-foreground">
-          <span>latency · voice_to_voice</span>
-          <span className="text-2xl font-semibold tabular-nums text-fd-foreground">
-            {(total / 1000).toFixed(2)}
-            <span className="text-sm text-fd-muted-foreground">s</span>
-          </span>
-        </div>
-        <div className="mt-5 flex h-2.5 overflow-hidden rounded-sm bg-white/[0.06]">
-          {stages.map((s) => (
-            <div
-              key={s.name}
-              style={{ width: `${(s.ms / total) * 100}%`, background: s.color }}
-            />
-          ))}
-        </div>
-        <dl className="mt-6 grid gap-2.5 text-xs sm:grid-cols-2">
-          {stages.map((s) => (
-            <div key={s.name} className="flex items-center gap-3">
-              <span
-                className="size-2 rounded-sm"
-                style={{ background: s.color }}
-              />
-              <dt className="flex-1 text-fd-muted-foreground">{s.name}</dt>
-              <dd className="tabular-nums">{s.ms} ms</dd>
-            </div>
-          ))}
-        </dl>
-        <p className="mt-5 text-[0.7rem] text-fd-muted-foreground/70">
-          {"// example turn"}
-        </p>
+    <div className="mt-3 border border-white/10 bg-black p-4 font-mono">
+      <div className="flex items-baseline justify-between text-xs text-zinc-500">
+        <span>latency · voice_to_voice</span>
+        <span className="text-2xl font-medium tabular-nums text-white">
+          {(total / 1000).toFixed(2)}
+          <span className="text-sm text-zinc-500">s</span>
+        </span>
       </div>
-    </Moment>
-  );
-}
-
-function Architecture() {
-  const parts = [
-    {
-      name: "LiveKit",
-      body: "Carries WebRTC and SIP audio and dispatches each call to a worker. Self-host it or use LiveKit Cloud.",
-    },
-    {
-      name: "Worker",
-      body: "Builds the speech-to-text, LLM and text-to-speech pipeline for each call from the config it is handed. Stateless, so scale it horizontally.",
-    },
-    {
-      name: "Control plane",
-      body: "Stores agents and call logs, runs tools, does post-call analysis, and serves the dashboard and API.",
-    },
-  ];
-  return (
-    <Moment id="architecture" title="Media stays apart from agent logic.">
-      <Lede>
-        Three pieces, each doing one job. Your own code never goes in the Samata
-        repo.
-      </Lede>
-      <div className="relative border border-white/[0.08] bg-black/30">
-        <pre className="overflow-x-auto p-5 font-mono text-[11.5px] leading-[1.6] text-fd-muted-foreground">
-          {diagram}
-        </pre>
-        <div className="flow-line absolute inset-x-0 top-0 h-px" />
-      </div>
-      <div className="grid gap-px border border-white/[0.08] bg-white/[0.08] md:grid-cols-3">
-        {parts.map((p) => (
-          <div key={p.name} className="bg-fd-background p-5">
-            <h3 className="font-mono text-xs text-fd-primary">{p.name}</h3>
-            <p className="mt-2 text-[13px] leading-relaxed text-fd-muted-foreground">
-              {p.body}
-            </p>
-          </div>
+      <div className="mt-4 flex h-1.5 overflow-hidden bg-white/10">
+        {stages.map((stage) => (
+          <div
+            key={stage.name}
+            style={{
+              width: `${(stage.ms / total) * 100}%`,
+              background: stage.color,
+            }}
+          />
         ))}
       </div>
-      <TextLink href="/docs/architecture">Architecture</TextLink>
-    </Moment>
-  );
-}
-
-function SelfHost() {
-  return (
-    <Moment id="self-host" title="One compose file, prebuilt images.">
-      <Lede>
-        You don't need to clone or fork the repo. Every release ships a control
-        plane image and a worker image, and the compose file adds Caddy for
-        automatic TLS, LiveKit, SIP, Redis and Postgres.
-      </Lede>
-      <ServerCodeBlock
-        lang="bash"
-        code={deployScript}
-        codeblock={{ title: "deploy", className: "my-0 rounded-none" }}
-      />
-      <TextLink href="/docs/deploy">Deployment guide</TextLink>
-    </Moment>
+      <dl className="mt-4 grid gap-2 text-xs sm:grid-cols-2">
+        {stages.map((stage) => (
+          <div key={stage.name} className="flex items-center gap-3">
+            <span
+              className="size-1.5"
+              style={{ background: stage.color }}
+            />
+            <dt className="flex-1 text-zinc-500">{stage.name}</dt>
+            <dd className="tabular-nums text-zinc-300">{stage.ms} ms</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   );
 }
 
 function Footer() {
   return (
-    <footer className="border-t border-white/[0.08]">
-      <div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-3 px-6 py-6 font-mono text-[11px] text-fd-muted-foreground sm:flex-row sm:items-center">
-        <p>02:47 · end of call · © 2026 Samata · Apache-2.0</p>
-        <nav className="flex gap-5">
-          <Link href="/docs" className="hover:text-fd-foreground">
-            Docs
-          </Link>
-          <Link href="/docs/api" className="hover:text-fd-foreground">
-            API
-          </Link>
-          <Link href="/docs/deploy" className="hover:text-fd-foreground">
-            Deploy
-          </Link>
-          <a href={githubUrl} className="hover:text-fd-foreground">
-            GitHub
-          </a>
-        </nav>
-      </div>
+    <footer className="flex flex-col items-start justify-between gap-3 border-t border-white/10 px-6 py-5 font-mono text-[11px] text-zinc-500 sm:flex-row sm:items-center sm:px-8">
+      <p>© 2026 Samata · Apache-2.0</p>
+      <nav className="flex gap-5">
+        <Link href="/docs" className="hover:text-white">
+          Docs
+        </Link>
+        <Link href="/docs/api" className="hover:text-white">
+          API
+        </Link>
+        <Link href="/docs/deploy" className="hover:text-white">
+          Deploy
+        </Link>
+        <a href={githubUrl} className="hover:text-white">
+          GitHub
+        </a>
+      </nav>
     </footer>
   );
 }

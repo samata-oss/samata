@@ -79,7 +79,7 @@ export function UseCaseTabs({ items }: { items: UseCase[] }) {
 
         <div
           role="tabpanel"
-          className="grid lg:grid-cols-[1.1fr_1fr] lg:divide-x lg:divide-white/[0.07]"
+          className="grid xl:grid-cols-[1.1fr_1fr] xl:divide-x xl:divide-white/[0.07]"
         >
           <div className="min-w-0 p-3 sm:p-4">{current.code}</div>
           <CallLog item={current} key={current.file} />
@@ -91,7 +91,7 @@ export function UseCaseTabs({ items }: { items: UseCase[] }) {
 
 function CallLog({ item }: { item: UseCase }) {
   return (
-    <div className="flex min-w-0 flex-col border-t border-white/[0.07] font-mono text-xs lg:border-t-0">
+    <div className="flex min-w-0 flex-col border-t border-white/[0.07] font-mono text-xs xl:border-t-0">
       <div className="flex items-center justify-between px-4 py-2.5 text-fd-muted-foreground">
         <span className="flex items-center gap-2">
           <span className="relative flex size-1.5">
