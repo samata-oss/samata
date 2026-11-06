@@ -29,6 +29,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { fmtDuration, fmtMs, mean } from "@/lib/format";
+import {
+  costPerMinute,
+  estimateCosts,
+  fmtCostPerMinute,
+  type LegEstimate,
+  PRICES_AS_OF,
+} from "@/lib/pricing";
 import { STACKED_STAGES as STAGES, stageValue } from "@/lib/latency-stages";
 import {
   type KeyProvider,
@@ -71,6 +78,8 @@ export function AssistantTab({
   // show only what each stage added to the caller's wait (see latency-stages).
   const llmTtft = mean(calls.map((c) => c.latency?.llmTtftAvg));
   const ttsTtfb = mean(calls.map((c) => c.latency?.ttsTtfbAvg));
+  const estimate = estimateCosts(config);
+  const recent = costPerMinute(calls);
   const voiceToVoice = mean(calls.map((c) => c.latency?.voiceToVoiceAvg));
   const total = STAGES.reduce((sum, s) => sum + (latency[s.key] ?? 0), 0);
   const measured = calls.filter((c) => c.latency).length;
@@ -246,6 +255,16 @@ export function AssistantTab({
             <p className="truncate text-xs text-muted-foreground">
               Listen, think, then speak. Open a step to change its provider.
             </p>
+            <span
+              title={`Estimated cost per minute of call for the selected models, from provider list prices (${PRICES_AS_OF}). Your bill may differ.`}
+              className="ml-auto shrink-0 font-mono text-xs text-muted-foreground tabular-nums"
+            >
+              <span className="font-medium text-foreground">
+                {estimate.total === null
+                  ? "—"
+                  : `≈ ${fmtCostPerMinute(estimate.total)}`}
+              </span>
+            </span>
           </div>
           <ol className="space-y-3">
             <PipelineStage
@@ -261,6 +280,7 @@ export function AssistantTab({
               missingKey={lacksKey(config.transcriber.provider, configuredKeys)}
               measured={fmtMs(transcription)}
               measuredLabel="Transcription delay"
+              cost={stageCost(estimate.listen, recent.listen)}
             >
               <Field label="Provider" htmlFor="stt-provider">
                 <ProviderSelect
@@ -354,6 +374,7 @@ export function AssistantTab({
               missingKey={lacksKey(config.model.provider, configuredKeys)}
               measured={fmtMs(llmTtft)}
               measuredLabel="Time to first token"
+              cost={stageCost(estimate.think, recent.think)}
             >
               <Field
                 label="Provider"
@@ -462,6 +483,7 @@ export function AssistantTab({
               missingKey={lacksKey(config.voice.provider, configuredKeys)}
               measured={fmtMs(ttsTtfb)}
               measuredLabel="Time to first byte"
+              cost={stageCost(estimate.speak, recent.speak)}
             >
               <Field label="Provider" htmlFor="tts-provider">
                 <ProviderSelect
@@ -570,6 +592,32 @@ export function AssistantTab({
   );
 }
 
+type StageCost = { label: string; title: string };
+
+/** The cost pill for one leg: the selected model's estimate, plus what recent calls cost. */
+function stageCost(
+  estimate: LegEstimate | null,
+  recent: number | null,
+): StageCost {
+  if (!estimate) {
+    return {
+      label: "—",
+      title: "No public list price for this model, so no estimate.",
+    };
+  }
+  const parts = [
+    `Estimated cost per minute of call. ${estimate.basis}`,
+    `List prices as of ${PRICES_AS_OF}; your bill may differ.`,
+  ];
+  if (recent !== null) {
+    parts.push(`Recent calls averaged ${fmtCostPerMinute(recent)}.`);
+  }
+  return {
+    label: `~${fmtCostPerMinute(estimate.usdPerMinute)}`,
+    title: parts.join(" "),
+  };
+}
+
 /**
  * One step of the call pipeline, on a vertical rail: what the caller says is
  * heard, thought about, then spoken back. Collapsed it is a one-line summary
@@ -581,6 +629,7 @@ function PipelineStage({
   summary,
   measured,
   measuredLabel,
+  cost,
   missingKey,
   defaultOpen,
   last,
@@ -591,6 +640,8 @@ function PipelineStage({
   summary: string;
   measured?: string;
   measuredLabel?: string;
+  /** Estimated spend per minute of call for the selected model. */
+  cost?: StageCost;
   /** The chosen provider has no key: start open so the notice is seen. */
   missingKey?: boolean;
   defaultOpen?: boolean;
@@ -634,6 +685,16 @@ function PipelineStage({
               >
                 <span className="font-medium text-foreground tabular-nums">
                   {measured}
+                </span>
+              </span>
+            )}
+            {cost && (
+              <span
+                title={cost.title}
+                className="hidden shrink-0 items-baseline gap-1.5 rounded border bg-muted/50 px-2 py-0.5 font-mono text-[11px] text-muted-foreground sm:flex"
+              >
+                <span className="font-medium text-foreground tabular-nums">
+                  {cost.label}
                 </span>
               </span>
             )}

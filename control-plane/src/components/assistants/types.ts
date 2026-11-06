@@ -13,6 +13,8 @@ export type AssistantCall = {
   summary: string | null;
   toolCallCount: number;
   latency: CallLatency | null;
+  /** Raw model usage from the worker; priced in `lib/pricing.ts`. */
+  usage: Record<string, unknown>[] | null;
 };
 
 /** The editable state of an assistant. `phoneNumber` is "" when unassigned. */

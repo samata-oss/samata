@@ -33,6 +33,7 @@ export default async function AssistantPage({
       summary: callLog.summary,
       toolCallCount: callLog.toolCallCount,
       latency: callLog.latency,
+      usage: callLog.usage,
     })
     .from(callLog)
     .where(
