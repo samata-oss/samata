@@ -1,8 +1,17 @@
 # Samata local stack.
 #
-#   docker compose up -d                          # infra only (livekit (SFU) + postgres)
+# Default = local stack (no profile needed): LiveKit SFU + Redis + Postgres.
+# Browser-based test calls work out of the box.
 #
-# Recommended that control-plane, worker, and webhook-server run on the host
+#   docker compose up -d                              # local: livekit + redis + postgres
+#
+# LiveKit Cloud: media runs on LiveKit Cloud, so skip the local SFU, Redis, and SIP.
+# Set LIVEKIT_URL / LIVEKIT_API_KEY / LIVEKIT_API_SECRET in control-plane/.env
+# and worker/.env, then:
+#
+#   docker compose --profile cloud up -d postgres worker-cloud
+#
+# Recommended that control-plane and worker run on the host
 
 services:
   livekit:
@@ -36,7 +45,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    profiles: ["redis"]
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -74,6 +82,18 @@ services:
     env_file: ./worker/.env
     environment:
       LIVEKIT_URL: ws://livekit:7880
+      SAMATA_CONTROL_PLANE_URL: http://host.docker.internal:3000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Worker for LiveKit Cloud: uses LIVEKIT_* from worker/.env as-is and does not
+  # depend on the local SFU.
+  worker-cloud:
+    build: ./worker
+    profiles: ["cloud"]
+    restart: unless-stopped
+    env_file: ./worker/.env
+    environment:
       SAMATA_CONTROL_PLANE_URL: http://host.docker.internal:3000
     extra_hosts:
       - "host.docker.internal:host-gateway"

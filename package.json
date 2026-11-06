@@ -2,7 +2,8 @@
   "name": "samata",
   "private": true,
   "scripts": {
-    "infra:up": "docker compose up -d livekit redis postgres",
+    "infra:up": "docker compose up -d",
+    "infra:up:cloud": "docker compose --profile cloud up -d postgres worker-cloud",
     "infra:down": "docker compose down",
     "dev": "pnpm --filter control-plane dev",
     "worker:dev": "cd worker && .venv/bin/python main.py dev",
