@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "infra:up": "docker compose up -d",
-    "infra:up:cloud": "docker compose --profile cloud up -d postgres worker-cloud",
+    "infra:up:cloud": "docker compose up -d postgres",
     "infra:down": "docker compose down",
     "dev": "pnpm --filter control-plane dev",
     "worker:dev": "cd worker && .venv/bin/python main.py dev",
