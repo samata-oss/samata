@@ -4,16 +4,14 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Reveal, ScrollProgress, Spotlight } from "@/components/landing/fx";
 import { InstallTabs } from "@/components/landing/install-tabs";
-import { Latency } from "@/components/landing/latency";
 import { LiveMark } from "@/components/landing/live-mark";
+import { Starfield } from "@/components/landing/starfield";
 import { ProductCards } from "@/components/landing/surfaces";
 import { TerminalHero } from "@/components/landing/terminal-hero";
-import { UseCaseTabs } from "@/components/landing/use-case-tabs";
 import { LogoMark } from "@/components/logo";
 import { cn } from "@/lib/cn";
 import { getStars } from "@/lib/github";
 import { githubUrl } from "@/lib/shared";
-import { buildUseCases } from "./use-cases";
 
 const installTabs = [
   {
@@ -37,81 +35,6 @@ const installTabs = [
     command:
       'curl -X POST $SAMATA_URL/api/session/start -d \'{"assistantId":"support"}\'',
   },
-];
-
-const stages = [
-  { name: "end_of_turn", ms: 300, color: "#d4d4d8" },
-  { name: "transcription", ms: 150, color: "#a5b4fc" },
-  { name: "llm_ttft", ms: 350, color: "#818cf8" },
-  { name: "tts_ttfb", ms: 100, color: "#4f46e5" },
-];
-
-const endpoints = [
-  {
-    method: "PUT",
-    path: "/api/agents",
-    body: "Create or replace an agent by slug",
-    href: "/docs/api/agents",
-  },
-  {
-    method: "PATCH",
-    path: "/api/agents/:ref",
-    body: "Change part of an agent's config",
-    href: "/docs/api/agents",
-  },
-  {
-    method: "PUT",
-    path: "/api/tools",
-    body: "Push your tool library, idempotently",
-    href: "/docs/api/tools",
-  },
-  {
-    method: "POST",
-    path: "/api/session/start",
-    body: "Start a browser call and get a room token",
-    href: "/docs/api/sessions",
-  },
-  {
-    method: "GET",
-    path: "/api/calls",
-    body: "List calls with transcripts and latency",
-    href: "/docs/api/calls",
-  },
-  {
-    method: "GET",
-    path: "/api/calls/:id",
-    body: "One call: summary, structured data, usage",
-    href: "/docs/api/calls",
-  },
-];
-
-const methodColor: Record<string, string> = {
-  GET: "text-emerald-400 bg-emerald-400/10",
-  POST: "text-sky-400 bg-sky-400/10",
-  PUT: "text-amber-300 bg-amber-300/10",
-  PATCH: "text-fuchsia-400 bg-fuchsia-400/10",
-};
-
-const providers = [
-  {
-    layer: "model",
-    names: ["openai", "openrouter", "vercel-ai-gateway", "groq", "custom"],
-  },
-  {
-    layer: "transcriber",
-    names: ["deepgram", "assemblyai", "elevenlabs", "openai"],
-  },
-  { layer: "voice", names: ["cartesia", "elevenlabs", "deepgram", "openai"] },
-];
-
-const worksWith = [
-  "OpenAI",
-  "Groq",
-  "Deepgram",
-  "Cartesia",
-  "ElevenLabs",
-  "AssemblyAI",
-  "Telnyx",
 ];
 
 const features = [
@@ -149,56 +72,6 @@ const features = [
   },
 ];
 
-const pipeline = [
-  {
-    step: "01",
-    name: "LiveKit",
-    note: "Carries the audio in and out.",
-    chips: ["pstn", "sip", "webrtc"],
-  },
-  {
-    step: "02",
-    name: "Transcriber",
-    note: "Speech to text.",
-    layer: "transcriber",
-    ms: 150,
-  },
-  {
-    step: "03",
-    name: "Model",
-    note: "Decides what to say and which tool to call.",
-    layer: "model",
-    ms: 350,
-  },
-  {
-    step: "04",
-    name: "Voice",
-    note: "Text to speech.",
-    layer: "voice",
-    ms: 100,
-  },
-];
-
-const toolHandler = `import { Hono } from "hono";
-
-const app = new Hono();
-
-// Samata POSTs here whenever an agent's LLM calls one of your tools.
-app.post("/samata", async (c) => {
-  if (!verifySecret(c)) return c.text("Unauthorized", 401);
-
-  const { message } = await c.req.json();
-  if (message.type !== "tool-calls") return c.json({});
-
-  const results = await Promise.all(
-    message.toolCallList.map(async (call) => ({
-      toolCallId: call.id,
-      result: await tools[call.name](call.arguments),
-    })),
-  );
-  return c.json({ results });
-});`;
-
 const pushCommand = `# In CI, on every deploy
 curl -X PUT $SAMATA_URL/api/tools \\
   -H "authorization: Bearer $SAMATA_API_KEY" \\
@@ -217,10 +90,6 @@ $EDITOR .env            # domains and secrets
 docker compose up -d`;
 
 const questions = [
-  {
-    q: "What is Samata?",
-    a: "An open-source voice orchestration platform. You define an agent in JSON. Samata runs speech-to-text, the model and text-to-speech on LiveKit, and calls tools on an HTTP server you run.",
-  },
   {
     q: "Where does call data live?",
     a: "On infrastructure you host. API keys are encrypted at rest and shown only as their last four characters. Transcripts, usage and call logs sit in your Postgres.",
@@ -243,19 +112,30 @@ const questions = [
   },
 ];
 
+const openSource = [
+  {
+    title: "Apache 2.0",
+    body: "Use it commercially, fork it, change it. The licence is in the repo.",
+  },
+  {
+    title: "Your data stays put",
+    body: "API keys are encrypted at rest. Transcripts, usage and call logs sit in your Postgres.",
+  },
+  {
+    title: "Bring your own models",
+    body: "A transcriber, a model and a voice per agent: OpenAI, Groq, Deepgram, Cartesia, ElevenLabs, AssemblyAI, OpenRouter, or a custom endpoint.",
+  },
+];
+
 export default async function HomePage() {
   const stars = await getStars();
-  const useCases = await buildUseCases();
 
   return (
     <div className="flex min-h-screen flex-col bg-black text-white">
       <Nav stars={stars} />
-      <div className="lg:grid lg:grid-cols-[clamp(20rem,36vw,40rem)_minmax(0,1fr)] lg:items-start">
+      <div className="lg:grid lg:grid-cols-[minmax(20rem,36%)_minmax(0,1fr)] lg:items-start">
         <aside className="relative flex flex-col gap-8 overflow-hidden border-b border-white/10 px-6 py-8 sm:px-8 lg:sticky lg:top-12 lg:h-[calc(100svh-3rem)] lg:justify-center lg:gap-6 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:border-r lg:border-b-0 lg:px-10 lg:pt-6 lg:pb-40 xl:px-14">
-          <div
-            aria-hidden="true"
-            className="grain pointer-events-none absolute inset-0 opacity-[0.18]"
-          />
+          <Starfield className="pointer-events-none absolute inset-0 size-full" />
           <div className="relative mx-auto w-full max-w-md">
             <LiveMark className="size-48 sm:size-52 lg:size-[clamp(11rem,14.5vw,18rem)]" />
             <a
@@ -309,23 +189,16 @@ export default async function HomePage() {
             <div className="mt-8">
               <InstallTabs tabs={installTabs} />
             </div>
-            <div className="mt-8">
-              <ProductCards />
-            </div>
-            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-5 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-600">
-              <span className="text-zinc-500">Works with</span>
-              {worksWith.map((name) => (
-                <span key={name}>{name}</span>
-              ))}
-            </div>
           </section>
 
           <Block
-            id="features"
-            kicker="Features"
-            title="Everything a call needs, in the repo."
+            id="what"
+            kicker="Overview"
+            title="What is Samata?"
+            lede="An open-source voice orchestration platform. You describe an agent in JSON. Samata runs speech-to-text, the model and text-to-speech on LiveKit, calls tools on an HTTP server you run, and keeps every transcript in your own Postgres."
           >
-            <Spotlight className="grid grid-cols-1 gap-px sm:grid-cols-2">
+            <ProductCards />
+            <Spotlight className="mt-3 grid grid-cols-1 gap-px sm:grid-cols-2">
               {features.map((feature) => (
                 <div key={feature.title} className="bg-black p-4">
                   <h3 className="flex items-center gap-2 text-sm font-medium">
@@ -341,174 +214,96 @@ export default async function HomePage() {
           </Block>
 
           <Block
-            id="pipeline"
-            kicker="Pipeline"
-            title="You pick every stage of the call."
-            lede="A transcriber, a model and a voice, per agent. Calls use your workspace keys, encrypted at rest and handed to a worker only when it takes a call."
+            id="get-started"
+            kicker="Get started"
+            title="From clone to first call."
+            lede="No SDK to install. Agents, tools and calls are plain HTTP, so everything below is a shell command."
           >
-            <Spotlight className="grid grid-cols-1 gap-px sm:grid-cols-2">
-              {pipeline.map((stage) => {
-                const names =
-                  "layer" in stage
-                    ? (providers.find((item) => item.layer === stage.layer)
-                        ?.names ?? [])
-                    : stage.chips;
-                return (
-                  <div
-                    key={stage.name}
-                    className="flex flex-col gap-3 bg-black p-4"
-                  >
-                    <div className="flex items-baseline justify-between font-mono text-[10px] text-zinc-500">
-                      <span>{stage.step}</span>
-                      {"ms" in stage ? (
-                        <span className="tabular-nums">{stage.ms} ms</span>
-                      ) : null}
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium">{stage.name}</h3>
-                      <p className="mt-1 text-[13px] leading-relaxed text-zinc-400">
-                        {stage.note}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {names.map((name) => (
-                        <span
-                          key={name}
-                          className="rounded-sm border border-white/10 px-1.5 py-0.5 font-mono text-[10px] text-zinc-400"
-                        >
-                          {name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </Spotlight>
-            <div className="border border-t-0 border-white/10 bg-black px-4 py-3">
-              <p className="font-mono text-[10px] text-amber-200/90">
-                ↳ tool-calls
-              </p>
-              <p className="mt-1 text-[13px] leading-relaxed text-zinc-400">
-                POST to your own server, in any language.
-              </p>
+            <div className="space-y-8">
+              <Step n="01" title="Run Samata">
+                <ServerCodeBlock
+                  lang="bash"
+                  code={deployScript}
+                  codeblock={{
+                    title: "deploy",
+                    className: "my-0 rounded-none",
+                  }}
+                />
+                <More href="/docs/deploy">Deployment guide</More>
+              </Step>
+              <Step n="02" title="Define an agent and take a call">
+                <TerminalHero />
+                <More href="/docs/quickstart">Quickstart</More>
+              </Step>
+              <Step n="03" title="Keep it in CI">
+                <ServerCodeBlock
+                  lang="bash"
+                  code={pushCommand}
+                  codeblock={{
+                    title: "deploy.sh",
+                    className: "my-0 rounded-none",
+                  }}
+                />
+                <More href="/docs/api">API reference</More>
+              </Step>
             </div>
-            <Latency stages={stages} />
-            <More href="/docs/models">Bring your own models</More>
           </Block>
 
           <Block
-            id="agents"
-            kicker="Agents"
-            title="An agent is a JSON file."
-            lede="Pick one to see its config next to the call log it produces."
+            id="open-source"
+            kicker="Open source"
+            title="Yours to host, read and change."
+            lede="There is no hosted tier between you and your calls. The control plane, the worker and the LiveKit setup are all in the repo."
           >
-            <UseCaseTabs items={useCases} />
-            <More href="/docs/agent-config">Agent config reference</More>
-          </Block>
-
-          <Block
-            id="api"
-            kicker="API"
-            title="The dashboard calls the same API you do."
-            lede="Script agents and calls from CI. JSON in, JSON out, one bearer key per workspace."
-          >
-            <ul className="divide-y divide-white/10 border border-white/10 font-mono text-[13px]">
-              {endpoints.map((endpoint) => (
-                <li key={endpoint.method + endpoint.path}>
-                  <Link
-                    href={endpoint.href}
-                    className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.03]"
-                  >
-                    <span
-                      className={cn(
-                        "w-14 shrink-0 rounded-sm px-1.5 py-0.5 text-center text-[10px] font-semibold",
-                        methodColor[endpoint.method],
-                      )}
-                    >
-                      {endpoint.method}
-                    </span>
-                    <span className="shrink-0 text-zinc-200">
-                      {endpoint.path}
-                    </span>
-                    <span className="hidden min-w-0 flex-1 truncate text-xs text-zinc-500 md:block">
-                      {endpoint.body}
-                    </span>
-                    <ArrowRight className="ml-auto size-3.5 shrink-0 text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-6">
-              <TerminalHero />
-            </div>
-            <div className="mt-3 flex min-w-0 flex-col gap-3">
-              <ServerCodeBlock
-                lang="ts"
-                code={toolHandler}
-                codeblock={{
-                  title: "server.ts",
-                  className: "my-0 rounded-none",
-                }}
-              />
-              <ServerCodeBlock
-                lang="bash"
-                code={pushCommand}
-                codeblock={{
-                  title: "deploy.sh",
-                  className: "my-0 rounded-none",
-                }}
-              />
-            </div>
-            <More href="/docs/api">API reference</More>
-          </Block>
-
-          <Block
-            id="deploy"
-            kicker="Deploy"
-            title="One compose file, prebuilt images."
-            lede="You don't need to clone or fork the repo to run it. Every release ships a control plane image and a worker image. The compose file adds Caddy, LiveKit, SIP, Redis and Postgres."
-          >
-            <ServerCodeBlock
-              lang="bash"
-              code={deployScript}
-              codeblock={{ title: "deploy", className: "my-0 rounded-none" }}
-            />
-            <Spotlight className="mt-3 grid gap-px sm:grid-cols-3">
-              {parts.map((part) => (
-                <div key={part.name} className="bg-black p-4">
+            <Spotlight className="grid gap-px sm:grid-cols-3">
+              {openSource.map((item) => (
+                <div key={item.title} className="bg-black p-4">
                   <h3 className="font-mono text-xs text-zinc-300">
-                    {part.name}
+                    {item.title}
                   </h3>
                   <p className="mt-2 text-[13px] leading-relaxed text-zinc-400">
-                    {part.body}
+                    {item.body}
                   </p>
                 </div>
               ))}
             </Spotlight>
-            <More href="/docs/deploy">Deployment guide</More>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <a
+                href={githubUrl}
+                className="inline-flex h-10 items-center rounded-md bg-white px-4 text-sm font-medium text-black transition-colors hover:bg-zinc-200"
+              >
+                Star on GitHub
+                {stars !== null && stars >= 10 ? (
+                  <span className="ml-2 text-zinc-500">★ {stars}</span>
+                ) : null}
+              </a>
+              <a
+                href={`${githubUrl}/issues`}
+                className="inline-flex h-10 items-center rounded-md border border-white/15 px-4 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-white"
+              >
+                Open an issue
+              </a>
+            </div>
+          </Block>
 
-            <div className="mt-14">
-              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
-                Questions
-              </p>
-              <div className="mt-4 border-t border-white/10">
-                {questions.map((item) => (
-                  <details
-                    key={item.q}
-                    className="group border-b border-white/10"
-                  >
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-4 text-sm [&::-webkit-details-marker]:hidden">
-                      {item.q}
-                      <span className="font-mono text-zinc-500 transition-transform group-open:rotate-45">
-                        +
-                      </span>
-                    </summary>
-                    <p className="max-w-2xl pb-4 text-sm leading-relaxed text-zinc-400">
-                      {item.a}
-                    </p>
-                  </details>
-                ))}
-              </div>
+          <Block id="faq" kicker="FAQ" title="Questions.">
+            <div className="border-t border-white/10">
+              {questions.map((item) => (
+                <details
+                  key={item.q}
+                  className="group border-b border-white/10"
+                >
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-4 text-sm [&::-webkit-details-marker]:hidden">
+                    {item.q}
+                    <span className="font-mono text-zinc-500 transition-transform group-open:rotate-45">
+                      +
+                    </span>
+                  </summary>
+                  <p className="max-w-2xl pb-4 text-sm leading-relaxed text-zinc-400">
+                    {item.a}
+                  </p>
+                </details>
+              ))}
             </div>
           </Block>
         </main>
@@ -517,21 +312,6 @@ export default async function HomePage() {
     </div>
   );
 }
-
-const parts = [
-  {
-    name: "LiveKit",
-    body: "Carries WebRTC and SIP audio and dispatches each call to a worker. Self-host it or use LiveKit Cloud.",
-  },
-  {
-    name: "Worker",
-    body: "Builds the speech-to-text, model and voice pipeline from the config it is handed. Stateless, so you scale it horizontally.",
-  },
-  {
-    name: "Control plane",
-    body: "Stores agents and call logs, runs tools, does post-call analysis, and serves the dashboard and the API.",
-  },
-];
 
 function Nav({ stars }: { stars: number | null }) {
   const links = [
@@ -646,5 +426,25 @@ function Footer() {
         </a>
       </nav>
     </footer>
+  );
+}
+
+function Step({
+  n,
+  title,
+  children,
+}: {
+  n: string;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <div className="mb-3 flex items-baseline gap-3 font-mono text-xs">
+        <span className="text-zinc-600">{n}</span>
+        <span className="text-zinc-300">{title}</span>
+      </div>
+      {children}
+    </div>
   );
 }
