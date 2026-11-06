@@ -133,10 +133,10 @@ export default async function HomePage() {
   return (
     <div className="flex min-h-screen flex-col bg-black text-white">
       <Nav stars={stars} />
-      <div className="lg:grid lg:grid-cols-[minmax(20rem,36%)_minmax(0,1fr)] lg:items-start">
+      <div className="lg:grid lg:grid-cols-[minmax(22rem,42%)_minmax(0,1fr)] lg:items-start">
         <aside className="relative flex flex-col gap-8 overflow-hidden border-b border-white/10 px-6 py-8 sm:px-8 lg:sticky lg:top-12 lg:h-[calc(100svh-3rem)] lg:justify-center lg:gap-6 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:border-r lg:border-b-0 lg:px-10 lg:pt-6 lg:pb-40 xl:px-14">
           <Starfield className="pointer-events-none absolute inset-0 size-full" />
-          <div className="relative mx-auto w-full max-w-md">
+          <div className="@container relative mx-auto w-full max-w-2xl">
             <LiveMark className="size-48 sm:size-52 lg:size-[clamp(11rem,14.5vw,18rem)]" />
             <a
               href={githubUrl}
@@ -145,12 +145,11 @@ export default async function HomePage() {
               <span className="size-1.5 rounded-full bg-emerald-400" />
               Apache 2.0 · Self-hosted
             </a>
-            <h1 className="mt-4 font-mono text-[1.9rem] font-medium leading-[1.12] tracking-[-0.04em] sm:text-4xl lg:text-[clamp(1.6rem,2.5vw,2.5rem)]">
-              The open source
-              <br />
+            <h1 className="mt-4 font-mono text-[1.9rem] font-medium leading-[1.12] tracking-[-0.04em] sm:text-4xl lg:whitespace-nowrap lg:text-[clamp(1.1rem,5.6cqw,3.25rem)]">
+              The open source <br className="lg:hidden" />
               voice platform
             </h1>
-            <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-zinc-400">
+            <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-zinc-400 xl:max-w-none xl:whitespace-nowrap xl:text-[clamp(0.68rem,2.5cqw,0.9375rem)]">
               Declarative agents, tools over HTTP, and every transcript on
               infrastructure you run.
             </p>

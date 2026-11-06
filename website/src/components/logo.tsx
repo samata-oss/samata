@@ -1,5 +1,18 @@
 import { cn } from "@/lib/cn";
 
+/** Nine rectangular bars as [x, y, height], on a 32x32 tile. */
+const BARS: [number, number, number][] = [
+  [3.55, 12.35, 7.3],
+  [6.4, 10.25, 11.5],
+  [9.25, 6.05, 19.9],
+  [12.1, 5.55, 20.9],
+  [14.95, 7.1, 17.8],
+  [17.8, 5.0, 22],
+  [20.65, 5.55, 20.9],
+  [23.5, 9.45, 13.1],
+  [26.35, 11.8, 8.4],
+];
+
 /** The Samata mark: a waveform on an indigo tile (same as the dashboard icon). */
 export function LogoMark({ className }: { className?: string }) {
   return (
@@ -16,20 +29,10 @@ export function LogoMark({ className }: { className?: string }) {
       </defs>
       <rect width="32" height="32" rx="7" fill="#676cf4" />
       <rect width="32" height="32" rx="7" fill="url(#samata-shine)" />
-      <g
-        transform="translate(4 4)"
-        fill="none"
-        stroke="#fff"
-        strokeWidth="2.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M2 10v3" />
-        <path d="M6 6v11" />
-        <path d="M10 3v18" />
-        <path d="M14 8v7" />
-        <path d="M18 5v13" />
-        <path d="M22 10v3" />
+      <g fill="#fff">
+        {BARS.map(([x, y, h]) => (
+          <rect key={x} x={x} y={y} width="2.1" height={h} rx="0.35" />
+        ))}
       </g>
     </svg>
   );
