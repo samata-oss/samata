@@ -1,9 +1,11 @@
 import { ServerCodeBlock } from "fumadocs-ui/components/codeblock.rsc";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { CallCard } from "@/components/landing/call-card";
+import { CallScrubber } from "@/components/landing/call-scrubber";
 import { HalftoneWave } from "@/components/landing/halftone-wave";
 import { InstallTabs } from "@/components/landing/install-tabs";
-import { Block, SectionLabel } from "@/components/landing/section";
+import { Lede, Moment } from "@/components/landing/section";
 import { TerminalHero } from "@/components/landing/terminal-hero";
 import { UseCaseTabs } from "@/components/landing/use-case-tabs";
 import { LogoMark } from "@/components/logo";
@@ -34,19 +36,6 @@ const installTabs = [
     command:
       'curl -X POST $SAMATA_URL/api/session/start -d \'{"assistantId":"support"}\'',
   },
-];
-
-const worksWith = [
-  "LiveKit",
-  "OpenAI",
-  "OpenRouter",
-  "Groq",
-  "Deepgram",
-  "AssemblyAI",
-  "ElevenLabs",
-  "Cartesia",
-  "Telnyx",
-  "Postgres",
 ];
 
 const stages = [
@@ -164,185 +153,33 @@ export default async function HomePage() {
   const useCases = await buildUseCases();
 
   return (
-    <div className="flex flex-1 flex-col lg:flex-row">
-      <LeftPane stars={stars} />
-      <main className="min-w-0 flex-1 border-white/[0.08] lg:border-l">
-        <TabBar />
-        <Readme />
-        <WorksWith />
-        <Features />
-        <HowItWorks />
-        <Agents useCases={useCases} />
-        <Api />
-        <Tools />
-        <Observability />
-        <Architecture />
-        <Providers />
-        <SelfHost />
-        <Footer />
-      </main>
+    <div className="relative flex flex-1 flex-col">
+      <Nav stars={stars} />
+      <Hero />
+      <WaveBand />
+      <Install />
+      <Pipeline />
+      <Loop />
+      <Agents useCases={useCases} />
+      <Api />
+      <Tools />
+      <Latency />
+      <Architecture />
+      <SelfHost />
+      <Footer />
+      <CallScrubber />
     </div>
   );
 }
 
-/* ---------------------------------------------------------------- */
-/* Left pane: fixed on desktop, like a poster next to the README.     */
-
-function LeftPane({ stars }: { stars: number | null }) {
+function TextLink({ href, children }: { href: string; children: string }) {
   return (
-    <aside className="relative flex min-h-[36rem] flex-col overflow-hidden lg:sticky lg:top-0 lg:h-screen lg:w-[38%] lg:min-w-[22rem] lg:shrink-0">
-      <header className="relative z-10 flex h-10 items-center gap-2 px-5">
-        <LogoMark className="size-5" />
-        <span className="font-mono text-[11px] uppercase tracking-[0.18em]">
-          Samata
-        </span>
-      </header>
-
-      <HalftoneWave className="absolute inset-x-0 top-8 h-[56%] w-full" />
-      {/* Fade the art into the page on the right and bottom. */}
-      <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-fd-background/80"
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-fd-background via-fd-background/90 to-transparent"
-        aria-hidden="true"
-      />
-
-      <div className="relative z-10 mt-auto px-5 pb-6 pt-48">
-        <a
-          href={githubUrl}
-          className="mb-5 inline-flex items-center gap-2.5 rounded-sm border border-white/10 bg-black/50 px-2.5 py-1.5 font-mono text-[11px] text-fd-muted-foreground backdrop-blur transition-colors hover:text-fd-foreground"
-        >
-          <span className="size-1.5 rotate-45 bg-fd-primary" />
-          Open source
-          <span className="text-white/20">|</span>
-          Apache 2.0, self-hosted
-          {stars !== null && stars >= 10 ? (
-            <span className="text-fd-foreground">★ {stars}</span>
-          ) : (
-            <ArrowRight className="size-3" />
-          )}
-        </a>
-
-        <h1 className="max-w-md text-balance text-4xl font-medium leading-[1.1] tracking-tight sm:text-[2.6rem]">
-          Voice agents, as code.
-        </h1>
-
-        <div className="mt-7 flex items-center gap-3">
-          <Link
-            href="/docs/quickstart"
-            className="inline-flex h-9 items-center bg-white px-5 text-sm font-medium text-black transition-colors hover:bg-white/85"
-          >
-            Get Started
-          </Link>
-          <a
-            href={githubUrl}
-            className="relative inline-flex h-9 items-center border border-white/15 px-5 text-sm transition-colors hover:bg-white/[0.06]"
-          >
-            GitHub
-          </a>
-        </div>
-      </div>
-
-      <footer className="relative z-10 flex items-center justify-between px-5 pb-4 font-mono text-[11px] text-fd-muted-foreground">
-        <nav className="flex gap-4">
-          <Link href="/docs" className="hover:text-fd-foreground">
-            Docs
-          </Link>
-          <Link href="/docs/api" className="hover:text-fd-foreground">
-            API
-          </Link>
-          <a
-            href={`${githubUrl}/blob/main/LICENSE`}
-            className="hover:text-fd-foreground"
-          >
-            License
-          </a>
-        </nav>
-        <a href={githubUrl} className="hover:text-fd-foreground">
-          <span className="sr-only">GitHub</span>
-          <svg
-            viewBox="0 0 16 16"
-            className="size-4 fill-current"
-            aria-hidden="true"
-          >
-            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
-          </svg>
-        </a>
-      </footer>
-    </aside>
-  );
-}
-
-/* ---------------------------------------------------------------- */
-/* Right column                                                       */
-
-function TabBar() {
-  const items = [
-    { label: "Readme", href: "#readme", active: true },
-    { label: "Docs", href: "/docs" },
-    { label: "API", href: "/docs/api" },
-    { label: "Deploy", href: "/docs/deploy" },
-  ];
-  return (
-    <nav className="sticky top-0 z-30 flex h-10 border-b border-white/[0.08] bg-fd-background/85 backdrop-blur">
-      <div className="grid flex-1 grid-cols-4">
-        {items.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className={cn(
-              "flex items-center justify-center border-r border-white/[0.08] font-mono text-[11px] uppercase tracking-[0.18em] transition-colors",
-              item.active
-                ? "bg-white/[0.04] text-fd-foreground"
-                : "text-fd-muted-foreground hover:text-fd-foreground",
-            )}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </div>
-      <a
-        href={githubUrl}
-        className="flex w-28 items-center justify-center bg-white font-mono text-[11px] uppercase tracking-[0.18em] text-black transition-colors hover:bg-white/85 sm:w-36"
-      >
-        GitHub ↗
-      </a>
-    </nav>
-  );
-}
-
-function Readme() {
-  return (
-    <Block id="readme" className="space-y-8">
-      <SectionLabel>Readme</SectionLabel>
-      <p className="max-w-2xl text-[15px] leading-relaxed text-fd-muted-foreground">
-        Voice agents that live in your repo. Declarative, self-hosted and built
-        on LiveKit: agents are JSON, tools are plain HTTP, and every call, key
-        and transcript stays on your own infrastructure.
-      </p>
-      <InstallTabs tabs={installTabs} />
-    </Block>
-  );
-}
-
-function WorksWith() {
-  const loop = [...worksWith, ...worksWith];
-  return (
-    <div className="border-b border-white/[0.08] py-6">
-      <p className="mb-4 px-6 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-fd-muted-foreground sm:px-10">
-        Works with
-      </p>
-      <div className="marquee-mask overflow-hidden">
-        <ul className="marquee flex w-max gap-12 text-lg font-semibold text-fd-muted-foreground/70">
-          {loop.map((name, i) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: the list is repeated on purpose
-            <li key={i}>{name}</li>
-          ))}
-        </ul>
-      </div>
-    </div>
+    <Link
+      href={href}
+      className="inline-flex items-center gap-1.5 font-mono text-xs text-fd-primary hover:underline"
+    >
+      {children} <ArrowRight className="size-3.5" />
+    </Link>
   );
 }
 
@@ -367,152 +204,294 @@ function Chip({
   );
 }
 
-function LatencyBars() {
-  const total = stages.reduce((n, s) => n + s.ms, 0);
+/* ---------------------------------------------------------------- */
+/* Top: nav, hero, waveform                                           */
+
+function Nav({ stars }: { stars: number | null }) {
   return (
-    <div className="flex h-1.5 w-40 overflow-hidden rounded-sm bg-white/[0.06]">
-      {stages.map((s) => (
-        <div
-          key={s.name}
-          style={{ width: `${(s.ms / total) * 100}%`, background: s.color }}
-        />
-      ))}
+    <header className="sticky top-0 z-30 h-12 border-b border-white/[0.08] bg-fd-background/80 backdrop-blur">
+      <div className="mx-auto flex h-full max-w-5xl items-center justify-between px-6">
+        <Link href="/" className="flex items-center gap-2">
+          <LogoMark className="size-5" />
+          <span className="font-mono text-[11px] uppercase tracking-[0.18em]">
+            Samata
+          </span>
+        </Link>
+        <nav className="flex items-center gap-5 font-mono text-[11px] uppercase tracking-[0.16em] text-fd-muted-foreground">
+          <Link href="/docs" className="hover:text-fd-foreground">
+            Docs
+          </Link>
+          <Link href="/docs/api" className="hover:text-fd-foreground">
+            API
+          </Link>
+          <Link
+            href="/docs/deploy"
+            className="hidden hover:text-fd-foreground sm:block"
+          >
+            Deploy
+          </Link>
+          <a
+            href={githubUrl}
+            className="border border-white/15 px-2.5 py-1 text-fd-foreground transition-colors hover:bg-white/[0.06]"
+          >
+            GitHub{stars !== null && stars >= 10 ? ` ★ ${stars}` : " ↗"}
+          </a>
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+function Hero() {
+  return (
+    <div className="mx-auto grid w-full max-w-5xl gap-12 px-6 pb-16 pt-16 sm:pt-20 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-center">
+      <div className="min-w-0">
+        <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.2em] text-fd-muted-foreground">
+          Open source · Apache 2.0 · Self-hosted
+        </p>
+        <h1 className="text-balance text-5xl font-medium leading-[1.04] tracking-tight sm:text-6xl">
+          Voice agents,
+          <br />
+          as code.
+        </h1>
+        <p className="mt-6 max-w-md text-[15px] leading-relaxed text-fd-muted-foreground">
+          Agents are JSON. Tools are plain HTTP. Every call, key and transcript
+          stays on your infrastructure. Built on LiveKit.
+        </p>
+        <div className="mt-8 flex items-center gap-3">
+          <Link
+            href="/docs/quickstart"
+            className="inline-flex h-10 items-center bg-white px-5 text-sm font-medium text-black transition-colors hover:bg-white/85"
+          >
+            Get Started
+          </Link>
+          <Link
+            href="/docs"
+            className="inline-flex h-10 items-center border border-white/15 px-5 text-sm transition-colors hover:bg-white/[0.06]"
+          >
+            Read the docs
+          </Link>
+        </div>
+      </div>
+      <CallCard />
     </div>
+  );
+}
+
+/** The recording itself: a waveform with a playhead and a timecode ruler. */
+function WaveBand() {
+  return (
+    <div className="relative h-44 overflow-hidden border-y border-white/[0.08]">
+      <HalftoneWave className="absolute inset-x-0 top-3 h-32" />
+      <div
+        aria-hidden="true"
+        className="absolute inset-y-0 left-[38%] w-px bg-fd-primary/70"
+      />
+      <span
+        aria-hidden="true"
+        className="absolute left-[38%] top-2 ml-1.5 font-mono text-[10px] tabular-nums text-fd-primary"
+      >
+        00:04
+      </span>
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 bottom-0 h-6 border-t border-white/[0.08] bg-black/30"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(to right, rgba(255,255,255,0.22) 0 1px, transparent 1px 28px)",
+          backgroundSize: "100% 6px",
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "top",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 bottom-0 flex justify-between px-6 pb-0.5 font-mono text-[9px] tabular-nums text-fd-muted-foreground/60"
+      >
+        <span>00:00</span>
+        <span>02:47</span>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- */
+/* Moments                                                            */
+
+function Install() {
+  return (
+    <Moment id="install" title="Four commands to a live agent.">
+      <Lede>
+        Clone the repo, start LiveKit and Postgres, push an agent, start a call.
+        No SDK to install and no flow builder to learn.
+      </Lede>
+      <InstallTabs tabs={installTabs} />
+    </Moment>
+  );
+}
+
+const pipeline = [
+  {
+    step: "01",
+    name: "LiveKit",
+    note: "Carries the audio in and out.",
+    chips: ["pstn", "sip", "webrtc"],
+  },
+  {
+    step: "02",
+    name: "Transcriber",
+    note: "Speech to text.",
+    layer: "transcriber",
+    ms: 150,
+    color: stages[1].color,
+  },
+  {
+    step: "03",
+    name: "Model",
+    note: "Decides what to say and which tool to call.",
+    layer: "model",
+    ms: 350,
+    color: stages[2].color,
+  },
+  {
+    step: "04",
+    name: "Voice",
+    note: "Text to speech.",
+    layer: "voice",
+    ms: 100,
+    color: stages[3].color,
+  },
+];
+
+function Pipeline() {
+  return (
+    <Moment
+      id="pipeline"
+      title="Every call runs the same pipeline. You pick each stage."
+    >
+      <Lede>
+        Choose a transcriber, a model and a voice per agent. Calls use your
+        workspace's keys, which are encrypted at rest, shown only as their last
+        four characters, and handed to a worker only when it takes a call.
+      </Lede>
+      <div className="border border-white/[0.08]">
+        <div className="grid gap-px bg-white/[0.08] md:grid-cols-4">
+          {pipeline.map((p, i) => {
+            const names =
+              "layer" in p
+                ? (providers.find((x) => x.layer === p.layer)?.names ?? [])
+                : p.chips;
+            return (
+              <div
+                key={p.name}
+                className="relative flex flex-col gap-3 bg-fd-background p-4"
+              >
+                <div className="flex items-baseline justify-between font-mono text-[10px] text-fd-muted-foreground">
+                  <span>{p.step}</span>
+                  {"ms" in p ? (
+                    <span className="tabular-nums">{p.ms} ms</span>
+                  ) : null}
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium">{p.name}</h3>
+                  <p className="mt-1 text-[13px] leading-relaxed text-fd-muted-foreground">
+                    {p.note}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {names.map((n) => (
+                    <Chip key={n} accent={"layer" in p}>
+                      {n}
+                    </Chip>
+                  ))}
+                </div>
+                {"color" in p ? (
+                  <div
+                    className="mt-auto h-0.5"
+                    style={{ background: p.color }}
+                  />
+                ) : null}
+                {i < pipeline.length - 1 ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -right-2 top-3.5 z-10 hidden bg-fd-background px-0.5 font-mono text-xs text-fd-primary md:block"
+                  >
+                    →
+                  </span>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+        <div className="border-t border-white/[0.08] bg-fd-background p-4 md:ml-[50%] md:w-1/4 md:border-x">
+          <p className="font-mono text-[10px] text-amber-300/90">
+            ↳ tool-calls
+          </p>
+          <p className="mt-1 text-[13px] leading-relaxed text-fd-muted-foreground">
+            POST to your own server, in any language.
+          </p>
+        </div>
+      </div>
+
+      <dl className="grid gap-x-10 gap-y-6 pt-4 sm:grid-cols-2">
+        {features.map((f) => (
+          <div key={f.title}>
+            <dt className="flex gap-2 text-sm font-medium">
+              <span className="font-mono text-fd-primary">+</span>
+              {f.title}
+            </dt>
+            <dd className="mt-1 pl-4 text-[13px] leading-relaxed text-fd-muted-foreground">
+              {f.body}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <TextLink href="/docs/models">Bring your own models</TextLink>
+    </Moment>
   );
 }
 
 const features = [
   {
-    title: "Declarative agents.",
+    title: "Declarative agents",
     body: "Model, voice, tools, barge-in and analysis in one JSON document.",
-    visual: (
-      <>
-        <Chip accent>agents/support.json</Chip>
-        <Chip>PUT</Chip>
-      </>
-    ),
   },
   {
-    title: "Bring your own models.",
-    body: "OpenAI, OpenRouter, Groq, Deepgram, ElevenLabs, Cartesia, or any OpenAI-compatible endpoint.",
-    visual: (
-      <>
-        <Chip accent>openrouter</Chip>
-        <Chip>deepgram</Chip>
-        <Chip>cartesia</Chip>
-        <Chip>+5</Chip>
-      </>
-    ),
-  },
-  {
-    title: "Tools on your server.",
+    title: "Tools on your server",
     body: "One webhook server for all your tools, in any language.",
-    visual: (
-      <>
-        <Chip accent>POST /samata</Chip>
-        <Chip>tool-calls</Chip>
-      </>
-    ),
   },
   {
-    title: "Real phone numbers.",
+    title: "Real phone numbers",
     body: "Import a Telnyx number. Samata wires the LiveKit SIP trunk and dispatch rule.",
-    visual: (
-      <>
-        <Chip accent>+1 415 555 0100</Chip>
-        <Chip>SIP</Chip>
-      </>
-    ),
   },
   {
-    title: "Browser calls.",
+    title: "Browser calls",
     body: "Start a session from your backend, join over WebRTC with a one-room token.",
-    visual: (
-      <>
-        <Chip accent>WebRTC</Chip>
-        <Chip>room token</Chip>
-      </>
-    ),
   },
   {
-    title: "Post-call analysis.",
+    title: "Post-call analysis",
     body: "A summary and structured data from every call, on your own model key.",
-    visual: (
-      <>
-        <Chip accent>structuredData</Chip>
-        <Chip>summary</Chip>
-      </>
-    ),
   },
   {
-    title: "Observability built in.",
+    title: "Observability built in",
     body: "Transcripts, usage and per-turn latency for every call.",
-    visual: <LatencyBars />,
   },
   {
-    title: "Workspaces and API keys.",
+    title: "Workspaces and API keys",
     body: "Real accounts, invitation-only sign-up, keys scoped to a workspace.",
-    visual: (
-      <>
-        <Chip accent>smt_••••3f9a</Chip>
-        <Chip>owner</Chip>
-      </>
-    ),
   },
   {
-    title: "Yours to host.",
+    title: "Yours to host",
     body: "One compose file with prebuilt images. Scale workers with a flag.",
-    visual: (
-      <>
-        <Chip>postgres</Chip>
-        <Chip>livekit</Chip>
-        <Chip>caddy</Chip>
-        <Chip accent>--scale worker=N</Chip>
-      </>
-    ),
   },
 ];
 
-function Features() {
+function Loop() {
   return (
-    <Block className="space-y-8">
-      <SectionLabel>Features</SectionLabel>
-      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
-        Everything between the caller and your code, in one repo you can read.
-      </p>
-      <div className="-mx-6 grid border-t border-white/[0.08] sm:-mx-10 sm:grid-cols-2 xl:grid-cols-3">
-        {features.map((f, i) => (
-          <div
-            key={f.title}
-            className="group flex min-h-48 flex-col border-b border-white/[0.08] p-5 transition-colors hover:bg-white/[0.02] sm:border-r sm:[&:nth-child(2n)]:border-r-0 xl:[&:nth-child(2n)]:border-r xl:[&:nth-child(3n)]:border-r-0"
-          >
-            <span className="font-mono text-[10px] text-fd-muted-foreground">
-              {String(i + 1).padStart(2, "0")}
-            </span>
-            <h3 className="mt-3 text-sm font-medium">{f.title}</h3>
-            <p className="mt-1.5 flex-1 text-[13px] leading-relaxed text-fd-muted-foreground">
-              {f.body}
-            </p>
-            <div className="mt-5 flex flex-wrap items-center gap-1.5">
-              {f.visual}
-            </div>
-          </div>
-        ))}
-      </div>
-    </Block>
-  );
-}
-
-function HowItWorks() {
-  return (
-    <Block className="space-y-8">
-      <SectionLabel>How it works</SectionLabel>
-      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
-        Define an agent, start a call, read back what happened. The whole loop
-        is three HTTP requests.
-      </p>
+    <Moment id="loop" title="The whole loop is three HTTP requests.">
+      <Lede>Define an agent, start a call, read back what happened.</Lede>
       <TerminalHero />
-    </Block>
+    </Moment>
   );
 }
 
@@ -522,32 +501,21 @@ function Agents({
   useCases: Awaited<ReturnType<typeof buildUseCases>>;
 }) {
   return (
-    <Block className="space-y-8">
-      <SectionLabel>Agents</SectionLabel>
-      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
-        An agent is a JSON file. Pick one to see its config next to the call log
-        it produces.
-      </p>
+    <Moment id="agents" title="An agent is a JSON file.">
+      <Lede>Pick one to see its config next to the call log it produces.</Lede>
       <UseCaseTabs items={useCases} />
-      <Link
-        href="/docs/agent-config"
-        className="inline-flex items-center gap-1.5 font-mono text-xs text-fd-primary hover:underline"
-      >
-        Agent config reference <ArrowRight className="size-3.5" />
-      </Link>
-    </Block>
+      <TextLink href="/docs/agent-config">Agent config reference</TextLink>
+    </Moment>
   );
 }
 
 function Api() {
   return (
-    <Block className="space-y-8">
-      <SectionLabel>API</SectionLabel>
-      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
-        The dashboard calls the same HTTP API you do. Script agents and calls
-        from CI, call it from your backend. JSON in, JSON out, one bearer key
-        per workspace.
-      </p>
+    <Moment id="api" title="The dashboard calls the same API you do.">
+      <Lede>
+        Script agents and calls from CI, call it from your backend. JSON in,
+        JSON out, one bearer key per workspace.
+      </Lede>
       <ul className="divide-y divide-white/[0.08] border border-white/[0.08] font-mono text-sm">
         {endpoints.map((e) => (
           <li key={e.method + e.path}>
@@ -572,26 +540,19 @@ function Api() {
           </li>
         ))}
       </ul>
-      <Link
-        href="/docs/api"
-        className="inline-flex items-center gap-1.5 font-mono text-xs text-fd-primary hover:underline"
-      >
-        API reference <ArrowRight className="size-3.5" />
-      </Link>
-    </Block>
+      <TextLink href="/docs/api">API reference</TextLink>
+    </Moment>
   );
 }
 
 function Tools() {
   return (
-    <Block className="space-y-8">
-      <SectionLabel>Tools</SectionLabel>
-      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
-        No flow builder and no proprietary runtime. Tools are HTTP endpoints on
-        a server you run, in any language, using the same message envelope as
-        Vapi so existing handlers port over with small changes. Agents and tools
-        are idempotent PUTs, so your repo stays the source of truth.
-      </p>
+    <Moment id="tools" title="Tools are HTTP endpoints on a server you run.">
+      <Lede>
+        Same message envelope as Vapi, so existing handlers port over with small
+        changes. Agents and tools are idempotent PUTs, so your repo stays the
+        source of truth.
+      </Lede>
       <div className="flex min-w-0 flex-col gap-3">
         <ServerCodeBlock
           lang="ts"
@@ -604,26 +565,20 @@ function Tools() {
           codeblock={{ title: "deploy.sh", className: "my-0 rounded-none" }}
         />
       </div>
-      <Link
-        href="/docs/tools"
-        className="inline-flex items-center gap-1.5 font-mono text-xs text-fd-primary hover:underline"
-      >
-        Tools and your webhook server <ArrowRight className="size-3.5" />
-      </Link>
-    </Block>
+      <TextLink href="/docs/tools">Tools and your webhook server</TextLink>
+    </Moment>
   );
 }
 
-function Observability() {
+function Latency() {
   const total = stages.reduce((n, s) => n + s.ms, 0);
   return (
-    <Block className="space-y-8">
-      <SectionLabel>Observability</SectionLabel>
-      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
+    <Moment id="latency" title="See which stage is slow.">
+      <Lede>
         Every call is logged with its transcript, summary, structured data and
-        model usage. Latency is broken down per turn into end of turn,
-        transcription, LLM and speech, so you tune what is actually slow.
-      </p>
+        model usage. Latency is broken down per turn, so you tune what is
+        actually slow.
+      </Lede>
       <div className="border border-white/[0.08] bg-black/30 p-5 font-mono">
         <div className="flex items-baseline justify-between text-xs text-fd-muted-foreground">
           <span>latency · voice_to_voice</span>
@@ -656,7 +611,7 @@ function Observability() {
           {"// example turn"}
         </p>
       </div>
-    </Block>
+    </Moment>
   );
 }
 
@@ -676,24 +631,20 @@ function Architecture() {
     },
   ];
   return (
-    <Block className="space-y-8">
-      <SectionLabel>Architecture</SectionLabel>
-      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
-        Real-time media is kept apart from agent logic. Three pieces, each doing
-        one job, and your own code never goes in the Samata repo.
-      </p>
+    <Moment id="architecture" title="Media stays apart from agent logic.">
+      <Lede>
+        Three pieces, each doing one job. Your own code never goes in the Samata
+        repo.
+      </Lede>
       <div className="relative border border-white/[0.08] bg-black/30">
         <pre className="overflow-x-auto p-5 font-mono text-[11.5px] leading-[1.6] text-fd-muted-foreground">
           {diagram}
         </pre>
         <div className="flow-line absolute inset-x-0 top-0 h-px" />
       </div>
-      <div className="-mx-6 grid border-t border-white/[0.08] sm:-mx-10 md:grid-cols-3">
+      <div className="grid gap-px border border-white/[0.08] bg-white/[0.08] md:grid-cols-3">
         {parts.map((p) => (
-          <div
-            key={p.name}
-            className="border-b border-white/[0.08] p-5 md:border-r md:last:border-r-0"
-          >
+          <div key={p.name} className="bg-fd-background p-5">
             <h3 className="font-mono text-xs text-fd-primary">{p.name}</h3>
             <p className="mt-2 text-[13px] leading-relaxed text-fd-muted-foreground">
               {p.body}
@@ -701,99 +652,49 @@ function Architecture() {
           </div>
         ))}
       </div>
-      <Link
-        href="/docs/architecture"
-        className="inline-flex items-center gap-1.5 font-mono text-xs text-fd-primary hover:underline"
-      >
-        Architecture <ArrowRight className="size-3.5" />
-      </Link>
-    </Block>
-  );
-}
-
-function Providers() {
-  return (
-    <Block className="space-y-8">
-      <SectionLabel>Providers</SectionLabel>
-      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
-        Pick a model, a transcriber and a voice per agent. Calls use your
-        workspace's keys, which are encrypted at rest, shown only as their last
-        four characters, and handed to a worker only when it takes a call.
-      </p>
-      <div className="border border-white/[0.08] bg-black/30 font-mono text-xs">
-        {providers.map(({ layer, names }, i) => (
-          <div
-            key={layer}
-            className={cn(
-              "flex flex-col gap-2.5 p-4 sm:flex-row sm:items-center",
-              i > 0 && "border-t border-white/[0.08]",
-            )}
-          >
-            <span className="w-28 shrink-0 text-fd-muted-foreground">
-              {layer}:
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {names.map((name) => (
-                <Chip key={name} accent>
-                  "{name}"
-                </Chip>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-      <Link
-        href="/docs/models"
-        className="inline-flex items-center gap-1.5 font-mono text-xs text-fd-primary hover:underline"
-      >
-        Bring your own models <ArrowRight className="size-3.5" />
-      </Link>
-    </Block>
+      <TextLink href="/docs/architecture">Architecture</TextLink>
+    </Moment>
   );
 }
 
 function SelfHost() {
   return (
-    <Block className="space-y-8">
-      <SectionLabel>Self-host</SectionLabel>
-      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
+    <Moment id="self-host" title="One compose file, prebuilt images.">
+      <Lede>
         You don't need to clone or fork the repo. Every release ships a control
         plane image and a worker image, and the compose file adds Caddy for
         automatic TLS, LiveKit, SIP, Redis and Postgres.
-      </p>
+      </Lede>
       <ServerCodeBlock
         lang="bash"
         code={deployScript}
         codeblock={{ title: "deploy", className: "my-0 rounded-none" }}
       />
-      <Link
-        href="/docs/deploy"
-        className="inline-flex items-center gap-1.5 font-mono text-xs text-fd-primary hover:underline"
-      >
-        Deployment guide <ArrowRight className="size-3.5" />
-      </Link>
-    </Block>
+      <TextLink href="/docs/deploy">Deployment guide</TextLink>
+    </Moment>
   );
 }
 
 function Footer() {
   return (
-    <footer className="flex flex-col items-start justify-between gap-3 px-6 py-6 font-mono text-[11px] text-fd-muted-foreground sm:flex-row sm:items-center sm:px-10">
-      <p>© 2026 Samata · Apache-2.0</p>
-      <nav className="flex gap-5">
-        <Link href="/docs" className="hover:text-fd-foreground">
-          Docs
-        </Link>
-        <Link href="/docs/api" className="hover:text-fd-foreground">
-          API
-        </Link>
-        <Link href="/docs/deploy" className="hover:text-fd-foreground">
-          Deploy
-        </Link>
-        <a href={githubUrl} className="hover:text-fd-foreground">
-          GitHub
-        </a>
-      </nav>
+    <footer className="border-t border-white/[0.08]">
+      <div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-3 px-6 py-6 font-mono text-[11px] text-fd-muted-foreground sm:flex-row sm:items-center">
+        <p>02:47 · end of call · © 2026 Samata · Apache-2.0</p>
+        <nav className="flex gap-5">
+          <Link href="/docs" className="hover:text-fd-foreground">
+            Docs
+          </Link>
+          <Link href="/docs/api" className="hover:text-fd-foreground">
+            API
+          </Link>
+          <Link href="/docs/deploy" className="hover:text-fd-foreground">
+            Deploy
+          </Link>
+          <a href={githubUrl} className="hover:text-fd-foreground">
+            GitHub
+          </a>
+        </nav>
+      </div>
     </footer>
   );
 }

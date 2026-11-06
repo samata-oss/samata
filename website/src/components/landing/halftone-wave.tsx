@@ -3,11 +3,18 @@
 import { useEffect, useRef } from "react";
 
 /**
- * The left-pane art: a halftone voice waveform drawn from small squares, so it
+ * The hero art: a halftone voice waveform drawn from small squares, so it
  * reads as a sampled signal rather than an illustration. It drifts slowly and
  * holds still for people who prefer reduced motion.
  */
-export function HalftoneWave({ className }: { className?: string }) {
+export function HalftoneWave({
+  className,
+  center = 0.38,
+}: {
+  className?: string;
+  /** Where across the width (0..1) the waveform peaks. */
+  center?: number;
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -44,7 +51,7 @@ export function HalftoneWave({ className }: { className?: string }) {
         const u = x / cols; // 0..1 across
         // A few sines at different speeds, shaped by an envelope that peaks
         // left of centre and dies off to the right.
-        const envelope = Math.exp(-((u - 0.38) ** 2) / 0.07);
+        const envelope = Math.exp(-((u - center) ** 2) / 0.07);
         const amp =
           envelope *
           (0.55 +
@@ -87,7 +94,7 @@ export function HalftoneWave({ className }: { className?: string }) {
       cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, []);
+  }, [center]);
 
   return (
     <div aria-hidden="true" className={className}>

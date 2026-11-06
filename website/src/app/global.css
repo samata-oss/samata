@@ -104,30 +104,10 @@ html > body[data-scroll-locked] {
   }
 }
 
-@keyframes marquee {
-  to {
-    transform: translateX(-50%);
-  }
-}
-
 @keyframes flow {
   to {
     background-position: 200% 0;
   }
-}
-
-.marquee {
-  animation: marquee 40s linear infinite;
-}
-
-.marquee-mask {
-  mask-image: linear-gradient(
-    to right,
-    transparent,
-    black 12%,
-    black 88%,
-    transparent
-  );
 }
 
 .caret {
@@ -154,7 +134,6 @@ html > body[data-scroll-locked] {
 
 @media (prefers-reduced-motion: reduce) {
   .caret,
-  .marquee,
   .flow-line {
     animation: none;
   }
