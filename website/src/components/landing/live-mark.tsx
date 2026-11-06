@@ -96,12 +96,14 @@ export function LiveMark({ className }: { className?: string }) {
           const cx = (x + 0.5) * cell;
           const cy = (y + 0.5) * cell;
           const path = isBar ? bars : halo;
-          path.moveTo(cx + cell * 0.46, cy);
-          path.arc(cx, cy, cell * 0.46, 0, Math.PI * 2);
+          // Bar dots overlap so the bars read as solid; halo dots stay apart.
+          const r = cell * (isBar ? 0.74 : 0.5);
+          path.moveTo(cx + r, cy);
+          path.arc(cx, cy, r, 0, Math.PI * 2);
         }
       }
 
-      ctx.fillStyle = "rgba(165,180,252,0.32)";
+      ctx.fillStyle = "rgba(165,180,252,0.3)";
       ctx.fill(halo);
       ctx.fillStyle = "#fff";
       ctx.fill(bars);

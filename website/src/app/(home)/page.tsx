@@ -2,7 +2,7 @@ import { ServerCodeBlock } from "fumadocs-ui/components/codeblock.rsc";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Reveal, ScrollProgress, Spotlight } from "@/components/landing/fx";
+import { Reveal, Spotlight } from "@/components/landing/fx";
 import { InstallTabs } from "@/components/landing/install-tabs";
 import { LiveMark } from "@/components/landing/live-mark";
 import { Starfield } from "@/components/landing/starfield";
@@ -135,6 +135,10 @@ export default async function HomePage() {
       <Nav stars={stars} />
       <div className="lg:grid lg:grid-cols-[minmax(22rem,42%)_minmax(0,1fr)] lg:items-start lg:gap-3 lg:p-3">
         <aside className="relative flex flex-col gap-8 overflow-hidden border-b border-white/10 px-6 py-8 sm:px-8 lg:sticky lg:top-[3.75rem] lg:h-[calc(100svh-4.5rem)] lg:rounded-3xl lg:border lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] lg:justify-center lg:gap-6 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:px-10 lg:pt-6 lg:pb-40 xl:px-14">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_45%_at_50%_110%,oklch(0.66_0.2_277/0.12),transparent_70%)]"
+          />
           <Starfield className="pointer-events-none absolute inset-0 size-full" />
           <div className="@container relative mx-auto w-full max-w-2xl">
             <LiveMark className="size-48 sm:size-52 lg:size-[clamp(11rem,14.5vw,18rem)]" />
@@ -142,7 +146,7 @@ export default async function HomePage() {
               href={githubUrl}
               className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-400 transition-colors hover:border-white/25 hover:text-white"
             >
-              <span className="size-1.5 rounded-full bg-emerald-400" />
+              <span className="size-1.5 rounded-full bg-indigo-300 shadow-[0_0_8px_2px_rgba(165,180,252,0.7)]" />
               Apache 2.0 · Self-hosted
             </a>
             <h1 className="mt-4 font-mono text-[1.9rem] font-medium leading-[1.12] tracking-[-0.04em] sm:text-4xl lg:whitespace-nowrap lg:text-[clamp(1.1rem,5.6cqw,3.25rem)]">
@@ -178,7 +182,7 @@ export default async function HomePage() {
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
               Readme
             </p>
-            <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-300">
+            <p className="mt-4 text-[15px] leading-relaxed text-zinc-300">
               Samata is an open-source voice orchestration platform. Clone it,
               push an agent as JSON, and take the call over the phone or the
               browser. A worker turns speech into text, asks a model, calls
@@ -298,7 +302,7 @@ export default async function HomePage() {
                       +
                     </span>
                   </summary>
-                  <p className="max-w-2xl pb-4 text-sm leading-relaxed text-zinc-400">
+                  <p className="pb-4 text-sm leading-relaxed text-zinc-400">
                     {item.a}
                   </p>
                 </details>
@@ -353,7 +357,6 @@ function Nav({ stars }: { stars: number | null }) {
           ) : null}
         </a>
       </nav>
-      <ScrollProgress />
     </header>
   );
 }
@@ -384,7 +387,7 @@ function Block({
           {title}
         </h2>
         {lede ? (
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400">
+          <p className="mt-3 text-sm leading-relaxed text-zinc-400">
             {lede}
           </p>
         ) : null}
