@@ -5,7 +5,6 @@
 @theme inline {
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
-  --font-display: var(--font-display);
 }
 
 /* Samata brand: the dashboard's indigo on near-black with hairline borders. */
@@ -192,21 +191,6 @@ html > body[data-scroll-locked] {
   );
 }
 
-/* A slow aurora behind the top of the page. */
-@keyframes aurora {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(-6%, 4%, 0) scale(1.12);
-  }
-}
-
-.aurora {
-  animation: aurora 18s ease-in-out infinite;
-}
-
 .landing-fade {
   opacity: 0;
   animation: fade-up 0.45s ease-out forwards;
@@ -228,7 +212,6 @@ html > body[data-scroll-locked] {
 @media (prefers-reduced-motion: reduce) {
   .caret,
   .shimmer,
-  .aurora,
   .flare-pulse,
   .flow-line {
     animation: none;

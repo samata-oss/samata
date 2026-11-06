@@ -2,17 +2,10 @@ import { ServerCodeBlock } from "fumadocs-ui/components/codeblock.rsc";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { CallSimulator } from "@/components/landing/call-simulator";
-import {
-  CursorGlow,
-  Reveal,
-  ScrollProgress,
-  Spotlight,
-} from "@/components/landing/fx";
+import { Reveal, ScrollProgress, Spotlight } from "@/components/landing/fx";
 import { InstallTabs } from "@/components/landing/install-tabs";
 import { Latency } from "@/components/landing/latency";
 import { LiveMark } from "@/components/landing/live-mark";
-import { SectionNav } from "@/components/landing/section-nav";
 import { ProductCards } from "@/components/landing/surfaces";
 import { TerminalHero } from "@/components/landing/terminal-hero";
 import { UseCaseTabs } from "@/components/landing/use-case-tabs";
@@ -223,14 +216,6 @@ curl -o .env https://raw.githubusercontent.com/Samata-OSS/samata/main/deploy/.en
 $EDITOR .env            # domains and secrets
 docker compose up -d`;
 
-const diagram = `PSTN / SIP ──► LiveKit SIP ─┐
-                            ├─► LiveKit Server (Go SFU) ◄──► Python worker(s)
-Browser (WebRTC) ───────────┘        │  Redis                (livekit-agents,
-                                     │                        stateless)
-                                     ▼                            │
-                             Next.js control plane ◄── webhooks ──┘
-                             (agents, call logs, tools)   Postgres`;
-
 const questions = [
   {
     q: "What is Samata?",
@@ -264,10 +249,9 @@ export default async function HomePage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-black text-white">
-      <CursorGlow />
       <Nav stars={stars} />
-      <div className="lg:grid lg:grid-cols-[minmax(18rem,26rem)_minmax(0,1fr)] lg:items-start">
-        <aside className="relative flex flex-col gap-8 overflow-hidden border-b border-white/10 px-6 py-8 sm:px-8 lg:sticky lg:top-12 lg:h-[calc(100svh-3rem)] lg:justify-between lg:gap-6 lg:overflow-y-auto lg:border-r lg:border-b-0 lg:px-10 lg:py-6">
+      <div className="lg:grid lg:grid-cols-[clamp(20rem,36vw,40rem)_minmax(0,1fr)] lg:items-start">
+        <aside className="relative flex flex-col gap-8 overflow-hidden border-b border-white/10 px-6 py-8 sm:px-8 lg:sticky lg:top-12 lg:h-[calc(100svh-3rem)] lg:justify-between lg:gap-6 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:border-r lg:border-b-0 lg:px-10 lg:py-6 xl:px-14">
           <div
             aria-hidden="true"
             className="grain pointer-events-none absolute inset-0 opacity-[0.18]"
@@ -281,12 +265,12 @@ export default async function HomePage() {
               <span className="size-1.5 rounded-full bg-emerald-400" />
               Apache 2.0 · Self-hosted
             </a>
-            <h1 className="font-display mt-4 text-[2.35rem] font-medium leading-[0.96] tracking-[-0.045em] sm:text-5xl lg:text-[2.55rem]">
+            <h1 className="mt-4 font-mono text-[1.9rem] font-medium leading-[1.12] tracking-[-0.04em] sm:text-4xl lg:text-[clamp(1.6rem,2.5vw,2.5rem)]">
               The open source
               <br />
               voice platform
             </h1>
-            <p className="mt-4 max-w-xs text-[15px] leading-relaxed text-zinc-400">
+            <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-zinc-400">
               Declarative agents, tools over HTTP, and every transcript on
               infrastructure you run.
             </p>
@@ -305,17 +289,9 @@ export default async function HomePage() {
               </a>
             </div>
           </div>
-          <SectionNav className="relative" />
         </aside>
 
         <main className="relative isolate min-w-0">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[720px] overflow-hidden"
-          >
-            <div className="bg-grid absolute inset-0 opacity-70" />
-            <div className="aurora absolute -top-40 right-[-10%] h-[480px] w-[70%] rounded-full bg-indigo-500/20 blur-[120px]" />
-          </div>
           <section
             id="product"
             className="scroll-mt-14 px-6 py-14 sm:px-8 lg:px-12 lg:py-16"
@@ -331,9 +307,6 @@ export default async function HomePage() {
               your call logs stay in your Postgres.
             </p>
             <div className="mt-8">
-              <CallSimulator />
-            </div>
-            <div className="mt-3">
               <InstallTabs tabs={installTabs} />
             </div>
             <div className="mt-8">
@@ -500,11 +473,6 @@ export default async function HomePage() {
               code={deployScript}
               codeblock={{ title: "deploy", className: "my-0 rounded-none" }}
             />
-            <div className="relative mt-3 border border-white/10 bg-black">
-              <pre className="overflow-x-auto p-4 font-mono text-[11px] leading-[1.65] text-zinc-500">
-                {diagram}
-              </pre>
-            </div>
             <Spotlight className="mt-3 grid gap-px sm:grid-cols-3">
               {parts.map((part) => (
                 <div key={part.name} className="bg-black p-4">
