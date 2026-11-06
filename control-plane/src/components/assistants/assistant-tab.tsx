@@ -250,21 +250,42 @@ export function AssistantTab({
         </section>
 
         <div className="space-y-3 xl:sticky xl:top-32 xl:max-h-[calc(100svh-10rem)] xl:overflow-y-auto xl:pr-1">
-          <div className="flex items-baseline gap-3 px-0.5">
-            <h2 className="text-sm font-semibold">Voice stack</h2>
-            <p className="truncate text-xs text-muted-foreground">
-              Listen, think, then speak. Open a step to change its provider.
-            </p>
-            <span
-              title={`Estimated cost per minute of call for the selected models, from provider list prices (${PRICES_AS_OF}). Your bill may differ.`}
-              className="ml-auto shrink-0 font-mono text-xs text-muted-foreground tabular-nums"
-            >
-              <span className="font-medium text-foreground">
-                {estimate.total === null
-                  ? "—"
-                  : `≈ ${fmtCostPerMinute(estimate.total)}`}
-              </span>
-            </span>
+          <div className="px-0.5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold whitespace-nowrap">
+                Voice stack
+              </h2>
+              <Tooltip>
+                <TooltipTrigger
+                  render={<span />}
+                  className="flex cursor-default items-baseline gap-1.5 rounded-md border bg-muted/50 px-2 py-0.5 font-mono text-xs"
+                >
+                  <span className="text-muted-foreground">est.</span>
+                  <span className="font-medium tabular-nums">
+                    {estimate.total === null
+                      ? "—"
+                      : `${fmtCostPerMinute(estimate.total)}`}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="bottom"
+                  align="end"
+                  className="flex-col items-start gap-1"
+                >
+                  <p className="font-medium">
+                    Estimated cost per minute of call
+                  </p>
+                  <p>
+                    {estimate.total === null
+                      ? "At least one step has no public list price, so there is no total."
+                      : "Listen, think and speak added together for the models selected below."}
+                  </p>
+                  <p className="opacity-80">
+                    List prices as of {PRICES_AS_OF}. Your bill may differ.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
           <ol className="space-y-3">
             <PipelineStage
@@ -592,7 +613,38 @@ export function AssistantTab({
   );
 }
 
-type StageCost = { label: string; title: string };
+/**
+ * A small readout in a stage's header with a hover tooltip. The trigger is a
+ * span, not a button, because the header is already one.
+ */
+function StagePill({
+  label,
+  heading,
+  details,
+}: {
+  label: string;
+  heading?: string;
+  details: string[];
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={<span />}
+        className="hidden shrink-0 cursor-default items-baseline gap-1.5 rounded border bg-muted/50 px-2 py-0.5 font-mono text-[11px] sm:flex"
+      >
+        <span className="font-medium tabular-nums">{label}</span>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="flex-col items-start gap-1">
+        {heading && <p className="font-medium">{heading}</p>}
+        {details.map((d) => (
+          <p key={d}>{d}</p>
+        ))}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+type StageCost = { label: string; details: string[] };
 
 /** The cost pill for one leg: the selected model's estimate, plus what recent calls cost. */
 function stageCost(
@@ -602,19 +654,19 @@ function stageCost(
   if (!estimate) {
     return {
       label: "—",
-      title: "No public list price for this model, so no estimate.",
+      details: ["No public list price for this model, so no estimate."],
     };
   }
-  const parts = [
-    `Estimated cost per minute of call. ${estimate.basis}`,
-    `List prices as of ${PRICES_AS_OF}; your bill may differ.`,
+  const details = [
+    estimate.basis,
+    `${estimate.source ? `Source: ${estimate.source}. ` : ""}List prices as of ${PRICES_AS_OF}; your bill may differ.`,
   ];
   if (recent !== null) {
-    parts.push(`Recent calls averaged ${fmtCostPerMinute(recent)}.`);
+    details.push(`Recent calls averaged ${fmtCostPerMinute(recent)}.`);
   }
   return {
     label: `~${fmtCostPerMinute(estimate.usdPerMinute)}`,
-    title: parts.join(" "),
+    details,
   };
 }
 
@@ -675,28 +727,32 @@ function PipelineStage({
             className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <span className="text-sm font-semibold">{title}</span>
-            <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
-              {summary}
-            </span>
-            {measured && (
-              <span
-                title={measuredLabel}
-                className="hidden shrink-0 items-baseline gap-1.5 rounded border bg-muted/50 px-2 py-0.5 font-mono text-[11px] text-muted-foreground sm:flex"
+            <Tooltip>
+              <TooltipTrigger
+                render={<span />}
+                className="min-w-0 flex-1 cursor-default truncate text-left font-mono text-xs text-muted-foreground"
               >
-                <span className="font-medium text-foreground tabular-nums">
-                  {measured}
-                </span>
-              </span>
+                {summary}
+              </TooltipTrigger>
+              <TooltipContent side="top" className="break-all font-mono">
+                {summary}
+              </TooltipContent>
+            </Tooltip>
+            {measured && (
+              <StagePill
+                label={measured}
+                heading={measuredLabel}
+                details={[
+                  "Averaged over this assistant's recent calls. Shows — until a call has been measured.",
+                ]}
+              />
             )}
             {cost && (
-              <span
-                title={cost.title}
-                className="hidden shrink-0 items-baseline gap-1.5 rounded border bg-muted/50 px-2 py-0.5 font-mono text-[11px] text-muted-foreground sm:flex"
-              >
-                <span className="font-medium text-foreground tabular-nums">
-                  {cost.label}
-                </span>
-              </span>
+              <StagePill
+                label={cost.label}
+                heading="Estimated cost per minute of call"
+                details={cost.details}
+              />
             )}
             <ChevronDownIcon
               className={cn(

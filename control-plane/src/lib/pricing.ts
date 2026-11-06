@@ -23,6 +23,60 @@ import type { LlmProvider, SttProvider, TtsProvider } from "@/lib/providers";
 /** When the prices below were last checked. Shown in the tooltips. */
 export const PRICES_AS_OF = "Nov 2026";
 
+/**
+ * Where each price was taken from. Re-check a row against its page before
+ * changing it. Claude, Gemini and Llama prices come from the OpenRouter and
+ * Vercel catalogues, which pass the vendor's list price through, not from the
+ * vendors' own pages.
+ */
+const SOURCES = {
+  openai: "https://openai.com/api/pricing",
+  groq: "https://groq.com/pricing",
+  openrouter: "https://openrouter.ai/models",
+  vercel: "https://vercel.com/ai-gateway/models",
+  deepgram: "https://deepgram.com/pricing",
+  assemblyai: "https://www.assemblyai.com/pricing",
+  elevenlabs: "https://elevenlabs.io/pricing/api",
+  cartesia: "https://cartesia.ai/pricing",
+} as const;
+
+/** "https://openai.com/api/pricing" -> "openai.com/api/pricing". */
+const shortUrl = (url: string) => url.replace(/^https?:\/\/(www\.)?/, "");
+
+function llmSource(provider: string, model: string): string | undefined {
+  switch (provider) {
+    case "openai":
+      return SOURCES.openai;
+    case "groq":
+      return SOURCES.groq;
+    case "openrouter":
+    case "vercel-ai-gateway":
+      // OpenAI models are OpenAI's list price; the rest is the catalogue's.
+      if (model.startsWith("openai/")) return SOURCES.openai;
+      return provider === "openrouter" ? SOURCES.openrouter : SOURCES.vercel;
+    default:
+      return undefined;
+  }
+}
+
+function sttSource(model: string): string | undefined {
+  if (model.startsWith("nova")) return SOURCES.deepgram;
+  if (model.startsWith("universal")) return SOURCES.assemblyai;
+  if (model.startsWith("scribe")) return SOURCES.elevenlabs;
+  if (model.startsWith("gpt-") || model.startsWith("whisper"))
+    return SOURCES.openai;
+  return undefined;
+}
+
+function ttsSource(model: string): string | undefined {
+  if (model.startsWith("sonic")) return SOURCES.cartesia;
+  if (model.startsWith("eleven")) return SOURCES.elevenlabs;
+  if (model.startsWith("aura")) return SOURCES.deepgram;
+  if (model.startsWith("tts-") || model.startsWith("gpt-"))
+    return SOURCES.openai;
+  return undefined;
+}
+
 // ---------------------------------------------------------------------------
 // Prices
 // ---------------------------------------------------------------------------
@@ -163,6 +217,8 @@ export type LegEstimate = {
   usdPerMinute: number;
   /** How the number was reached, for the tooltip. */
   basis: string;
+  /** Where the price was taken from, e.g. "openai.com/api/pricing". */
+  source?: string;
 };
 
 export type CostEstimate = {
@@ -197,11 +253,14 @@ export function estimateCosts(config: PriceableConfig): CostEstimate {
   };
 }
 
+const sourced = (url: string | undefined) => (url ? shortUrl(url) : undefined);
+
 function estimateListen(model: string): LegEstimate | null {
   const price = STT_PRICES[model];
   if (!price) return null;
   const share = price.billedOn === "call" ? 1 : ASSUMED.callerSpeechShare;
   return {
+    source: sourced(sttSource(model)),
     usdPerMinute: price.perMinute * share,
     basis:
       price.billedOn === "call"
@@ -224,6 +283,7 @@ function estimateThink(model: PriceableConfig["model"]): LegEstimate | null {
   const perTurn =
     (inputPerTurn * price.input + outputPerTurn * price.output) / 1_000_000;
   return {
+    source: sourced(llmSource(model.provider, model.model)),
     usdPerMinute: perTurn * turnsPerMinute,
     basis: `$${price.input} in / $${price.output} out per 1M tokens. Assumes ${turnsPerMinute} turns a minute, about ${inputPerTurn.toLocaleString()} input tokens a turn (your prompt is about ${promptTokens.toLocaleString()}) and ${outputPerTurn} output tokens. Prompt caching would lower it.`,
   };
@@ -234,6 +294,7 @@ function estimateSpeak(model: string): LegEstimate | null {
   if (perChar === undefined) return null;
   const chars = CHARS_PER_SPEECH_MINUTE * ASSUMED.agentSpeechShare;
   return {
+    source: sourced(ttsSource(model)),
     usdPerMinute: perChar * chars,
     basis: `${usd(perChar * 1000)} per 1K characters. Assumes the agent speaks ${ASSUMED.agentSpeechShare * 100}% of the call, about ${Math.round(chars)} characters a minute.`,
   };
