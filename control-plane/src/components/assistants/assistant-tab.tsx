@@ -8,7 +8,7 @@ import {
   EarIcon,
   ScrollTextIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Field, NumberField } from "@/components/assistants/fields";
 import type {
   AssistantCall,
@@ -644,6 +644,43 @@ function StagePill({
   );
 }
 
+/**
+ * Text that ends in an ellipsis when it doesn't fit. It gets a native browser
+ * tooltip (the one that appears after resting the pointer) only while it is cut
+ * off, so short text gets none.
+ */
+function TruncatedText({
+  children,
+  className,
+}: {
+  children: string;
+  className?: string;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [truncated, setTruncated] = useState(false);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure when the text changes
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setTruncated(el.scrollWidth > el.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [children]);
+
+  return (
+    <span
+      ref={ref}
+      title={truncated ? children : undefined}
+      className={cn("truncate", className)}
+    >
+      {children}
+    </span>
+  );
+}
+
 type StageCost = { label: string; details: string[] };
 
 /** The cost pill for one leg: the selected model's estimate, plus what recent calls cost. */
@@ -727,17 +764,9 @@ function PipelineStage({
             className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <span className="text-sm font-semibold">{title}</span>
-            <Tooltip>
-              <TooltipTrigger
-                render={<span />}
-                className="min-w-0 flex-1 cursor-default truncate text-left font-mono text-xs text-muted-foreground"
-              >
-                {summary}
-              </TooltipTrigger>
-              <TooltipContent side="top" className="break-all font-mono">
-                {summary}
-              </TooltipContent>
-            </Tooltip>
+            <TruncatedText className="min-w-0 flex-1 font-mono text-xs text-muted-foreground">
+              {summary}
+            </TruncatedText>
             {measured && (
               <StagePill
                 label={measured}
