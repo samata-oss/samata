@@ -44,7 +44,7 @@ export default async function DashboardLayout({
             <ThemeToggle />
           </div>
         </header>
-        <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+        <main className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );

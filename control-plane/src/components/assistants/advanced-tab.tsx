@@ -48,7 +48,7 @@ export function AdvancedTab({
   }
 
   return (
-    <div className="grid max-w-3xl gap-6">
+    <div className="mx-auto grid max-w-3xl gap-6">
       <Section title="Identity">
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Name" htmlFor="agent-name">
