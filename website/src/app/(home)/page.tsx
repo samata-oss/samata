@@ -251,13 +251,13 @@ export default async function HomePage() {
     <div className="flex min-h-screen flex-col bg-black text-white">
       <Nav stars={stars} />
       <div className="lg:grid lg:grid-cols-[clamp(20rem,36vw,40rem)_minmax(0,1fr)] lg:items-start">
-        <aside className="relative flex flex-col gap-8 overflow-hidden border-b border-white/10 px-6 py-8 sm:px-8 lg:sticky lg:top-12 lg:h-[calc(100svh-3rem)] lg:justify-between lg:gap-6 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:border-r lg:border-b-0 lg:px-10 lg:py-6 xl:px-14">
+        <aside className="relative flex flex-col gap-8 overflow-hidden border-b border-white/10 px-6 py-8 sm:px-8 lg:sticky lg:top-12 lg:h-[calc(100svh-3rem)] lg:justify-center lg:gap-6 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:border-r lg:border-b-0 lg:px-10 lg:pt-6 lg:pb-40 xl:px-14">
           <div
             aria-hidden="true"
             className="grain pointer-events-none absolute inset-0 opacity-[0.18]"
           />
-          <div className="relative">
-            <LiveMark />
+          <div className="relative mx-auto w-full max-w-md">
+            <LiveMark className="size-48 sm:size-52 lg:size-[clamp(11rem,14.5vw,18rem)]" />
             <a
               href={githubUrl}
               className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-400 transition-colors hover:border-white/25 hover:text-white"

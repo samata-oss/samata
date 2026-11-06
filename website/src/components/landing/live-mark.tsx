@@ -151,7 +151,7 @@ export function LiveMark({ className }: { className?: string }) {
     <div
       ref={host}
       aria-hidden="true"
-      className={cn("relative size-44", className)}
+      className={cn("relative", className ?? "size-44")}
     >
       <GrainMark
         className={cn(
