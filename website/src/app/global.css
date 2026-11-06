@@ -5,6 +5,7 @@
 @theme inline {
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
 }
 
 /* Samata brand: the dashboard's indigo on near-black with hairline borders. */

@@ -1,9 +1,8 @@
 import { ServerCodeBlock } from "fumadocs-ui/components/codeblock.rsc";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { AsciiOrb } from "@/components/landing/ascii-orb";
 import { CallScrubber } from "@/components/landing/call-scrubber";
-import { HeroCommand } from "@/components/landing/hero-command";
+import { Monolith } from "@/components/landing/monolith";
 import { InstallTabs } from "@/components/landing/install-tabs";
 import { Lede, Moment } from "@/components/landing/section";
 import { TerminalHero } from "@/components/landing/terminal-hero";
@@ -244,85 +243,57 @@ function Nav({ stars }: { stars: number | null }) {
 function Hero() {
   return (
     <section className="relative overflow-hidden border-b border-white/[0.08]">
-      {/* Colour wash behind the whole frame. */}
+      {/* A pool of light, and a long arc of it low across the frame. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-40 top-1/2 size-[48rem] -translate-y-1/2 rounded-full bg-fd-primary/20 blur-[140px]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_72%_42%,rgba(255,255,255,0.07),transparent_70%)]"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -left-52 -top-40 size-[34rem] rounded-full bg-violet-500/10 blur-[130px]"
+        className="pointer-events-none absolute -left-[10%] bottom-[8%] h-[34rem] w-[130%] -rotate-[7deg] rounded-[50%] border-t border-white/[0.12] shadow-[0_-30px_80px_-30px_rgba(255,255,255,0.12)]"
+        style={{
+          maskImage:
+            "linear-gradient(to right, transparent, black 30%, black 70%, transparent)",
+        }}
       />
 
-      <div className="relative mx-auto max-w-6xl border-x border-white/[0.08]">
-        <div className="grid items-center gap-8 px-6 py-14 sm:px-10 lg:min-h-[calc(100svh-3rem-1.75rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,36rem)] lg:py-10">
-          <div className="min-w-0">
-            <p className="mb-7 inline-flex items-center gap-2 border border-white/10 bg-white/[0.03] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-fd-muted-foreground">
-              <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
-              Open source · Apache 2.0 · Self-hosted
-            </p>
-            <h1 className="text-balance text-6xl font-medium leading-[0.98] tracking-tight sm:text-7xl xl:text-[5.75rem]">
-              Voice agents,
-              <br />
-              <span className="bg-gradient-to-r from-indigo-200 via-fd-primary to-violet-400 bg-clip-text text-transparent">
-                as code.
-              </span>
-              <span
-                aria-hidden="true"
-                className="caret ml-2 inline-block h-[0.72em] w-[0.34em] translate-y-[0.04em] bg-fd-primary"
-              />
-            </h1>
-            <p className="mt-8 max-w-md text-base leading-relaxed text-fd-muted-foreground">
-              Agents are JSON. Tools are plain HTTP. Every call, key and
-              transcript stays on your infrastructure.
-            </p>
-            <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Link
-                href="/docs/quickstart"
-                className="inline-flex h-11 shrink-0 items-center justify-center bg-fd-primary px-6 text-sm font-medium text-white shadow-[0_0_36px_-6px] shadow-fd-primary transition hover:brightness-110"
-              >
-                Get started
-              </Link>
-              <HeroCommand
-                command={`git clone ${githubUrl}.git`}
-                className="sm:max-w-80"
-              />
-            </div>
-            <p className="mt-7 max-w-md font-mono text-[11px] leading-relaxed text-fd-muted-foreground">
-              Built on LiveKit · Runs with OpenAI, Deepgram, ElevenLabs,
-              Cartesia and Telnyx
-            </p>
+      <div className="relative mx-auto flex max-w-6xl flex-col px-6 py-16 sm:px-10 lg:min-h-[calc(100svh-3rem)] lg:flex-row lg:items-center lg:py-10">
+        <div className="relative z-10 min-w-0 lg:max-w-[34rem]">
+          <a
+            href={githubUrl}
+            className="mb-9 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-fd-muted-foreground transition-colors hover:border-white/20 hover:text-fd-foreground"
+          >
+            <span className="size-1.5 rounded-full bg-emerald-400" />
+            Apache 2.0 · Self-hosted · Built on LiveKit
+            <ArrowRight className="size-3" />
+          </a>
+          <h1 className="font-display bg-gradient-to-b from-white from-30% to-zinc-500 bg-clip-text text-[3.4rem] leading-[0.96] tracking-tight text-transparent sm:text-7xl xl:text-[5.6rem]">
+            The <em className="pr-1">open source</em> voice orchestration
+            platform
+          </h1>
+          <p className="mt-8 max-w-md text-[17px] leading-relaxed text-fd-muted-foreground">
+            Declarative agents, tools that are plain HTTP, and every call, key
+            and transcript on your own infrastructure.
+          </p>
+          <div className="mt-10 flex items-center gap-3">
+            <Link
+              href="/docs/quickstart"
+              className="inline-flex h-11 items-center rounded-lg border border-white/15 bg-white/[0.07] px-6 text-sm font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-colors hover:bg-white/[0.12]"
+            >
+              Get started
+            </Link>
+            <Link
+              href="/docs"
+              className="inline-flex h-11 items-center px-4 text-sm text-fd-muted-foreground transition-colors hover:text-fd-foreground"
+            >
+              Documentation
+            </Link>
           </div>
-
-          <AsciiOrb className="mx-auto max-w-[36rem]" />
         </div>
-        <Ruler />
+
+        <Monolith className="relative mx-auto mt-10 w-full max-w-[30rem] lg:absolute lg:-right-24 lg:top-1/2 lg:mx-0 lg:mt-0 lg:w-[50rem] lg:max-w-none lg:-translate-y-[53%]" />
       </div>
     </section>
-  );
-}
-
-/** Tick marks and timecodes along the bottom of the hero, like a timeline. */
-function Ruler() {
-  return (
-    <div
-      aria-hidden="true"
-      className="relative h-7 border-t border-white/[0.08] bg-black/30"
-      style={{
-        backgroundImage:
-          "repeating-linear-gradient(to right, rgba(255,255,255,0.22) 0 1px, transparent 1px 12px), repeating-linear-gradient(to right, rgba(255,255,255,0.55) 0 1px, transparent 1px 96px)",
-        backgroundSize: "100% 5px, 100% 10px",
-        backgroundRepeat: "no-repeat",
-        backgroundPosition: "top",
-      }}
-    >
-      <span className="absolute bottom-1 left-2 font-mono text-[9px] tabular-nums text-fd-muted-foreground/70">
-        00:00
-      </span>
-      <span className="absolute bottom-1 right-2 font-mono text-[9px] tabular-nums text-fd-muted-foreground/70">
-        02:47
-      </span>
-    </div>
   );
 }
 
