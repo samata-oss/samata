@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Spotlight } from "./fx";
 
 const cards = [
   {
@@ -33,30 +34,30 @@ const cards = [
 
 export function ProductCards() {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <Spotlight className="grid gap-3 sm:grid-cols-2">
       {cards.map((card) => (
         <article
           key={card.title}
-          className="flex flex-col border border-white/10 bg-[#0c0c0c]"
+          className="spot-card flex flex-col overflow-hidden"
         >
-          <div className="relative h-44 overflow-hidden border-b border-white/10 bg-black">
+          <div className="relative m-1.5 h-44 overflow-hidden rounded-xl border border-white/[0.07] bg-black">
             {card.visual}
           </div>
-          <div className="flex flex-1 flex-col p-4">
+          <div className="flex flex-1 flex-col px-4 pt-3 pb-4">
             <h3 className="text-sm font-medium">{card.title}</h3>
             <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-400">
               {card.body}
             </p>
             <Link
               href={card.href}
-              className="mt-4 inline-flex h-8 w-fit items-center rounded-md bg-white px-3 text-xs font-medium text-black transition-colors hover:bg-zinc-200"
+              className="mt-4 inline-flex h-8 w-fit items-center rounded-full bg-white px-4 text-xs font-medium text-black transition-colors hover:bg-zinc-200"
             >
               {card.cta}
             </Link>
           </div>
         </article>
       ))}
-    </div>
+    </Spotlight>
   );
 }
 
@@ -134,8 +135,7 @@ function ApiVisual() {
       <span className="text-white">curl</span>
       <span className="text-zinc-500"> -X PUT</span>
       {"\n"}
-      {"  "}$SAMATA_URL/api/agents \
-      {"\n"}
+      {"  "}$SAMATA_URL/api/agents \{"\n"}
       {"  "}
       <span className="text-zinc-500">-d</span> @agents/support.json
       {"\n\n"}

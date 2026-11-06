@@ -86,8 +86,9 @@ export function Reveal({
 }
 
 /**
- * A hairline grid that lights up under the cursor. The cells stay opaque
- * black, so the glow only shows through the 1px gaps between them.
+ * A group of `.spot-card`s whose borders light up under the cursor. Each card
+ * gets the pointer position relative to itself, so the glow follows across
+ * the gaps from one card to the next.
  */
 export function Spotlight({
   children,
@@ -98,16 +99,23 @@ export function Spotlight({
 }) {
   return (
     <div
-      className={cn("spotlight relative", className)}
+      className={className}
       onPointerMove={(event) => {
-        const el = event.currentTarget;
-        const rect = el.getBoundingClientRect();
-        el.style.setProperty("--mx", `${event.clientX - rect.left}px`);
-        el.style.setProperty("--my", `${event.clientY - rect.top}px`);
+        for (const card of event.currentTarget.querySelectorAll<HTMLElement>(
+          ".spot-card",
+        )) {
+          const rect = card.getBoundingClientRect();
+          card.style.setProperty("--mx", `${event.clientX - rect.left}px`);
+          card.style.setProperty("--my", `${event.clientY - rect.top}px`);
+        }
       }}
       onPointerLeave={(event) => {
-        event.currentTarget.style.removeProperty("--mx");
-        event.currentTarget.style.removeProperty("--my");
+        for (const card of event.currentTarget.querySelectorAll<HTMLElement>(
+          ".spot-card",
+        )) {
+          card.style.removeProperty("--mx");
+          card.style.removeProperty("--my");
+        }
       }}
     >
       {children}

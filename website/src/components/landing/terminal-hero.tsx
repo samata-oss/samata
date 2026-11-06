@@ -38,7 +38,7 @@ export function TerminalHero() {
   const n = () => i++;
 
   return (
-    <div className="border border-white/[0.08] bg-black/30">
+    <div className="overflow-hidden rounded-xl border border-white/[0.09] bg-white/[0.02]">
       <div>
         <div className="flex items-center gap-3 border-b border-white/[0.07] px-4 py-2.5">
           <div className="flex gap-1.5" aria-hidden="true">

@@ -13,8 +13,11 @@ export function InstallTabs({ tabs }: { tabs: InstallTab[] }) {
   const current = tabs.find((t) => t.id === active) ?? tabs[0];
 
   return (
-    <div className="border border-white/[0.08]">
-      <div role="tablist" className="flex border-b border-white/[0.08]">
+    <div className="overflow-hidden rounded-xl border border-white/[0.09] bg-white/[0.02]">
+      <div
+        role="tablist"
+        className="flex gap-1 border-b border-white/[0.07] p-1.5"
+      >
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -26,9 +29,9 @@ export function InstallTabs({ tabs }: { tabs: InstallTab[] }) {
               setCopied(false);
             }}
             className={cn(
-              "px-4 py-2.5 font-mono text-[11px] transition-colors",
+              "rounded-md px-3.5 py-1.5 font-mono text-[11px] transition-colors",
               tab.id === active
-                ? "bg-white/[0.06] text-fd-foreground"
+                ? "bg-white/[0.08] text-fd-foreground"
                 : "text-fd-muted-foreground hover:text-fd-foreground",
             )}
           >

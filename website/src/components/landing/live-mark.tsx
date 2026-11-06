@@ -93,14 +93,11 @@ export function LiveMark({ className }: { className?: string }) {
           }
           const threshold = (BAYER[(y & 3) * 4 + (x & 3)] + 0.5) / 16;
           if (lum <= threshold) continue;
-          const x0 = Math.floor(x * cell);
-          const y0 = Math.floor(y * cell);
-          (isBar ? bars : halo).rect(
-            x0,
-            y0,
-            Math.ceil((x + 1) * cell) - x0,
-            Math.ceil((y + 1) * cell) - y0,
-          );
+          const cx = (x + 0.5) * cell;
+          const cy = (y + 0.5) * cell;
+          const path = isBar ? bars : halo;
+          path.moveTo(cx + cell * 0.46, cy);
+          path.arc(cx, cy, cell * 0.46, 0, Math.PI * 2);
         }
       }
 

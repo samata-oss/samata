@@ -133,8 +133,8 @@ export default async function HomePage() {
   return (
     <div className="flex min-h-screen flex-col bg-black text-white">
       <Nav stars={stars} />
-      <div className="lg:grid lg:grid-cols-[minmax(22rem,42%)_minmax(0,1fr)] lg:items-start">
-        <aside className="relative flex flex-col gap-8 overflow-hidden border-b border-white/10 px-6 py-8 sm:px-8 lg:sticky lg:top-12 lg:h-[calc(100svh-3rem)] lg:justify-center lg:gap-6 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:border-r lg:border-b-0 lg:px-10 lg:pt-6 lg:pb-40 xl:px-14">
+      <div className="lg:grid lg:grid-cols-[minmax(22rem,42%)_minmax(0,1fr)] lg:items-start lg:gap-3 lg:p-3">
+        <aside className="relative flex flex-col gap-8 overflow-hidden border-b border-white/10 px-6 py-8 sm:px-8 lg:sticky lg:top-[3.75rem] lg:h-[calc(100svh-4.5rem)] lg:rounded-3xl lg:border lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] lg:justify-center lg:gap-6 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:px-10 lg:pt-6 lg:pb-40 xl:px-14">
           <Starfield className="pointer-events-none absolute inset-0 size-full" />
           <div className="@container relative mx-auto w-full max-w-2xl">
             <LiveMark className="size-48 sm:size-52 lg:size-[clamp(11rem,14.5vw,18rem)]" />
@@ -156,13 +156,13 @@ export default async function HomePage() {
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <Link
                 href="/docs/quickstart"
-                className="inline-flex h-10 items-center rounded-md bg-white px-4 text-sm font-medium text-black transition-colors hover:bg-zinc-200"
+                className="inline-flex h-10 items-center rounded-full bg-white px-5 text-sm font-medium text-black transition-colors hover:bg-zinc-200"
               >
                 Get started
               </Link>
               <a
                 href={githubUrl}
-                className="inline-flex h-10 items-center rounded-md border border-white/15 px-4 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-white"
+                className="inline-flex h-10 items-center rounded-full border border-white/15 px-5 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-white"
               >
                 GitHub
               </a>
@@ -197,9 +197,9 @@ export default async function HomePage() {
             lede="An open-source voice orchestration platform. You describe an agent in JSON. Samata runs speech-to-text, the model and text-to-speech on LiveKit, calls tools on an HTTP server you run, and keeps every transcript in your own Postgres."
           >
             <ProductCards />
-            <Spotlight className="mt-3 grid grid-cols-1 gap-px sm:grid-cols-2">
+            <Spotlight className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {features.map((feature) => (
-                <div key={feature.title} className="bg-black p-4">
+                <div key={feature.title} className="spot-card p-5">
                   <h3 className="flex items-center gap-2 text-sm font-medium">
                     <span className="font-mono text-xs text-zinc-500">+</span>
                     {feature.title}
@@ -225,7 +225,7 @@ export default async function HomePage() {
                   code={deployScript}
                   codeblock={{
                     title: "deploy",
-                    className: "my-0 rounded-none",
+                    className: "my-0 rounded-xl",
                   }}
                 />
                 <More href="/docs/deploy">Deployment guide</More>
@@ -240,7 +240,7 @@ export default async function HomePage() {
                   code={pushCommand}
                   codeblock={{
                     title: "deploy.sh",
-                    className: "my-0 rounded-none",
+                    className: "my-0 rounded-xl",
                   }}
                 />
                 <More href="/docs/api">API reference</More>
@@ -254,9 +254,9 @@ export default async function HomePage() {
             title="Yours to host, read and change."
             lede="There is no hosted tier between you and your calls. The control plane, the worker and the LiveKit setup are all in the repo."
           >
-            <Spotlight className="grid gap-px sm:grid-cols-3">
+            <Spotlight className="grid gap-3 sm:grid-cols-3">
               {openSource.map((item) => (
-                <div key={item.title} className="bg-black p-4">
+                <div key={item.title} className="spot-card p-5">
                   <h3 className="font-mono text-xs text-zinc-300">
                     {item.title}
                   </h3>
@@ -269,7 +269,7 @@ export default async function HomePage() {
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <a
                 href={githubUrl}
-                className="inline-flex h-10 items-center rounded-md bg-white px-4 text-sm font-medium text-black transition-colors hover:bg-zinc-200"
+                className="inline-flex h-10 items-center rounded-full bg-white px-5 text-sm font-medium text-black transition-colors hover:bg-zinc-200"
               >
                 Star on GitHub
                 {stars !== null && stars >= 10 ? (
@@ -278,7 +278,7 @@ export default async function HomePage() {
               </a>
               <a
                 href={`${githubUrl}/issues`}
-                className="inline-flex h-10 items-center rounded-md border border-white/15 px-4 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-white"
+                className="inline-flex h-10 items-center rounded-full border border-white/15 px-5 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-white"
               >
                 Open an issue
               </a>
@@ -286,11 +286,11 @@ export default async function HomePage() {
           </Block>
 
           <Block id="faq" kicker="FAQ" title="Questions.">
-            <div className="border-t border-white/10">
+            <div className="space-y-2">
               {questions.map((item) => (
                 <details
                   key={item.q}
-                  className="group border-b border-white/10"
+                  className="group rounded-xl border border-white/[0.09] bg-white/[0.02] px-4 transition-colors open:bg-white/[0.04]"
                 >
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-4 text-sm [&::-webkit-details-marker]:hidden">
                     {item.q}
@@ -319,33 +319,33 @@ function Nav({ stars }: { stars: number | null }) {
     { href: "/docs/deploy", label: "Deploy" },
   ];
   return (
-    <header className="sticky top-0 z-40 flex h-12 border-b border-white/10 bg-black/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 flex h-12 items-center gap-1 border-b border-white/[0.07] bg-black/70 px-3 backdrop-blur-xl">
       <Link
         href="/"
-        className="flex items-center gap-2 border-r border-white/10 px-4 sm:px-5"
+        className="flex items-center gap-2 rounded-full px-3 py-1.5 transition-colors hover:bg-white/[0.05]"
       >
-        <LogoMark className="size-4 rounded-[3px]" />
+        <LogoMark className="size-4 rounded-md" />
         <span className="font-mono text-[11px] uppercase tracking-[0.2em]">
           Samata
         </span>
       </Link>
-      <nav className="flex min-w-0 flex-1 items-stretch font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500">
+      <nav className="flex min-w-0 flex-1 items-center gap-1 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500">
         {links.map((link) => (
           <Link
             key={link.href}
             href={link.href}
             className={cn(
-              "items-center border-r border-white/10 px-4 transition-colors hover:bg-white/[0.03] hover:text-white",
+              "items-center rounded-full px-3 py-1.5 transition-colors hover:bg-white/[0.06] hover:text-white",
               link.label === "Deploy" ? "hidden sm:flex" : "flex",
             )}
           >
             {link.label}
           </Link>
         ))}
-        <div className="flex-1 border-r border-white/10" />
+        <div className="flex-1" />
         <a
           href={githubUrl}
-          className="flex items-center px-4 text-white transition-colors hover:bg-white/[0.04]"
+          className="flex items-center rounded-full border border-white/10 px-3.5 py-1.5 text-white transition-colors hover:bg-white/[0.06]"
         >
           GitHub
           {stars !== null && stars >= 10 ? (
@@ -374,7 +374,7 @@ function Block({
   return (
     <section
       id={id}
-      className="scroll-mt-14 border-t border-white/10 px-6 py-14 sm:px-8 lg:px-12 lg:py-16"
+      className="scroll-mt-14 border-t border-white/[0.07] px-6 py-14 sm:px-8 lg:px-12 lg:py-16"
     >
       <Reveal>
         <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">

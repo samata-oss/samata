@@ -33,9 +33,10 @@ function dots(min: number, max: number) {
       const lum = shade(u, v);
       const threshold = (BAYER[(y & 3) * 4 + (x & 3)] + 0.5) / 16;
       if (lum <= threshold || lum < min || lum >= max) continue;
-      const px = x * DOT;
-      const py = y * DOT;
-      d += `M${px} ${py}h${DOT}v${DOT}h-${DOT}z`;
+      const r = DOT * 0.46;
+      const cx = x * DOT + DOT / 2;
+      const cy = y * DOT + DOT / 2;
+      d += `M${cx - r} ${cy}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0z`;
     }
   }
   return d;
