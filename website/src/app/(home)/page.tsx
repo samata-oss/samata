@@ -1,481 +1,798 @@
-import {
-  ArrowRight,
-  Bot,
-  Cpu,
-  Globe,
-  Phone,
-  Users,
-  Wrench,
-} from "lucide-react";
-import Link from "next/link";
 import { ServerCodeBlock } from "fumadocs-ui/components/codeblock.rsc";
-import { CopyCommand } from "@/components/copy-command";
+import { ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { HalftoneWave } from "@/components/landing/halftone-wave";
+import { InstallTabs } from "@/components/landing/install-tabs";
+import { Block, SectionLabel } from "@/components/landing/section";
+import { TerminalHero } from "@/components/landing/terminal-hero";
+import { UseCaseTabs } from "@/components/landing/use-case-tabs";
+import { LogoMark } from "@/components/logo";
+import { cn } from "@/lib/cn";
+import { getStars } from "@/lib/github";
 import { githubUrl } from "@/lib/shared";
+import { buildUseCases } from "./use-cases";
 
-const agentJson = `{
-  "slug": "support",
-  "name": "Support",
-  "phoneNumber": "+14155550100",
-  "config": {
-    "firstMessage": "Hi! How can I help?",
-    "model": {
-      "provider": "openrouter",
-      "model": "anthropic/claude-sonnet-4.5",
-      "systemPrompt": "You are a concise support agent."
-    },
-    "transcriber": { "provider": "deepgram" },
-    "voice": { "provider": "cartesia" },
-    "toolNames": ["lookup_order_status"],
-    "analysisPlan": {
-      "structuredDataSchema": {
-        "type": "object",
-        "properties": { "intent": { "type": "string" } }
-      }
-    },
-    "server": { "url": "https://example.com/samata-events" }
-  }
-}`;
+const installTabs = [
+  {
+    id: "clone",
+    label: "Clone",
+    command: "git clone https://github.com/Samata-OSS/samata.git",
+  },
+  {
+    id: "run",
+    label: "Run",
+    command: "docker compose up -d livekit postgres",
+  },
+  {
+    id: "agent",
+    label: "Agent",
+    command: "curl -X PUT $SAMATA_URL/api/agents -d @agents/support.json",
+  },
+  {
+    id: "call",
+    label: "Call",
+    command:
+      'curl -X POST $SAMATA_URL/api/session/start -d \'{"assistantId":"support"}\'',
+  },
+];
 
-const pushCommand = `curl -X PUT $SAMATA_URL/api/agents \\
+const worksWith = [
+  "LiveKit",
+  "OpenAI",
+  "OpenRouter",
+  "Groq",
+  "Deepgram",
+  "AssemblyAI",
+  "ElevenLabs",
+  "Cartesia",
+  "Telnyx",
+  "Postgres",
+];
+
+const stages = [
+  { name: "end_of_turn", ms: 300, color: "oklch(0.8 0.1 290)" },
+  { name: "transcription", ms: 150, color: "oklch(0.72 0.16 285)" },
+  { name: "llm_ttft", ms: 350, color: "oklch(0.64 0.2 277)" },
+  { name: "tts_ttfb", ms: 100, color: "oklch(0.52 0.22 275)" },
+];
+
+const endpoints = [
+  {
+    method: "PUT",
+    path: "/api/agents",
+    body: "Create or replace an agent by slug",
+    href: "/docs/api/agents",
+  },
+  {
+    method: "PATCH",
+    path: "/api/agents/:ref",
+    body: "Change part of an agent's config",
+    href: "/docs/api/agents",
+  },
+  {
+    method: "PUT",
+    path: "/api/tools",
+    body: "Push your tool library, idempotently",
+    href: "/docs/api/tools",
+  },
+  {
+    method: "POST",
+    path: "/api/session/start",
+    body: "Start a browser call and get a room token",
+    href: "/docs/api/sessions",
+  },
+  {
+    method: "GET",
+    path: "/api/calls",
+    body: "List calls with transcripts and latency",
+    href: "/docs/api/calls",
+  },
+  {
+    method: "GET",
+    path: "/api/calls/:id",
+    body: "One call: summary, structured data, usage",
+    href: "/docs/api/calls",
+  },
+];
+
+const methodColor: Record<string, string> = {
+  GET: "text-emerald-400 bg-emerald-400/10",
+  POST: "text-sky-400 bg-sky-400/10",
+  PUT: "text-amber-300 bg-amber-300/10",
+  PATCH: "text-fuchsia-400 bg-fuchsia-400/10",
+};
+
+const providers = [
+  {
+    layer: "model",
+    names: ["openai", "openrouter", "vercel-ai-gateway", "groq", "custom"],
+  },
+  {
+    layer: "transcriber",
+    names: ["deepgram", "assemblyai", "elevenlabs", "openai"],
+  },
+  { layer: "voice", names: ["cartesia", "elevenlabs", "deepgram", "openai"] },
+];
+
+const toolHandler = `import { Hono } from "hono";
+
+const app = new Hono();
+
+// Samata POSTs here whenever an agent's LLM calls one of your tools.
+app.post("/samata", async (c) => {
+  if (!verifySecret(c)) return c.text("Unauthorized", 401);
+
+  const { message } = await c.req.json();
+  if (message.type !== "tool-calls") return c.json({});
+
+  const results = await Promise.all(
+    message.toolCallList.map(async (call) => ({
+      toolCallId: call.id,
+      result: await tools[call.name](call.arguments),
+    })),
+  );
+  return c.json({ results });
+});`;
+
+const pushCommand = `# In CI, on every deploy
+curl -X PUT $SAMATA_URL/api/tools \\
+  -H "authorization: Bearer $SAMATA_API_KEY" \\
+  -H "content-type: application/json" \\
+  -d @tools.json
+
+curl -X PUT $SAMATA_URL/api/agents \\
   -H "authorization: Bearer $SAMATA_API_KEY" \\
   -H "content-type: application/json" \\
   -d @agents/support.json`;
 
-const features = [
-  {
-    icon: Bot,
-    title: "Declarative agents",
-    body: "An agent is JSON: model, voice, transcriber, tools, barge-in and post-call analysis. Keep it in git and push it with an idempotent PUT.",
-  },
-  {
-    icon: Cpu,
-    title: "Bring your own models",
-    body: "Use your own OpenAI, OpenRouter, Groq, Deepgram, AssemblyAI, ElevenLabs or Cartesia keys, or any OpenAI-compatible endpoint. Keys are encrypted at rest.",
-  },
-  {
-    icon: Wrench,
-    title: "Tools on your server",
-    body: "One webhook server holds all your tool endpoints. Samata forwards tool calls to it and passes the result back to the LLM.",
-  },
-  {
-    icon: Phone,
-    title: "Real phone numbers",
-    body: "Import a Telnyx number and assign it to an assistant. Samata creates the LiveKit SIP trunk and dispatch rule for you.",
-  },
-  {
-    icon: Globe,
-    title: "Browser calls",
-    body: "Start a session from your backend and join it over WebRTC with a token scoped to a single room. Browsers never hold your LiveKit secret.",
-  },
-  {
-    icon: Users,
-    title: "Workspaces and teams",
-    body: "Real accounts, an owner, invitation-only sign-up, and API keys scoped to a workspace. Every query is workspace-scoped.",
-  },
-];
+const deployScript = `mkdir samata && cd samata
+curl -O https://raw.githubusercontent.com/Samata-OSS/samata/main/deploy/docker-compose.yml
+curl -o .env https://raw.githubusercontent.com/Samata-OSS/samata/main/deploy/.env.example
+$EDITOR .env            # domains and secrets
+docker compose up -d`;
 
-const providers = [
-  {
-    layer: "Model",
-    names: ["OpenAI", "OpenRouter", "Vercel AI Gateway", "Groq", "Custom"],
-  },
-  {
-    layer: "Transcriber",
-    names: ["Deepgram", "AssemblyAI", "ElevenLabs", "OpenAI"],
-  },
-  {
-    layer: "Voice",
-    names: ["Cartesia", "ElevenLabs", "Deepgram", "OpenAI"],
-  },
-];
+const diagram = `PSTN / SIP ──► LiveKit SIP ─┐
+                            ├─► LiveKit Server (Go SFU) ◄──► Python worker(s)
+Browser (WebRTC) ───────────┘        │  Redis                (livekit-agents,
+                                     │                        stateless)
+                                     ▼                            │
+                             Next.js control plane ◄── webhooks ──┘
+                             (agents, call logs, tools)   Postgres`;
 
-export default function HomePage() {
+export default async function HomePage() {
+  const stars = await getStars();
+  const useCases = await buildUseCases();
+
   return (
-    <main className="flex-1">
-      <Hero />
-      <AgentsAreJson />
-      <Features />
-      <Architecture />
-      <Models />
-      <SelfHost />
-      <Cta />
-      <Footer />
-    </main>
-  );
-}
-
-function Hero() {
-  return (
-    <section className="relative overflow-hidden border-b">
-      <div className="bg-grid absolute inset-0" aria-hidden="true" />
-      <div
-        className="absolute left-1/2 top-0 h-80 w-[40rem] -translate-x-1/2 rounded-full bg-fd-primary/20 blur-3xl"
-        aria-hidden="true"
-      />
-      <div className="relative mx-auto flex max-w-4xl flex-col items-center px-6 pb-24 pt-24 text-center md:pt-32">
-        <a
-          href={githubUrl}
-          className="mb-8 inline-flex items-center gap-2 rounded-full border bg-fd-card/60 px-3 py-1 text-xs text-fd-muted-foreground backdrop-blur transition-colors hover:text-fd-foreground"
-        >
-          <span className="size-1.5 rounded-full bg-fd-primary" />
-          Open source · Apache 2.0
-          <ArrowRight className="size-3" />
-        </a>
-        <h1 className="text-balance text-5xl font-semibold tracking-tight md:text-7xl">
-          Voice agents you run yourself.
-        </h1>
-        <p className="mt-6 max-w-2xl text-balance text-lg text-fd-muted-foreground">
-          Samata is a self-hosted, declarative voice AI orchestrator. Describe
-          an agent as JSON, bring your own models, and take phone and browser
-          calls on your own infrastructure.
-        </p>
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-          <Link
-            href="/docs/quickstart"
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-fd-primary px-5 text-sm font-medium text-fd-primary-foreground transition-opacity hover:opacity-90"
-          >
-            Get started
-            <ArrowRight className="size-4" />
-          </Link>
-          <Link
-            href="/docs"
-            className="inline-flex h-10 items-center rounded-lg border bg-fd-card px-5 text-sm font-medium transition-colors hover:bg-fd-accent"
-          >
-            Read the docs
-          </Link>
-        </div>
-        <CopyCommand
-          className="mt-8 w-full max-w-xl text-left"
-          command="git clone https://github.com/samata-oss/samata.git"
-        />
-      </div>
-    </section>
-  );
-}
-
-function SectionHeading({
-  eyebrow,
-  title,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className="max-w-2xl">
-      <p className="mb-3 font-mono text-xs uppercase tracking-widest text-fd-primary">
-        {eyebrow}
-      </p>
-      <h2 className="text-balance text-3xl font-semibold tracking-tight md:text-4xl">
-        {title}
-      </h2>
-      {children ? (
-        <p className="mt-4 text-fd-muted-foreground">{children}</p>
-      ) : null}
+    <div className="flex flex-1 flex-col lg:flex-row">
+      <LeftPane stars={stars} />
+      <main className="min-w-0 flex-1 border-white/[0.08] lg:border-l">
+        <TabBar />
+        <Readme />
+        <WorksWith />
+        <Features />
+        <HowItWorks />
+        <Agents useCases={useCases} />
+        <Api />
+        <Tools />
+        <Observability />
+        <Architecture />
+        <Providers />
+        <SelfHost />
+        <Footer />
+      </main>
     </div>
   );
 }
 
-async function AgentsAreJson() {
+/* ---------------------------------------------------------------- */
+/* Left pane: fixed on desktop, like a poster next to the README.     */
+
+function LeftPane({ stars }: { stars: number | null }) {
   return (
-    <section className="border-b">
-      <div className="mx-auto grid max-w-6xl gap-12 px-6 py-24 lg:grid-cols-2 lg:items-center">
-        <div>
-          <SectionHeading
-            eyebrow="Config as code"
-            title="Agents are just JSON."
-          >
-            No flow builder to click through, and nothing to migrate between
-            environments by hand. Send the config to the API on every deploy and
-            Samata creates or updates the agent. Fields you leave out get
-            sensible defaults.
-          </SectionHeading>
-          <ul className="mt-8 space-y-3 text-sm text-fd-muted-foreground">
-            <li>
-              <span className="text-fd-foreground">Idempotent.</span> PUT by
-              slug creates or replaces, so it is safe in CI.
-            </li>
-            <li>
-              <span className="text-fd-foreground">Stateless workers.</span> The
-              worker stores nothing about an agent. It fetches the config and
-              your keys for each call.
-            </li>
-            <li>
-              <span className="text-fd-foreground">
-                Your logic stays yours.
-              </span>{" "}
-              Tools and post-call handling run on your servers, called over
-              HTTP.
-            </li>
-          </ul>
+    <aside className="relative flex min-h-[36rem] flex-col overflow-hidden lg:sticky lg:top-0 lg:h-screen lg:w-[38%] lg:min-w-[22rem] lg:shrink-0">
+      <header className="relative z-10 flex h-10 items-center gap-2 px-5">
+        <LogoMark className="size-5" />
+        <span className="font-mono text-[11px] uppercase tracking-[0.18em]">
+          Samata
+        </span>
+      </header>
+
+      <HalftoneWave className="absolute inset-x-0 top-8 h-[56%] w-full" />
+      {/* Fade the art into the page on the right and bottom. */}
+      <div
+        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-fd-background/80"
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-fd-background via-fd-background/90 to-transparent"
+        aria-hidden="true"
+      />
+
+      <div className="relative z-10 mt-auto px-5 pb-6 pt-48">
+        <a
+          href={githubUrl}
+          className="mb-5 inline-flex items-center gap-2.5 rounded-sm border border-white/10 bg-black/50 px-2.5 py-1.5 font-mono text-[11px] text-fd-muted-foreground backdrop-blur transition-colors hover:text-fd-foreground"
+        >
+          <span className="size-1.5 rotate-45 bg-fd-primary" />
+          Open source
+          <span className="text-white/20">|</span>
+          Apache 2.0, self-hosted
+          {stars !== null && stars >= 10 ? (
+            <span className="text-fd-foreground">★ {stars}</span>
+          ) : (
+            <ArrowRight className="size-3" />
+          )}
+        </a>
+
+        <h1 className="max-w-md text-balance text-4xl font-medium leading-[1.1] tracking-tight sm:text-[2.6rem]">
+          Voice agents, as code.
+        </h1>
+
+        <div className="mt-7 flex items-center gap-3">
           <Link
-            href="/docs/agent-config"
-            className="mt-8 inline-flex items-center gap-1.5 text-sm font-medium text-fd-primary hover:underline"
+            href="/docs/quickstart"
+            className="inline-flex h-9 items-center bg-white px-5 text-sm font-medium text-black transition-colors hover:bg-white/85"
           >
-            Agent config reference <ArrowRight className="size-4" />
+            Get Started
           </Link>
-        </div>
-        <div className="min-w-0 space-y-3">
-          <ServerCodeBlock
-            lang="json"
-            code={agentJson}
-            codeblock={{ title: "agents/support.json", className: "my-0" }}
-          />
-          <ServerCodeBlock
-            lang="bash"
-            code={pushCommand}
-            codeblock={{ title: "Deploy", className: "my-0" }}
-          />
+          <a
+            href={githubUrl}
+            className="relative inline-flex h-9 items-center border border-white/15 px-5 text-sm transition-colors hover:bg-white/[0.06]"
+          >
+            GitHub
+          </a>
         </div>
       </div>
-    </section>
+
+      <footer className="relative z-10 flex items-center justify-between px-5 pb-4 font-mono text-[11px] text-fd-muted-foreground">
+        <nav className="flex gap-4">
+          <Link href="/docs" className="hover:text-fd-foreground">
+            Docs
+          </Link>
+          <Link href="/docs/api" className="hover:text-fd-foreground">
+            API
+          </Link>
+          <a
+            href={`${githubUrl}/blob/main/LICENSE`}
+            className="hover:text-fd-foreground"
+          >
+            License
+          </a>
+        </nav>
+        <a href={githubUrl} className="hover:text-fd-foreground">
+          <span className="sr-only">GitHub</span>
+          <svg
+            viewBox="0 0 16 16"
+            className="size-4 fill-current"
+            aria-hidden="true"
+          >
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+          </svg>
+        </a>
+      </footer>
+    </aside>
   );
 }
 
+/* ---------------------------------------------------------------- */
+/* Right column                                                       */
+
+function TabBar() {
+  const items = [
+    { label: "Readme", href: "#readme", active: true },
+    { label: "Docs", href: "/docs" },
+    { label: "API", href: "/docs/api" },
+    { label: "Deploy", href: "/docs/deploy" },
+  ];
+  return (
+    <nav className="sticky top-0 z-30 flex h-10 border-b border-white/[0.08] bg-fd-background/85 backdrop-blur">
+      <div className="grid flex-1 grid-cols-4">
+        {items.map((item) => (
+          <Link
+            key={item.label}
+            href={item.href}
+            className={cn(
+              "flex items-center justify-center border-r border-white/[0.08] font-mono text-[11px] uppercase tracking-[0.18em] transition-colors",
+              item.active
+                ? "bg-white/[0.04] text-fd-foreground"
+                : "text-fd-muted-foreground hover:text-fd-foreground",
+            )}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
+      <a
+        href={githubUrl}
+        className="flex w-28 items-center justify-center bg-white font-mono text-[11px] uppercase tracking-[0.18em] text-black transition-colors hover:bg-white/85 sm:w-36"
+      >
+        GitHub ↗
+      </a>
+    </nav>
+  );
+}
+
+function Readme() {
+  return (
+    <Block id="readme" className="space-y-8">
+      <SectionLabel>Readme</SectionLabel>
+      <p className="max-w-2xl text-[15px] leading-relaxed text-fd-muted-foreground">
+        Voice agents that live in your repo. Declarative, self-hosted and built
+        on LiveKit: agents are JSON, tools are plain HTTP, and every call, key
+        and transcript stays on your own infrastructure.
+      </p>
+      <InstallTabs tabs={installTabs} />
+    </Block>
+  );
+}
+
+function WorksWith() {
+  const loop = [...worksWith, ...worksWith];
+  return (
+    <div className="border-b border-white/[0.08] py-6">
+      <p className="mb-4 px-6 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-fd-muted-foreground sm:px-10">
+        Works with
+      </p>
+      <div className="marquee-mask overflow-hidden">
+        <ul className="marquee flex w-max gap-12 text-lg font-semibold text-fd-muted-foreground/70">
+          {loop.map((name, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: the list is repeated on purpose
+            <li key={i}>{name}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function Chip({
+  children,
+  accent,
+}: {
+  children: React.ReactNode;
+  accent?: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        "rounded-sm border px-1.5 py-0.5 font-mono text-[10px]",
+        accent
+          ? "border-fd-primary/30 bg-fd-primary/10 text-fd-primary"
+          : "border-white/10 bg-white/[0.03] text-fd-muted-foreground",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function LatencyBars() {
+  const total = stages.reduce((n, s) => n + s.ms, 0);
+  return (
+    <div className="flex h-1.5 w-40 overflow-hidden rounded-sm bg-white/[0.06]">
+      {stages.map((s) => (
+        <div
+          key={s.name}
+          style={{ width: `${(s.ms / total) * 100}%`, background: s.color }}
+        />
+      ))}
+    </div>
+  );
+}
+
+const features = [
+  {
+    title: "Declarative agents.",
+    body: "Model, voice, tools, barge-in and analysis in one JSON document.",
+    visual: (
+      <>
+        <Chip accent>agents/support.json</Chip>
+        <Chip>PUT</Chip>
+      </>
+    ),
+  },
+  {
+    title: "Bring your own models.",
+    body: "OpenAI, OpenRouter, Groq, Deepgram, ElevenLabs, Cartesia, or any OpenAI-compatible endpoint.",
+    visual: (
+      <>
+        <Chip accent>openrouter</Chip>
+        <Chip>deepgram</Chip>
+        <Chip>cartesia</Chip>
+        <Chip>+5</Chip>
+      </>
+    ),
+  },
+  {
+    title: "Tools on your server.",
+    body: "One webhook server for all your tools, in any language.",
+    visual: (
+      <>
+        <Chip accent>POST /samata</Chip>
+        <Chip>tool-calls</Chip>
+      </>
+    ),
+  },
+  {
+    title: "Real phone numbers.",
+    body: "Import a Telnyx number. Samata wires the LiveKit SIP trunk and dispatch rule.",
+    visual: (
+      <>
+        <Chip accent>+1 415 555 0100</Chip>
+        <Chip>SIP</Chip>
+      </>
+    ),
+  },
+  {
+    title: "Browser calls.",
+    body: "Start a session from your backend, join over WebRTC with a one-room token.",
+    visual: (
+      <>
+        <Chip accent>WebRTC</Chip>
+        <Chip>room token</Chip>
+      </>
+    ),
+  },
+  {
+    title: "Post-call analysis.",
+    body: "A summary and structured data from every call, on your own model key.",
+    visual: (
+      <>
+        <Chip accent>structuredData</Chip>
+        <Chip>summary</Chip>
+      </>
+    ),
+  },
+  {
+    title: "Observability built in.",
+    body: "Transcripts, usage and per-turn latency for every call.",
+    visual: <LatencyBars />,
+  },
+  {
+    title: "Workspaces and API keys.",
+    body: "Real accounts, invitation-only sign-up, keys scoped to a workspace.",
+    visual: (
+      <>
+        <Chip accent>smt_••••3f9a</Chip>
+        <Chip>owner</Chip>
+      </>
+    ),
+  },
+  {
+    title: "Yours to host.",
+    body: "One compose file with prebuilt images. Scale workers with a flag.",
+    visual: (
+      <>
+        <Chip>postgres</Chip>
+        <Chip>livekit</Chip>
+        <Chip>caddy</Chip>
+        <Chip accent>--scale worker=N</Chip>
+      </>
+    ),
+  },
+];
+
 function Features() {
   return (
-    <section className="border-b">
-      <div className="mx-auto max-w-6xl px-6 py-24">
-        <SectionHeading
-          eyebrow="What you get"
-          title="Everything between the caller and your code."
-        />
-        <div className="mt-12 grid gap-px overflow-hidden rounded-xl border bg-fd-border sm:grid-cols-2 lg:grid-cols-3">
-          {features.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="bg-fd-background p-6">
-              <div className="mb-4 flex size-9 items-center justify-center rounded-lg border bg-fd-card text-fd-primary">
-                <Icon className="size-4" />
-              </div>
-              <h3 className="font-medium">{title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-fd-muted-foreground">
-                {body}
-              </p>
+    <Block className="space-y-8">
+      <SectionLabel>Features</SectionLabel>
+      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
+        Everything between the caller and your code, in one repo you can read.
+      </p>
+      <div className="-mx-6 grid border-t border-white/[0.08] sm:-mx-10 sm:grid-cols-2 xl:grid-cols-3">
+        {features.map((f, i) => (
+          <div
+            key={f.title}
+            className="group flex min-h-48 flex-col border-b border-white/[0.08] p-5 transition-colors hover:bg-white/[0.02] sm:border-r sm:[&:nth-child(2n)]:border-r-0 xl:[&:nth-child(2n)]:border-r xl:[&:nth-child(3n)]:border-r-0"
+          >
+            <span className="font-mono text-[10px] text-fd-muted-foreground">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <h3 className="mt-3 text-sm font-medium">{f.title}</h3>
+            <p className="mt-1.5 flex-1 text-[13px] leading-relaxed text-fd-muted-foreground">
+              {f.body}
+            </p>
+            <div className="mt-5 flex flex-wrap items-center gap-1.5">
+              {f.visual}
             </div>
+          </div>
+        ))}
+      </div>
+    </Block>
+  );
+}
+
+function HowItWorks() {
+  return (
+    <Block className="space-y-8">
+      <SectionLabel>How it works</SectionLabel>
+      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
+        Define an agent, start a call, read back what happened. The whole loop
+        is three HTTP requests.
+      </p>
+      <TerminalHero />
+    </Block>
+  );
+}
+
+function Agents({
+  useCases,
+}: {
+  useCases: Awaited<ReturnType<typeof buildUseCases>>;
+}) {
+  return (
+    <Block className="space-y-8">
+      <SectionLabel>Agents</SectionLabel>
+      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
+        An agent is a JSON file. Pick one to see its config next to the call log
+        it produces.
+      </p>
+      <UseCaseTabs items={useCases} />
+      <Link
+        href="/docs/agent-config"
+        className="inline-flex items-center gap-1.5 font-mono text-xs text-fd-primary hover:underline"
+      >
+        Agent config reference <ArrowRight className="size-3.5" />
+      </Link>
+    </Block>
+  );
+}
+
+function Api() {
+  return (
+    <Block className="space-y-8">
+      <SectionLabel>API</SectionLabel>
+      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
+        The dashboard calls the same HTTP API you do. Script agents and calls
+        from CI, call it from your backend. JSON in, JSON out, one bearer key
+        per workspace.
+      </p>
+      <ul className="divide-y divide-white/[0.08] border border-white/[0.08] font-mono text-sm">
+        {endpoints.map((e) => (
+          <li key={e.method + e.path}>
+            <Link
+              href={e.href}
+              className="group flex items-center gap-4 px-4 py-3 transition-colors hover:bg-white/[0.03]"
+            >
+              <span
+                className={cn(
+                  "w-14 shrink-0 rounded-sm px-1.5 py-0.5 text-center text-[0.7rem] font-semibold",
+                  methodColor[e.method],
+                )}
+              >
+                {e.method}
+              </span>
+              <span className="shrink-0">{e.path}</span>
+              <span className="hidden min-w-0 flex-1 truncate text-xs text-fd-muted-foreground md:block">
+                {e.body}
+              </span>
+              <ArrowRight className="ml-auto size-3.5 shrink-0 text-fd-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <Link
+        href="/docs/api"
+        className="inline-flex items-center gap-1.5 font-mono text-xs text-fd-primary hover:underline"
+      >
+        API reference <ArrowRight className="size-3.5" />
+      </Link>
+    </Block>
+  );
+}
+
+function Tools() {
+  return (
+    <Block className="space-y-8">
+      <SectionLabel>Tools</SectionLabel>
+      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
+        No flow builder and no proprietary runtime. Tools are HTTP endpoints on
+        a server you run, in any language, using the same message envelope as
+        Vapi so existing handlers port over with small changes. Agents and tools
+        are idempotent PUTs, so your repo stays the source of truth.
+      </p>
+      <div className="flex min-w-0 flex-col gap-3">
+        <ServerCodeBlock
+          lang="ts"
+          code={toolHandler}
+          codeblock={{ title: "server.ts", className: "my-0 rounded-none" }}
+        />
+        <ServerCodeBlock
+          lang="bash"
+          code={pushCommand}
+          codeblock={{ title: "deploy.sh", className: "my-0 rounded-none" }}
+        />
+      </div>
+      <Link
+        href="/docs/tools"
+        className="inline-flex items-center gap-1.5 font-mono text-xs text-fd-primary hover:underline"
+      >
+        Tools and your webhook server <ArrowRight className="size-3.5" />
+      </Link>
+    </Block>
+  );
+}
+
+function Observability() {
+  const total = stages.reduce((n, s) => n + s.ms, 0);
+  return (
+    <Block className="space-y-8">
+      <SectionLabel>Observability</SectionLabel>
+      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
+        Every call is logged with its transcript, summary, structured data and
+        model usage. Latency is broken down per turn into end of turn,
+        transcription, LLM and speech, so you tune what is actually slow.
+      </p>
+      <div className="border border-white/[0.08] bg-black/30 p-5 font-mono">
+        <div className="flex items-baseline justify-between text-xs text-fd-muted-foreground">
+          <span>latency · voice_to_voice</span>
+          <span className="text-2xl font-semibold tabular-nums text-fd-foreground">
+            {(total / 1000).toFixed(2)}
+            <span className="text-sm text-fd-muted-foreground">s</span>
+          </span>
+        </div>
+        <div className="mt-5 flex h-2.5 overflow-hidden rounded-sm bg-white/[0.06]">
+          {stages.map((s) => (
+            <div
+              key={s.name}
+              style={{ width: `${(s.ms / total) * 100}%`, background: s.color }}
+            />
           ))}
         </div>
+        <dl className="mt-6 grid gap-2.5 text-xs sm:grid-cols-2">
+          {stages.map((s) => (
+            <div key={s.name} className="flex items-center gap-3">
+              <span
+                className="size-2 rounded-sm"
+                style={{ background: s.color }}
+              />
+              <dt className="flex-1 text-fd-muted-foreground">{s.name}</dt>
+              <dd className="tabular-nums">{s.ms} ms</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="mt-5 text-[0.7rem] text-fd-muted-foreground/70">
+          {"// example turn"}
+        </p>
       </div>
-    </section>
+    </Block>
   );
 }
 
 function Architecture() {
-  const columns = [
+  const parts = [
     {
       name: "LiveKit",
-      role: "Media",
       body: "Carries WebRTC and SIP audio and dispatches each call to a worker. Self-host it or use LiveKit Cloud.",
     },
     {
       name: "Worker",
-      role: "Stateless Python",
-      body: "Builds the speech-to-text, LLM and text-to-speech pipeline for each call from the config it is handed. Scale it horizontally.",
+      body: "Builds the speech-to-text, LLM and text-to-speech pipeline for each call from the config it is handed. Stateless, so scale it horizontally.",
     },
     {
       name: "Control plane",
-      role: "Next.js + Postgres",
       body: "Stores agents and call logs, runs tools, does post-call analysis, and serves the dashboard and API.",
     },
   ];
-
   return (
-    <section className="border-b">
-      <div className="mx-auto max-w-6xl px-6 py-24">
-        <SectionHeading
-          eyebrow="Architecture"
-          title="Real-time media is kept apart from agent logic."
-        >
-          Three pieces, each doing one job. Your own code never goes in the
-          Samata repo.
-        </SectionHeading>
-        <div className="mt-12 grid items-stretch gap-4 md:grid-cols-[1fr_auto_1fr_auto_1fr]">
-          {columns.map((col, i) => (
-            <ArchitectureColumn
-              key={col.name}
-              {...col}
-              last={i === columns.length - 1}
-            />
-          ))}
-        </div>
-        <p className="mt-6 text-sm text-fd-muted-foreground">
-          Callers arrive by phone (PSTN to LiveKit SIP) or browser (WebRTC). The
-          worker and control plane talk over webhooks authenticated with a
-          shared secret, and the control plane forwards tool calls and call
-          reports to your server.{" "}
-          <Link
-            href="/docs/architecture"
-            className="text-fd-primary hover:underline"
+    <Block className="space-y-8">
+      <SectionLabel>Architecture</SectionLabel>
+      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
+        Real-time media is kept apart from agent logic. Three pieces, each doing
+        one job, and your own code never goes in the Samata repo.
+      </p>
+      <div className="relative border border-white/[0.08] bg-black/30">
+        <pre className="overflow-x-auto p-5 font-mono text-[11.5px] leading-[1.6] text-fd-muted-foreground">
+          {diagram}
+        </pre>
+        <div className="flow-line absolute inset-x-0 top-0 h-px" />
+      </div>
+      <div className="-mx-6 grid border-t border-white/[0.08] sm:-mx-10 md:grid-cols-3">
+        {parts.map((p) => (
+          <div
+            key={p.name}
+            className="border-b border-white/[0.08] p-5 md:border-r md:last:border-r-0"
           >
-            Read more
-          </Link>
-        </p>
+            <h3 className="font-mono text-xs text-fd-primary">{p.name}</h3>
+            <p className="mt-2 text-[13px] leading-relaxed text-fd-muted-foreground">
+              {p.body}
+            </p>
+          </div>
+        ))}
       </div>
-    </section>
+      <Link
+        href="/docs/architecture"
+        className="inline-flex items-center gap-1.5 font-mono text-xs text-fd-primary hover:underline"
+      >
+        Architecture <ArrowRight className="size-3.5" />
+      </Link>
+    </Block>
   );
 }
 
-function ArchitectureColumn({
-  name,
-  role,
-  body,
-  last,
-}: {
-  name: string;
-  role: string;
-  body: string;
-  last: boolean;
-}) {
+function Providers() {
   return (
-    <>
-      <div className="rounded-xl border bg-fd-card p-6">
-        <p className="font-mono text-xs text-fd-muted-foreground">{role}</p>
-        <h3 className="mt-1 text-lg font-medium">{name}</h3>
-        <p className="mt-3 text-sm leading-relaxed text-fd-muted-foreground">
-          {body}
-        </p>
-      </div>
-      {last ? null : (
-        <div
-          className="hidden items-center justify-center text-fd-muted-foreground md:flex"
-          aria-hidden="true"
-        >
-          <ArrowRight className="size-4" />
-        </div>
-      )}
-    </>
-  );
-}
-
-function Models() {
-  return (
-    <section className="border-b">
-      <div className="mx-auto grid max-w-6xl gap-12 px-6 py-24 lg:grid-cols-2">
-        <SectionHeading
-          eyebrow="Your keys"
-          title="Pick a model, a transcriber and a voice per agent."
-        >
-          Calls use your workspace's keys for whichever providers an agent
-          chose. Keys are encrypted at rest, shown only as their last four
-          characters, and handed to a worker only when it takes a call.
-        </SectionHeading>
-        <div className="space-y-3">
-          {providers.map(({ layer, names }) => (
-            <div
-              key={layer}
-              className="flex flex-col gap-3 rounded-xl border bg-fd-card p-5 sm:flex-row sm:items-center"
-            >
-              <span className="w-28 shrink-0 font-mono text-xs uppercase tracking-widest text-fd-muted-foreground">
-                {layer}
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {names.map((name) => (
-                  <span
-                    key={name}
-                    className="rounded-md border bg-fd-background px-2.5 py-1 text-sm"
-                  >
-                    {name}
-                  </span>
-                ))}
-              </div>
+    <Block className="space-y-8">
+      <SectionLabel>Providers</SectionLabel>
+      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
+        Pick a model, a transcriber and a voice per agent. Calls use your
+        workspace's keys, which are encrypted at rest, shown only as their last
+        four characters, and handed to a worker only when it takes a call.
+      </p>
+      <div className="border border-white/[0.08] bg-black/30 font-mono text-xs">
+        {providers.map(({ layer, names }, i) => (
+          <div
+            key={layer}
+            className={cn(
+              "flex flex-col gap-2.5 p-4 sm:flex-row sm:items-center",
+              i > 0 && "border-t border-white/[0.08]",
+            )}
+          >
+            <span className="w-28 shrink-0 text-fd-muted-foreground">
+              {layer}:
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {names.map((name) => (
+                <Chip key={name} accent>
+                  "{name}"
+                </Chip>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
-    </section>
+      <Link
+        href="/docs/models"
+        className="inline-flex items-center gap-1.5 font-mono text-xs text-fd-primary hover:underline"
+      >
+        Bring your own models <ArrowRight className="size-3.5" />
+      </Link>
+    </Block>
   );
 }
 
 function SelfHost() {
   return (
-    <section className="border-b">
-      <div className="mx-auto grid max-w-6xl gap-12 px-6 py-24 lg:grid-cols-2 lg:items-center">
-        <div className="min-w-0">
-          <ServerCodeBlock
-            lang="bash"
-            code={`mkdir samata && cd samata
-curl -O https://raw.githubusercontent.com/samata-oss/samata/main/deploy/docker-compose.yml
-curl -o .env https://raw.githubusercontent.com/samata-oss/samata/main/deploy/.env.example
-$EDITOR .env            # domains and secrets
-docker compose up -d`}
-            codeblock={{ title: "Deploy", className: "my-0" }}
-          />
-        </div>
-        <div>
-          <SectionHeading
-            eyebrow="Self-host"
-            title="One compose file, prebuilt images."
-          >
-            You don't need to clone or fork the repo. Every release ships a
-            control plane image and a worker image, and the compose file adds
-            Caddy for automatic TLS, LiveKit, SIP, Redis and Postgres. Add
-            workers with <code className="font-mono text-sm">--scale</code>.
-          </SectionHeading>
-          <Link
-            href="/docs/deploy"
-            className="mt-8 inline-flex items-center gap-1.5 text-sm font-medium text-fd-primary hover:underline"
-          >
-            Deployment guide <ArrowRight className="size-4" />
-          </Link>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Cta() {
-  return (
-    <section className="relative overflow-hidden border-b">
-      <div
-        className="absolute left-1/2 top-1/2 h-64 w-[36rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-fd-primary/15 blur-3xl"
-        aria-hidden="true"
+    <Block className="space-y-8">
+      <SectionLabel>Self-host</SectionLabel>
+      <p className="max-w-2xl text-sm leading-relaxed text-fd-muted-foreground">
+        You don't need to clone or fork the repo. Every release ships a control
+        plane image and a worker image, and the compose file adds Caddy for
+        automatic TLS, LiveKit, SIP, Redis and Postgres.
+      </p>
+      <ServerCodeBlock
+        lang="bash"
+        code={deployScript}
+        codeblock={{ title: "deploy", className: "my-0 rounded-none" }}
       />
-      <div className="relative mx-auto flex max-w-3xl flex-col items-center px-6 py-24 text-center">
-        <h2 className="text-balance text-3xl font-semibold tracking-tight md:text-4xl">
-          Run your first call in a few minutes.
-        </h2>
-        <p className="mt-4 text-fd-muted-foreground">
-          The quickstart runs the whole stack on your laptop. No accounts needed
-          except the model providers you choose.
-        </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link
-            href="/docs/quickstart"
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-fd-primary px-5 text-sm font-medium text-fd-primary-foreground transition-opacity hover:opacity-90"
-          >
-            Quickstart <ArrowRight className="size-4" />
-          </Link>
-          <a
-            href={githubUrl}
-            className="inline-flex h-10 items-center rounded-lg border bg-fd-card px-5 text-sm font-medium transition-colors hover:bg-fd-accent"
-          >
-            Star on GitHub
-          </a>
-        </div>
-      </div>
-    </section>
+      <Link
+        href="/docs/deploy"
+        className="inline-flex items-center gap-1.5 font-mono text-xs text-fd-primary hover:underline"
+      >
+        Deployment guide <ArrowRight className="size-3.5" />
+      </Link>
+    </Block>
   );
 }
 
 function Footer() {
-  const links = [
-    { href: "/docs", label: "Docs" },
-    { href: "/docs/api", label: "API" },
-    { href: "/docs/deploy", label: "Deploy" },
-    { href: githubUrl, label: "GitHub" },
-  ];
   return (
-    <footer className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-fd-muted-foreground sm:flex-row">
-      <p>© 2026 Samata. Licensed under Apache 2.0.</p>
+    <footer className="flex flex-col items-start justify-between gap-3 px-6 py-6 font-mono text-[11px] text-fd-muted-foreground sm:flex-row sm:items-center sm:px-10">
+      <p>© 2026 Samata · Apache-2.0</p>
       <nav className="flex gap-5">
-        {links.map((l) => (
-          <Link
-            key={l.label}
-            href={l.href}
-            className="transition-colors hover:text-fd-foreground"
-          >
-            {l.label}
-          </Link>
-        ))}
+        <Link href="/docs" className="hover:text-fd-foreground">
+          Docs
+        </Link>
+        <Link href="/docs/api" className="hover:text-fd-foreground">
+          API
+        </Link>
+        <Link href="/docs/deploy" className="hover:text-fd-foreground">
+          Deploy
+        </Link>
+        <a href={githubUrl} className="hover:text-fd-foreground">
+          GitHub
+        </a>
       </nav>
     </footer>
   );
