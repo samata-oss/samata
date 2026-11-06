@@ -1,13 +1,11 @@
-import { CheckCircle2Icon, CircleAlertIcon } from "lucide-react";
-import { headers } from "next/headers";
-import Link from "next/link";
-import { desc, eq } from "drizzle-orm";
 import { ApiKeysManager } from "@/components/api-keys-manager";
 import { PageShell } from "@/components/page-shell";
 import { db } from "@/db";
 import { apiKey } from "@/db/schema";
 import { canManageTeam } from "@/lib/workspace";
 import { requireWorkspaceSession } from "@/server/workspace";
+import { desc, eq } from "drizzle-orm";
+import { headers } from "next/headers";
 
 const ENDPOINTS = [
   ["GET", "/api/agents", "List assistants"],
@@ -54,18 +52,6 @@ const WEBHOOKS = [
   ["/api/webhooks/end-of-call-report", "Worker reports the finished call"],
 ] as const;
 
-function Status({ ok, children }: { ok: boolean; children: React.ReactNode }) {
-  const Icon = ok ? CheckCircle2Icon : CircleAlertIcon;
-  return (
-    <div className="flex items-center gap-2 text-sm">
-      <Icon
-        className={ok ? "size-4 text-emerald-500" : "size-4 text-amber-500"}
-      />
-      {children}
-    </div>
-  );
-}
-
 export default async function ApiKeysPage() {
   const { organizationId, role } = await requireWorkspaceSession();
   const keys = await db
@@ -87,65 +73,8 @@ export default async function ApiKeysPage() {
   const base = `${proto}://${host}`;
 
   return (
-    <PageShell
-      title="API Keys"
-      description="Keys for your servers and scripts to call the API, and the control plane's own configuration."
-    >
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-sm font-medium">API keys</h2>
-          <p className="text-sm text-muted-foreground">
-            Send one as <code>Authorization: Bearer &lt;key&gt;</code>. It acts
-            on this workspace. Pushing tools (<code>/api/tools</code>) requires
-            one.
-          </p>
-        </div>
-        <ApiKeysManager keys={keys} canManage={canManageTeam(role)} />
-      </section>
-
-      <section className="space-y-3 rounded-lg border bg-card p-4">
-        <h2 className="text-sm font-medium">Configuration</h2>
-        <p className="text-xs text-muted-foreground">
-          Environment variables on the control plane. Never shown here.
-        </p>
-        <Status ok={Boolean(process.env.SAMATA_API_KEY)}>
-          <code>SAMATA_API_KEY</code>
-          <span className="text-muted-foreground">
-            Optional bearer key from the environment. It acts on the default
-            workspace.
-          </span>
-        </Status>
-        <Status ok={Boolean(process.env.SAMATA_WEBHOOK_SECRET)}>
-          <code>SAMATA_WEBHOOK_SECRET</code>
-          <span className="text-muted-foreground">
-            Shared secret the worker sends on every webhook
-          </span>
-        </Status>
-        <Status ok={Boolean(process.env.BETTER_AUTH_SECRET)}>
-          <code>BETTER_AUTH_SECRET</code>
-          <span className="text-muted-foreground">
-            Signs dashboard sessions (required in production)
-          </span>
-        </Status>
-        <Status
-          ok={Boolean(
-            process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET,
-          )}
-        >
-          <code>LIVEKIT_API_KEY</code> / <code>LIVEKIT_API_SECRET</code>
-          <span className="text-muted-foreground">
-            Mint browser test tokens
-          </span>
-        </Status>
-        <p className="text-xs text-muted-foreground">
-          Model provider keys (OpenAI, Deepgram, Cartesia, …) are not configured
-          here: add them per workspace on{" "}
-          <Link href="/provider-keys" className="underline">
-            Provider Keys
-          </Link>
-          .
-        </p>
-      </section>
+    <PageShell title="API Keys">
+      <ApiKeysManager keys={keys} canManage={canManageTeam(role)} />
 
       <section className="space-y-3">
         <h2 className="text-sm font-medium">Management API</h2>
