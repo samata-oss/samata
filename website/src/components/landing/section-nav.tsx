@@ -36,10 +36,24 @@ export function SectionNav({ className }: { className?: string }) {
       frame = requestAnimationFrame(update);
     };
 
+    const onKey = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable]")) return;
+      const section = sections[Number(event.key) - 1];
+      if (!section) return;
+      document
+        .getElementById(section.id)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setActive(section.id);
+    };
+
     update();
+    window.addEventListener("keydown", onKey);
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
     return () => {
+      window.removeEventListener("keydown", onKey);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       cancelAnimationFrame(frame);
@@ -74,6 +88,16 @@ export function SectionNav({ className }: { className?: string }) {
           </a>
         );
       })}
+      <p className="mt-3 hidden items-center gap-1.5 text-[11px] text-zinc-600 lg:flex">
+        <kbd className="rounded-sm border border-white/15 px-1 text-zinc-500">
+          1
+        </kbd>
+        –
+        <kbd className="rounded-sm border border-white/15 px-1 text-zinc-500">
+          {sections.length}
+        </kbd>
+        to jump
+      </p>
     </nav>
   );
 }

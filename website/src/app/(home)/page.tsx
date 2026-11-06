@@ -2,8 +2,16 @@ import { ServerCodeBlock } from "fumadocs-ui/components/codeblock.rsc";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { CallSimulator } from "@/components/landing/call-simulator";
+import {
+  CursorGlow,
+  Reveal,
+  ScrollProgress,
+  Spotlight,
+} from "@/components/landing/fx";
 import { InstallTabs } from "@/components/landing/install-tabs";
-import { GrainMark } from "@/components/landing/grain-mark";
+import { Latency } from "@/components/landing/latency";
+import { LiveMark } from "@/components/landing/live-mark";
 import { SectionNav } from "@/components/landing/section-nav";
 import { ProductCards } from "@/components/landing/surfaces";
 import { TerminalHero } from "@/components/landing/terminal-hero";
@@ -256,6 +264,7 @@ export default async function HomePage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-black text-white">
+      <CursorGlow />
       <Nav stars={stars} />
       <div className="lg:grid lg:grid-cols-[minmax(18rem,26rem)_minmax(0,1fr)] lg:items-start">
         <aside className="relative flex flex-col gap-8 overflow-hidden border-b border-white/10 px-6 py-8 sm:px-8 lg:sticky lg:top-12 lg:h-[calc(100svh-3rem)] lg:justify-between lg:gap-6 lg:overflow-y-auto lg:border-r lg:border-b-0 lg:px-10 lg:py-6">
@@ -264,7 +273,7 @@ export default async function HomePage() {
             className="grain pointer-events-none absolute inset-0 opacity-[0.18]"
           />
           <div className="relative">
-            <GrainMark />
+            <LiveMark />
             <a
               href={githubUrl}
               className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-400 transition-colors hover:border-white/25 hover:text-white"
@@ -299,7 +308,14 @@ export default async function HomePage() {
           <SectionNav className="relative" />
         </aside>
 
-        <main className="min-w-0">
+        <main className="relative isolate min-w-0">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[720px] overflow-hidden"
+          >
+            <div className="bg-grid absolute inset-0 opacity-70" />
+            <div className="aurora absolute -top-40 right-[-10%] h-[480px] w-[70%] rounded-full bg-indigo-500/20 blur-[120px]" />
+          </div>
           <section
             id="product"
             className="scroll-mt-14 px-6 py-14 sm:px-8 lg:px-12 lg:py-16"
@@ -315,6 +331,9 @@ export default async function HomePage() {
               your call logs stay in your Postgres.
             </p>
             <div className="mt-8">
+              <CallSimulator />
+            </div>
+            <div className="mt-3">
               <InstallTabs tabs={installTabs} />
             </div>
             <div className="mt-8">
@@ -333,7 +352,7 @@ export default async function HomePage() {
             kicker="Features"
             title="Everything a call needs, in the repo."
           >
-            <div className="grid grid-cols-1 gap-px bg-white/10 sm:grid-cols-2">
+            <Spotlight className="grid grid-cols-1 gap-px sm:grid-cols-2">
               {features.map((feature) => (
                 <div key={feature.title} className="bg-black p-4">
                   <h3 className="flex items-center gap-2 text-sm font-medium">
@@ -345,7 +364,7 @@ export default async function HomePage() {
                   </p>
                 </div>
               ))}
-            </div>
+            </Spotlight>
           </Block>
 
           <Block
@@ -354,7 +373,7 @@ export default async function HomePage() {
             title="You pick every stage of the call."
             lede="A transcriber, a model and a voice, per agent. Calls use your workspace keys, encrypted at rest and handed to a worker only when it takes a call."
           >
-            <div className="grid grid-cols-1 gap-px bg-white/10 sm:grid-cols-2">
+            <Spotlight className="grid grid-cols-1 gap-px sm:grid-cols-2">
               {pipeline.map((stage) => {
                 const names =
                   "layer" in stage
@@ -391,7 +410,7 @@ export default async function HomePage() {
                   </div>
                 );
               })}
-            </div>
+            </Spotlight>
             <div className="border border-t-0 border-white/10 bg-black px-4 py-3">
               <p className="font-mono text-[10px] text-amber-200/90">
                 ↳ tool-calls
@@ -400,7 +419,7 @@ export default async function HomePage() {
                 POST to your own server, in any language.
               </p>
             </div>
-            <Latency />
+            <Latency stages={stages} />
             <More href="/docs/models">Bring your own models</More>
           </Block>
 
@@ -486,7 +505,7 @@ export default async function HomePage() {
                 {diagram}
               </pre>
             </div>
-            <div className="mt-3 grid gap-px bg-white/10 sm:grid-cols-3">
+            <Spotlight className="mt-3 grid gap-px sm:grid-cols-3">
               {parts.map((part) => (
                 <div key={part.name} className="bg-black p-4">
                   <h3 className="font-mono text-xs text-zinc-300">
@@ -497,7 +516,7 @@ export default async function HomePage() {
                   </p>
                 </div>
               ))}
-            </div>
+            </Spotlight>
             <More href="/docs/deploy">Deployment guide</More>
 
             <div className="mt-14">
@@ -553,7 +572,7 @@ function Nav({ stars }: { stars: number | null }) {
     { href: "/docs/deploy", label: "Deploy" },
   ];
   return (
-    <header className="sticky top-0 z-40 flex h-12 border-b border-white/10 bg-black">
+    <header className="sticky top-0 z-40 flex h-12 border-b border-white/10 bg-black/80 backdrop-blur-md">
       <Link
         href="/"
         className="flex items-center gap-2 border-r border-white/10 px-4 sm:px-5"
@@ -587,6 +606,7 @@ function Nav({ stars }: { stars: number | null }) {
           ) : null}
         </a>
       </nav>
+      <ScrollProgress />
     </header>
   );
 }
@@ -609,18 +629,20 @@ function Block({
       id={id}
       className="scroll-mt-14 border-t border-white/10 px-6 py-14 sm:px-8 lg:px-12 lg:py-16"
     >
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
-        {kicker}
-      </p>
-      <h2 className="mt-3 max-w-xl text-xl font-medium tracking-tight sm:text-[1.65rem]">
-        {title}
-      </h2>
-      {lede ? (
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400">
-          {lede}
+      <Reveal>
+        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+          {kicker}
         </p>
-      ) : null}
-      <div className="mt-8">{children}</div>
+        <h2 className="mt-3 max-w-xl text-xl font-medium tracking-tight sm:text-[1.65rem]">
+          {title}
+        </h2>
+        {lede ? (
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400">
+            {lede}
+          </p>
+        ) : null}
+        <div className="mt-8">{children}</div>
+      </Reveal>
     </section>
   );
 }
@@ -634,44 +656,6 @@ function More({ href, children }: { href: string; children: string }) {
       {children}
       <ArrowRight className="size-3.5" />
     </Link>
-  );
-}
-
-function Latency() {
-  const total = stages.reduce((sum, stage) => sum + stage.ms, 0);
-  return (
-    <div className="mt-3 border border-white/10 bg-black p-4 font-mono">
-      <div className="flex items-baseline justify-between text-xs text-zinc-500">
-        <span>latency · voice_to_voice</span>
-        <span className="text-2xl font-medium tabular-nums text-white">
-          {(total / 1000).toFixed(2)}
-          <span className="text-sm text-zinc-500">s</span>
-        </span>
-      </div>
-      <div className="mt-4 flex h-1.5 overflow-hidden bg-white/10">
-        {stages.map((stage) => (
-          <div
-            key={stage.name}
-            style={{
-              width: `${(stage.ms / total) * 100}%`,
-              background: stage.color,
-            }}
-          />
-        ))}
-      </div>
-      <dl className="mt-4 grid gap-2 text-xs sm:grid-cols-2">
-        {stages.map((stage) => (
-          <div key={stage.name} className="flex items-center gap-3">
-            <span
-              className="size-1.5"
-              style={{ background: stage.color }}
-            />
-            <dt className="flex-1 text-zinc-500">{stage.name}</dt>
-            <dd className="tabular-nums text-zinc-300">{stage.ms} ms</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
   );
 }
 
