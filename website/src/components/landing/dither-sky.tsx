@@ -4,14 +4,12 @@ import { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 
 /**
- * The hero pane's backdrop: sound spreading from a point below the pane,
- * rendered as ordered dither. Two sources ring out in the brand's indigo and
- * their waves interfere, so the rings knot and part as they rise and fade. A
- * smooth field is evaluated per cell, then each cell is lit in full or left
- * dim by a Bayer threshold, which turns the rings into dots on black. It
- * shares the dither language of the `LiveMark` waveform. The canvas is drawn
- * at one pixel per cell and scaled up without smoothing, so every cell stays
- * crisp.
+ * The hero pane's backdrop: the limb of a planet seen from orbit, rendered as
+ * ordered dither. A smooth scene is evaluated per cell, then each cell is
+ * either lit in full or left dim depending on a Bayer threshold, so the glow
+ * dissolves into coloured dots on black. It shares the dither language of the
+ * `LiveMark` waveform. The canvas is drawn at one pixel per cell and scaled up
+ * without smoothing, so every cell stays crisp.
  */
 
 const BAYER8 = [
@@ -37,54 +35,53 @@ function hash(x: number, y: number) {
 
 type Rgb = [number, number, number];
 
-/** Wavelength of the rings, in pane heights. */
-const LAMBDA = 0.085;
-/** How fast the rings travel outward, in wavelengths per second. */
-const SPEED = 0.16;
+/** The scene at (u, v) in 0..1, as linear-ish 0..1 colour, plus a time `t`. */
+function scene(u: number, v: number, t: number, out: Rgb) {
+  // The limb: a shallow arc that falls from left to right.
+  const limb =
+    0.7 +
+    0.2 * u -
+    0.06 * Math.sin(u * Math.PI) +
+    0.004 * Math.sin(t * 0.35 + u * 3);
+  const d = v - limb;
 
-/** One ring pattern: 1 on the crest, 0 in the trough. */
-function rings(dx: number, dy: number, t: number, phase: number) {
-  const r = Math.hypot(dx, dy);
-  const w =
-    0.5 + 0.5 * Math.cos(2 * Math.PI * (r / LAMBDA - t * SPEED) + phase);
-  return { w, r };
+  // Sky above the limb: navy overhead, a bright blue haze hugging the line.
+  const up = Math.max(0, -d);
+  const below = Math.max(0, d);
+  // The sky stops at the limb, so the haze fades just under the line.
+  const cut = Math.exp(-below / 0.01);
+  const haze = Math.exp(-up / 0.17) * cut;
+  const high = Math.exp(-up / 0.55) * cut;
+  let r = (0.02 + 0.03 * high) * cut + 0.08 * haze;
+  let g = (0.05 + 0.1 * high) * cut + 0.4 * haze;
+  let b = (0.12 + 0.28 * high) * cut + 0.85 * haze;
+
+  // The line itself runs hotter in some places than others.
+  const heat =
+    0.62 +
+    0.38 * Math.sin(u * 4.2 + 1.1 + t * 0.25) * Math.sin(u * 1.7 + 0.4) +
+    0.25 * Math.exp(-(((u - 0.55) / 0.3) ** 2));
+  const hot = clamp(heat, 0.25, 1.2);
+
+  const core = Math.exp(-((d / 0.012) ** 2)) * hot;
+  const flame = (d >= 0 ? Math.exp(-below / 0.03) : Math.exp(-up / 0.02)) * hot;
+  const ember = (d >= 0 ? Math.exp(-below / 0.07) : 0) * hot;
+
+  r += core * 1.0 + flame * 1.0 + ember * 0.55;
+  g += core * 0.7 + flame * 0.46 + ember * 0.1;
+  b += core * 0.16 + flame * 0.02;
+
+  // Below the limb the planet is dark, with a cold wash far from the glow.
+  const wash = d > 0 ? 0.03 * Math.exp(-below / 0.5) : 0;
+  b += wash;
+  g += wash * 0.3;
+
+  out[0] = r;
+  out[1] = g;
+  out[2] = b;
 }
 
-/**
- * The field at (u, v) in 0..1 as 0..1 colour, at time `t`. `aspect` is the
- * pane's width over its height, so the rings stay circular.
- */
-function scene(u: number, v: number, t: number, aspect: number, out: Rgb) {
-  const x = u * aspect;
-  const a = rings(x - aspect * 0.42, v - 1.18, t, 0);
-  const b = rings(x - aspect * 0.86, v - 1.06, t * 0.9, 1.7);
-
-  // Where the two sets of rings meet in step the crests reinforce, so the
-  // product picks out a lattice of bright knots inside the rings.
-  const crest = (a.w * 0.55 + b.w * 0.45) ** 3;
-  const knot = (a.w * b.w) ** 2;
-  const reach = Math.exp(-Math.min(a.r, b.r) / 0.85);
-  const energy = clamp((crest * 0.9 + knot * 0.5) * reach, 0, 1);
-
-  // A soft indigo bloom under the rings, so the dark is not flat.
-  const bloom = Math.exp(
-    -(((x - aspect * 0.5) / (aspect * 0.8)) ** 2) - ((v - 1) / 0.45) ** 2,
-  );
-
-  // Deep indigo in the trough, lavender on the crest, with a violet lean in
-  // the far field. The brightness is carried by `gain`.
-  const hot = energy ** 1.3;
-  const far = 1 - reach;
-  out[0] = 0.18 + 0.6 * hot + 0.3 * far;
-  out[1] = 0.16 + 0.55 * hot * hot;
-  out[2] = 0.95;
-  const gain = 0.06 + energy * 0.95 + 0.12 * bloom;
-  out[0] *= gain;
-  out[1] *= gain;
-  out[2] *= gain;
-}
-
-export function DitherWaves({ className }: { className?: string }) {
+export function DitherSky({ className }: { className?: string }) {
   const host = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
 
@@ -123,7 +120,7 @@ export function DitherWaves({ className }: { className?: string }) {
         const v = (y + 0.5) / rows;
         for (let x = 0; x < cols; x++) {
           const u = (x + 0.5) / cols;
-          scene(u, v, t, cols / rows, rgb);
+          scene(u, v, t, rgb);
           const lum = 0.3 * rgb[0] + 0.59 * rgb[1] + 0.11 * rgb[2];
           const threshold =
             (BAYER8[(y & 7) * 8 + (x & 7)] + 0.5) / 64 +
