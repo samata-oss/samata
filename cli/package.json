@@ -1,6 +1,6 @@
 {
   "name": "@samata-oss/cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Run Samata, the self-hosted voice AI orchestrator, on your machine with one command.",
   "keywords": [
     "voice",
