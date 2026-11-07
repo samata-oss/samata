@@ -107,6 +107,8 @@ const card =
 
 const primary =
   "inline-flex h-9 items-center bg-fd-primary px-4 text-xs font-medium text-fd-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.18)] transition-colors hover:bg-fd-primary/85";
+/** The hero's main button: a touch taller than the in-page ones. */
+const hero = primary.replace("h-9 ", "h-10 ").replace("px-4", "px-5");
 const ghost =
   "inline-flex h-9 items-center border border-white/[0.14] px-4 text-xs text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white";
 
@@ -121,27 +123,37 @@ export default async function HomePage() {
       <div className="lg:grid lg:grid-cols-[minmax(22rem,42%)_minmax(0,1fr)] lg:items-start">
         <aside className="lg:sticky lg:top-14 lg:h-[calc(100svh-3.5rem)]">
           <div className="relative h-full border-b border-white/[0.11] lg:border-r lg:border-b-0">
-            <div className="relative flex h-full flex-col gap-8 px-6 py-10 sm:px-8 lg:justify-center lg:gap-6 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:px-10 lg:pt-8 lg:pb-40 xl:px-14">
-              <div className="@container relative mx-auto w-full max-w-2xl">
-                <LiveMark className="size-48 sm:size-52 lg:size-[clamp(11rem,14.5vw,18rem)]" />
+            <div className="relative flex h-full flex-col px-6 py-10 sm:px-8 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:px-8 lg:pt-6 lg:pb-28 xl:px-10">
+              {/* The mark floats on its own, centred in the space above the copy. */}
+              <div className="flex flex-1 items-center justify-center pb-8 lg:min-h-[12rem] lg:pb-4">
+                <LiveMark className="size-48 sm:size-52 lg:size-[clamp(11rem,16vw,20rem)]" />
+              </div>
+
+              {/* The copy sits flush left, low in the pane. */}
+              <div className="@container w-full">
                 <a
                   href={githubUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={cn(
-                    "mt-5 inline-flex items-center gap-2 text-sm text-zinc-300 transition-colors hover:text-white",
+                    "inline-flex items-center gap-2 border border-white/[0.14] bg-white/[0.04] px-3 py-1.5 text-xs text-zinc-300 backdrop-blur-sm transition-colors hover:border-white/25 hover:text-white",
                     legible,
                   )}
                 >
                   <Scale
                     aria-hidden="true"
-                    className="size-3.5 text-fd-primary"
+                    className="size-3 text-fd-primary"
                   />
-                  MIT · Self-hosted
+                  MIT
+                  <span aria-hidden="true" className="text-zinc-600">
+                    |
+                  </span>
+                  <span className="text-white">Self-hosted</span>
+                  <span aria-hidden="true">→</span>
                 </a>
                 <h1
                   className={cn(
-                    "mt-3 text-[1.9rem] font-medium leading-[1.12] tracking-[-0.04em] sm:text-4xl lg:whitespace-nowrap lg:text-[clamp(1.1rem,5.4cqw,3.25rem)]",
+                    "mt-5 text-[1.9rem] font-normal leading-[1.1] tracking-[-0.045em] sm:text-4xl lg:whitespace-nowrap lg:text-[clamp(1.1rem,5.6cqw,3.4rem)]",
                     legible,
                   )}
                 >
@@ -150,22 +162,78 @@ export default async function HomePage() {
                 </h1>
                 <p
                   className={cn(
-                    "mt-4 max-w-md text-sm leading-relaxed text-zinc-200",
+                    "mt-4 max-w-sm text-[13px] leading-relaxed text-zinc-300",
                     legible,
                   )}
                 >
                   Declarative agents, tools over HTTP, and every transcript on
                   infrastructure you run.
                 </p>
-                <div className="mt-6 flex flex-wrap items-center gap-3">
-                  <Link href="/docs/quickstart" className={primary}>
+                <div className="mt-7 flex flex-wrap items-center gap-4">
+                  <Link href="/docs/quickstart" className={hero}>
                     Get started
                   </Link>
-                  <a href={githubUrl} className={cn(ghost, legible)}>
-                    GitHub
-                  </a>
+                  <span className="relative inline-flex">
+                    <a
+                      href={githubUrl}
+                      className={cn(ghost.replace("h-9 ", "h-10 "), legible)}
+                    >
+                      GitHub
+                    </a>
+                    {/* Guide lines that run past the border, like a drafting mark. */}
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -inset-x-3 top-0 h-px bg-white/[0.14]"
+                    />
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -inset-x-3 bottom-0 h-px bg-white/[0.14]"
+                    />
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -inset-y-3 left-0 w-px bg-white/[0.14]"
+                    />
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -inset-y-3 right-0 w-px bg-white/[0.14]"
+                    />
+                  </span>
                 </div>
               </div>
+
+              {/* Quiet links along the bottom edge. */}
+              <nav
+                aria-label="Project"
+                className={cn(
+                  "absolute inset-x-6 bottom-5 hidden items-center gap-3 text-[11px] text-zinc-400 sm:inset-x-8 lg:flex xl:inset-x-10",
+                  legible,
+                )}
+              >
+                <Link
+                  href="/docs"
+                  className="transition-colors hover:text-white"
+                >
+                  Docs
+                </Link>
+                <span aria-hidden="true" className="text-zinc-700">
+                  /
+                </span>
+                <a
+                  href={githubUrl}
+                  className="transition-colors hover:text-white"
+                >
+                  GitHub
+                </a>
+                <span aria-hidden="true" className="text-zinc-700">
+                  /
+                </span>
+                <a
+                  href={`${githubUrl}/issues`}
+                  className="transition-colors hover:text-white"
+                >
+                  Issues
+                </a>
+              </nav>
             </div>
           </div>
         </aside>
