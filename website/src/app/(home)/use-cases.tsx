@@ -223,7 +223,7 @@ export async function buildUseCases(): Promise<UseCase[]> {
       can: "Be on a call in a few minutes",
       code: await code(
         "bash",
-        `git clone https://github.com/Samata-OSS/samata.git
+        `git clone https://github.com/samata-oss/samata.git
 cd samata
 docker compose up -d livekit postgres
 

@@ -19,7 +19,7 @@ const installTabs = [
   {
     id: "clone",
     label: "Clone",
-    command: "git clone https://github.com/Samata-OSS/samata.git",
+    command: "git clone https://github.com/samata-oss/samata.git",
   },
   {
     id: "run",
