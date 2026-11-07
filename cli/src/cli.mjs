@@ -36,10 +36,13 @@ const red = paint("31");
 const step = (text) => console.log(`${cyan("→")} ${text}`);
 const note = (text) => console.log(`  ${dim(text)}`);
 
+/** How people invoke this package, for the commands we tell them to run. */
+const CMD = "npx @samata-oss/cli";
+
 const HELP = `${bold("samata")}: run Samata on your machine with one command
 
 ${bold("Usage")}
-  npx samata init [dir]        Download the stack into ./samata (or [dir]) and start it
+  ${CMD} init [dir]   Download the stack into ./samata (or [dir]) and start it
 
 ${bold("Options")}
   --port <n>                   Dashboard port on this machine (default ${DEFAULT_PORT})
@@ -80,7 +83,7 @@ export async function main(argv) {
       },
     });
   } catch (err) {
-    throw new CliError(`${err.message}\nRun \`samata --help\` for usage.`);
+    throw new CliError(`${err.message}\nRun \`${CMD} --help\` for usage.`);
   }
   const { values, positionals } = parsed;
 
@@ -99,7 +102,7 @@ export async function main(argv) {
   }
   if (command !== "init") {
     throw new CliError(
-      `Unknown command "${command}". Run \`samata --help\` for usage.`,
+      `Unknown command "${command}". Run \`${CMD} --help\` for usage.`,
     );
   }
   if (positionals.length > 2) {
@@ -288,7 +291,7 @@ async function checkPorts(ports) {
   if (busy.includes(ports[0])) {
     const free = await findFreePort(ports[0] + 1);
     lines.push(
-      `Pick another dashboard port with:  npx samata init --port ${free ?? 3100}`,
+      `Pick another dashboard port with:  ${CMD} init --port ${free ?? 3100}`,
     );
   }
   if (busy.some((p) => LIVEKIT_PORTS.includes(p))) {

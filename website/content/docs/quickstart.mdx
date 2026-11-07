@@ -10,7 +10,7 @@ You need [Docker](https://docs.docker.com/get-started/get-docker/) and nothing
 else. No clone, no Node project, no Python.
 
 ```bash
-npx samata init
+npx @samata-oss/cli
 ```
 
 This downloads the stack's compose file into `./samata`, generates secrets in
@@ -32,7 +32,7 @@ docker compose down          # stop (your data is kept)
 docker compose down -v       # stop and delete all data
 ```
 
-Re-running `npx samata init` in the same folder keeps your `.env` and starts the
+Re-running `npx @samata-oss/cli` in the same folder keeps your `.env` and starts the
 stack again. Options:
 
 | Flag                   | What it does                                                      |

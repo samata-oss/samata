@@ -1,5 +1,5 @@
 {
-  "name": "samata",
+  "name": "@samata-oss/cli",
   "version": "0.1.0",
   "description": "Run Samata, the self-hosted voice AI orchestrator, on your machine with one command.",
   "keywords": [
@@ -17,9 +17,12 @@
     "url": "git+https://github.com/samata-oss/samata.git",
     "directory": "cli"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "bin": {
-    "samata": "./bin/samata.mjs"
+    "samata": "bin/samata.mjs"
   },
   "files": [
     "bin",

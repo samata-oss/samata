@@ -1,5 +1,5 @@
 # Samata on your own machine: prebuilt images, no domain, no TLS, nothing to
-# clone or build. `npx samata init` downloads this file as docker-compose.yml
+# clone or build. `npx @samata-oss/cli init` downloads this file as docker-compose.yml
 # next to a generated .env and starts it.
 #
 #   docker compose up -d
