@@ -1,17 +1,14 @@
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
-import { Logo } from "@/components/logo";
 import { githubUrl } from "./shared";
 
 export function baseOptions(): BaseLayoutProps {
   return {
     nav: {
-      title: <Logo />,
+      // The site bar above already carries the logo, so the sidebar's own
+      // header only keeps its controls.
+      title: null,
       url: "/",
     },
     githubUrl,
-    links: [
-      { text: "Docs", url: "/docs", active: "nested-url" },
-      { text: "API", url: "/docs/api", active: "nested-url" },
-    ],
   };
 }

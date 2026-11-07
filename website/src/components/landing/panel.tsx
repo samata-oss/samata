@@ -26,7 +26,7 @@ export function Panel({
   return (
     <div
       className={cn(
-        "group/panel relative rounded-lg border border-white/[0.11] bg-fd-card transition-colors hover:border-white/20",
+        "group/panel relative border border-white/[0.11] bg-fd-card transition-colors hover:border-white/20",
         className,
       )}
     >

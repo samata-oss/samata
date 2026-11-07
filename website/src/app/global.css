@@ -55,6 +55,19 @@ html {
   }
 }
 
+/*
+ * Docs sidebar: drop the header row that holds the logo and the collapse
+ * button. The site bar above already carries the logo, and the sidebar stays
+ * open. Fumadocs gives the slot no option for this, so match the row by its
+ * button and give the search below it the room the row used to take.
+ */
+#nd-sidebar > div > div:has(> button[aria-label="Collapse Sidebar"]) {
+  display: none;
+}
+#nd-sidebar > div {
+  padding-top: 0.75rem;
+}
+
 /* Stop the page shifting when a dialog locks scroll. Needs !important to beat the lock's inline style. */
 html > body[data-scroll-locked] {
   /* biome-ignore lint/complexity/noImportantStyles: overrides an inline style */

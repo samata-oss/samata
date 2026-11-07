@@ -1,7 +1,9 @@
 import { RootProvider } from "fumadocs-ui/provider/next";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SiteNav } from "@/components/site-nav";
 import { cn } from "@/lib/cn";
+import { getStars } from "@/lib/github";
 import { appName, description, tagline } from "@/lib/shared";
 import "./global.css";
 
@@ -19,7 +21,9 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Layout({ children }: LayoutProps<"/">) {
+export default async function Layout({ children }: LayoutProps<"/">) {
+  const stars = await getStars();
+
   return (
     <html
       lang="en"
@@ -27,7 +31,11 @@ export default function Layout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <body className="flex min-h-screen flex-col">
-        <RootProvider theme={{ defaultTheme: "dark" }}>{children}</RootProvider>
+        <RootProvider theme={{ defaultTheme: "dark" }}>
+          {/* Here, not in a page, so it stays put between the home page and the docs. */}
+          <SiteNav stars={stars} />
+          {children}
+        </RootProvider>
       </body>
     </html>
   );

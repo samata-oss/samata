@@ -10,7 +10,8 @@ async function code(lang: string, source: string) {
       lang={lang}
       code={source}
       codeblock={{
-        className: "my-0 rounded-lg border-0 bg-transparent",
+        className:
+          "my-0 rounded-none border-0 [&_button]:rounded-none bg-transparent",
       }}
     />
   );

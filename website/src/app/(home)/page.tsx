@@ -4,9 +4,7 @@ import { Reveal } from "@/components/landing/fx";
 import { InstallTabs } from "@/components/landing/install-tabs";
 import { LiveMark } from "@/components/landing/live-mark";
 import { Panel } from "@/components/landing/panel";
-import { ProductCards } from "@/components/landing/surfaces";
 import { TerminalHero } from "@/components/landing/terminal-hero";
-import { LogoMark } from "@/components/logo";
 import { cn } from "@/lib/cn";
 import { getStars } from "@/lib/github";
 import { githubUrl } from "@/lib/shared";
@@ -36,41 +34,6 @@ const installTabs = [
     label: "Call",
     command:
       'curl -X POST $SAMATA_URL/api/session/start -d \'{"assistantId":"support"}\'',
-  },
-];
-
-const features = [
-  {
-    title: "Declarative agents",
-    body: "Model, voice, tools, barge-in and analysis in one JSON document.",
-  },
-  {
-    title: "Tools on your server",
-    body: "One webhook server for all your tools, in any language.",
-  },
-  {
-    title: "Real phone numbers",
-    body: "Import a Telnyx number. Samata wires the LiveKit SIP trunk and dispatch rule.",
-  },
-  {
-    title: "Browser calls",
-    body: "Start a session from your backend, join over WebRTC with a one-room token.",
-  },
-  {
-    title: "Post-call analysis",
-    body: "A summary and structured data from every call, on your own model key.",
-  },
-  {
-    title: "Observability built in",
-    body: "Transcripts, usage and per-turn latency for every call.",
-  },
-  {
-    title: "Workspaces and API keys",
-    body: "Real accounts, invitation-only sign-up, keys scoped to a workspace.",
-  },
-  {
-    title: "Yours to host",
-    body: "One compose file with prebuilt images. Scale workers with a flag.",
   },
 ];
 
@@ -139,9 +102,9 @@ const legible =
   "[text-shadow:0_0_3px_oklch(0.125_0.005_270),0_0_8px_oklch(0.125_0.005_270),0_0_16px_oklch(0.125_0.005_270)]";
 
 const primary =
-  "inline-flex h-9 items-center rounded-md bg-fd-primary px-4 text-xs font-medium text-fd-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.18)] transition-colors hover:bg-fd-primary/85";
+  "inline-flex h-9 items-center bg-fd-primary px-4 text-xs font-medium text-fd-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.18)] transition-colors hover:bg-fd-primary/85";
 const ghost =
-  "inline-flex h-9 items-center rounded-md border border-white/[0.14] px-4 text-xs text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white";
+  "inline-flex h-9 items-center border border-white/[0.14] px-4 text-xs text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white";
 
 export default async function HomePage() {
   const stars = await getStars();
@@ -151,10 +114,9 @@ export default async function HomePage() {
       {/* One backdrop for the whole page, so the glow runs under both columns. */}
       {/* Dimmed, and it falls away once it leaves the left pane (~42% wide). */}
       <DitherSky className="fixed inset-0 -z-10 opacity-55 [mask-image:linear-gradient(to_right,black_25%,rgb(0_0_0/0.3)_42%,rgb(0_0_0/0.1)_58%,transparent_80%)]" />
-      <Nav stars={stars} />
-      <div className="lg:grid lg:grid-cols-[minmax(22rem,42%)_minmax(0,1fr)] lg:items-start lg:gap-3 lg:p-3">
-        <aside className="m-3 lg:sticky lg:top-[4.25rem] lg:m-0 lg:h-[calc(100svh-5rem)]">
-          <div className="relative h-full rounded-lg border border-white/[0.11]">
+      <div className="lg:grid lg:grid-cols-[minmax(22rem,42%)_minmax(0,1fr)] lg:items-start">
+        <aside className="lg:sticky lg:top-14 lg:h-[calc(100svh-3.5rem)]">
+          <div className="relative h-full border-b border-white/[0.11] lg:border-r lg:border-b-0">
             <div className="relative flex h-full flex-col gap-8 px-6 py-10 sm:px-8 lg:justify-center lg:gap-6 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:px-10 lg:pt-8 lg:pb-40 xl:px-14">
               <div className="@container relative mx-auto w-full max-w-2xl">
                 <LiveMark className="size-48 sm:size-52 lg:size-[clamp(11rem,14.5vw,18rem)]" />
@@ -179,10 +141,6 @@ export default async function HomePage() {
                 >
                   The open source <br className="lg:hidden" />
                   voice platform
-                  <span
-                    aria-hidden="true"
-                    className="caret ml-[0.12em] inline-block h-[0.85em] w-[0.5em] translate-y-[0.1em] bg-fd-primary"
-                  />
                 </h1>
                 <p
                   className={cn(
@@ -230,18 +188,7 @@ export default async function HomePage() {
             id="what"
             title="What is Samata?"
             lede="An open-source voice orchestration platform. You describe an agent in JSON. Samata runs speech-to-text, the model and text-to-speech on LiveKit, calls tools on an HTTP server you run, and keeps every transcript in your own Postgres."
-          >
-            <ProductCards />
-            <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
-              {features.map((feature) => (
-                <Panel key={feature.title} title={feature.title.toLowerCase()}>
-                  <p className="px-4 pt-5 pb-4 text-[13px] leading-relaxed text-zinc-400">
-                    {feature.body}
-                  </p>
-                </Panel>
-              ))}
-            </div>
-          </Block>
+          />
 
           <Block
             id="compare"
@@ -268,7 +215,7 @@ export default async function HomePage() {
                   code={deployScript}
                   codeblock={{
                     title: "deploy",
-                    className: "my-0 rounded-md",
+                    className: "my-0 rounded-none [&_button]:rounded-none",
                   }}
                 />
                 <More href="/docs/deploy">deployment guide</More>
@@ -283,7 +230,7 @@ export default async function HomePage() {
                   code={pushCommand}
                   codeblock={{
                     title: "deploy.sh",
-                    className: "my-0 rounded-md",
+                    className: "my-0 rounded-none [&_button]:rounded-none",
                   }}
                 />
                 <More href="/docs/api">api reference</More>
@@ -325,7 +272,7 @@ export default async function HomePage() {
                   key={item.q}
                   className="group border-b border-dashed border-white/[0.1]"
                 >
-                  <summary className="flex cursor-pointer list-none items-center gap-3 rounded-sm px-1 py-3 text-[13px] transition-colors hover:bg-white/[0.04] group-open:text-fd-primary [&::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none items-center gap-3 px-1 py-3 text-[13px] transition-colors hover:bg-white/[0.04] group-open:text-fd-primary [&::-webkit-details-marker]:hidden">
                     <span aria-hidden="true" className="w-3 shrink-0">
                       <span className="group-open:hidden">▸</span>
                       <span className="hidden group-open:inline">▾</span>
@@ -345,51 +292,6 @@ export default async function HomePage() {
   );
 }
 
-function Nav({ stars }: { stars: number | null }) {
-  const links = [
-    { href: "/docs", label: "docs" },
-    { href: "/docs/api", label: "api" },
-    { href: "/docs/deploy", label: "deploy" },
-  ];
-  const item =
-    "rounded-md px-3 py-1.5 text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-white";
-  return (
-    <header className="sticky top-0 z-40 flex h-14 items-center gap-1 border-b border-fd-border bg-fd-background/80 px-4 text-sm backdrop-blur-md">
-      <Link
-        href="/"
-        className="flex items-center gap-2.5 rounded-md px-3 py-1.5 font-medium transition-colors hover:bg-white/[0.06]"
-      >
-        <LogoMark className="size-5 rounded-sm" />
-        samata
-      </Link>
-      <span aria-hidden="true" className="px-1 text-zinc-700">
-        /
-      </span>
-      <nav className="flex min-w-0 flex-1 items-center gap-1">
-        {links.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={cn(
-              item,
-              link.label === "deploy" ? "hidden sm:block" : "block",
-            )}
-          >
-            {link.label}
-          </Link>
-        ))}
-        <div className="flex-1" />
-        <a href={githubUrl} className={cn(item, "text-zinc-300")}>
-          github
-          {stars !== null && stars >= 10 ? (
-            <span className="ml-2 opacity-60">★ {stars}</span>
-          ) : null}
-        </a>
-      </nav>
-    </header>
-  );
-}
-
 function Block({
   id,
   title,
@@ -399,7 +301,7 @@ function Block({
   id: string;
   title: string;
   lede?: string;
-  children: ReactNode;
+  children?: ReactNode;
 }) {
   return (
     <section
@@ -413,7 +315,7 @@ function Block({
         {lede ? (
           <p className="mt-3 text-[13px] leading-[1.8] text-zinc-400">{lede}</p>
         ) : null}
-        <div className="mt-8">{children}</div>
+        {children ? <div className="mt-8">{children}</div> : null}
       </Reveal>
     </section>
   );
@@ -423,7 +325,7 @@ function More({ href, children }: { href: string; children: string }) {
   return (
     <Link
       href={href}
-      className="mt-4 -ml-1 inline-flex items-center gap-2 rounded-sm px-1 text-xs text-fd-primary transition-colors hover:bg-fd-primary/15"
+      className="mt-4 -ml-1 inline-flex items-center gap-2 px-1 text-xs text-fd-primary transition-colors hover:bg-fd-primary/15"
     >
       <span aria-hidden="true">→</span>
       {children}

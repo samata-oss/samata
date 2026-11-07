@@ -22,11 +22,7 @@ const rows: { label: string; cells: [Cell, Cell, Cell] }[] = [
   },
   {
     label: "Platform fee",
-    cells: [
-      yes("None"),
-      no("Per minute, on top of providers"),
-      yes("None"),
-    ],
+    cells: [yes("None"), no("Per minute, on top of providers"), yes("None")],
   },
   {
     label: "Transcripts and logs",
@@ -38,7 +34,11 @@ const rows: { label: string; cells: [Cell, Cell, Cell] }[] = [
   },
   {
     label: "Define an agent",
-    cells: [yes("JSON over HTTP"), no("Dashboard, API, SDKs"), no("Python code")],
+    cells: [
+      yes("JSON over HTTP"),
+      no("Dashboard, API, SDKs"),
+      no("Python code"),
+    ],
   },
   {
     label: "Tools",
