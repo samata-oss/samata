@@ -165,7 +165,10 @@ export default async function HomePage() {
                     legible,
                   )}
                 >
-                  <Scale aria-hidden="true" className="size-3.5 text-fd-primary" />
+                  <Scale
+                    aria-hidden="true"
+                    className="size-3.5 text-fd-primary"
+                  />
                   MIT · self-hosted
                 </a>
                 <h1
@@ -208,8 +211,10 @@ export default async function HomePage() {
             id="product"
             className="scroll-mt-16 px-6 py-14 sm:px-8 lg:px-12 lg:py-16"
           >
-            <Kicker>readme</Kicker>
-            <p className="mt-4 text-[13px] leading-[1.8] text-zinc-400">
+            <h2 className="max-w-xl text-lg font-medium tracking-tight sm:text-xl">
+              Voice agents you run yourself.
+            </h2>
+            <p className="mt-3 text-[13px] leading-[1.8] text-zinc-400">
               Samata is an open-source voice orchestration platform. Clone it,
               push an agent as JSON, and take the call over the phone or the
               browser. A worker turns speech into text, asks a model, calls
@@ -223,7 +228,6 @@ export default async function HomePage() {
 
           <Block
             id="what"
-            kicker="overview"
             title="What is Samata?"
             lede="An open-source voice orchestration platform. You describe an agent in JSON. Samata runs speech-to-text, the model and text-to-speech on LiveKit, calls tools on an HTTP server you run, and keeps every transcript in your own Postgres."
           >
@@ -241,7 +245,6 @@ export default async function HomePage() {
 
           <Block
             id="compare"
-            kicker="compare"
             title="Why not a hosted platform?"
             lede="Hosted voice platforms are the fastest way to a demo. Samata is for when the calls, the keys and the margin should stay with you, without writing the plumbing yourself."
           >
@@ -255,7 +258,6 @@ export default async function HomePage() {
 
           <Block
             id="get-started"
-            kicker="get started"
             title="From clone to first call."
             lede="No SDK to install. Agents, tools and calls are plain HTTP, so everything below is a shell command."
           >
@@ -291,7 +293,6 @@ export default async function HomePage() {
 
           <Block
             id="open-source"
-            kicker="open source"
             title="Yours to host, read and change."
             lede="There is no hosted tier between you and your calls. The control plane, the worker and the LiveKit setup are all in the repo."
           >
@@ -317,7 +318,7 @@ export default async function HomePage() {
             </div>
           </Block>
 
-          <Block id="faq" kicker="faq" title="Questions.">
+          <Block id="faq" title="Questions.">
             <div className="border-t border-dashed border-white/[0.1]">
               {questions.map((item) => (
                 <details
@@ -389,24 +390,13 @@ function Nav({ stars }: { stars: number | null }) {
   );
 }
 
-/** A section label written like a markdown heading: `## overview`. */
-function Kicker({ children }: { children: string }) {
-  return (
-    <p className="text-xs text-zinc-500">
-      <span className="text-fd-primary">##</span> {children}
-    </p>
-  );
-}
-
 function Block({
   id,
-  kicker,
   title,
   lede,
   children,
 }: {
   id: string;
-  kicker: string;
   title: string;
   lede?: string;
   children: ReactNode;
@@ -417,8 +407,7 @@ function Block({
       className="scroll-mt-16 border-t border-dashed border-white/[0.1] px-6 py-14 sm:px-8 lg:px-12 lg:py-16"
     >
       <Reveal>
-        <Kicker>{kicker}</Kicker>
-        <h2 className="mt-3 max-w-xl text-lg font-medium tracking-tight sm:text-xl">
+        <h2 className="max-w-xl text-lg font-medium tracking-tight sm:text-xl">
           {title}
         </h2>
         {lede ? (
