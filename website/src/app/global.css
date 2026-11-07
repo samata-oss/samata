@@ -33,6 +33,9 @@
  * and pure white.
  */
 .landing {
+  /* A touch deeper than the dashboard's 0.15, so it still reads as dark. */
+  --color-fd-background: oklch(0.125 0.005 270);
+  --color-fd-card: oklch(0.155 0.006 270);
   --color-white: oklch(0.97 0.003 270);
   --color-zinc-300: oklch(0.84 0.008 270);
   --color-zinc-400: oklch(0.73 0.01 270);
