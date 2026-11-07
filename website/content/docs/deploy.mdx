@@ -82,7 +82,7 @@ self-hosting, so this is a reasonable starting point.
 `.github/workflows/images.yml` builds both images for amd64 and arm64 on every PR.
 Pushes to the default branch publish `:edge`, and `v*` tags publish `:X.Y.Z`,
 `:X.Y` and `:latest`. In production, pin a release with `SAMATA_VERSION` rather
-than tracking `latest`.
+than tracking `edge`, which moves on every push to the default branch.
 
 The control plane applies pending database migrations on boot. Set
 `SAMATA_AUTO_MIGRATE=0` to manage migrations yourself.

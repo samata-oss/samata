@@ -18,7 +18,7 @@ name: samata-local
 
 services:
   control-plane:
-    image: ${SAMATA_IMAGE_PREFIX:-ghcr.io/samata-oss}/samata-control-plane:${SAMATA_VERSION:-latest}
+    image: ${SAMATA_IMAGE_PREFIX:-ghcr.io/samata-oss}/samata-control-plane:${SAMATA_VERSION:-edge}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -44,7 +44,7 @@ services:
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?set LIVEKIT_API_SECRET}
 
   worker:
-    image: ${SAMATA_IMAGE_PREFIX:-ghcr.io/samata-oss}/samata-worker:${SAMATA_VERSION:-latest}
+    image: ${SAMATA_IMAGE_PREFIX:-ghcr.io/samata-oss}/samata-worker:${SAMATA_VERSION:-edge}
     restart: unless-stopped
     depends_on:
       - livekit

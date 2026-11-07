@@ -49,7 +49,7 @@ These are read by `deploy/docker-compose.yml` from `.env`.
 | Variable              | Description                                                                           |
 | --------------------- | ------------------------------------------------------------------------------------- |
 | `SAMATA_IMAGE_PREFIX` | Registry and owner the images are pulled from, for example `ghcr.io/your-org`.        |
-| `SAMATA_VERSION`      | Image tag. Defaults to `latest`; pin a release in production.                         |
+| `SAMATA_VERSION`      | Image tag. Defaults to `edge`; pin a release in production.                         |
 | `SAMATA_DOMAIN`       | Hostname for the dashboard and API. Caddy gets a certificate for it.                  |
 | `LIVEKIT_DOMAIN`      | Hostname for LiveKit and SIP.                                                         |
 | `LIVEKIT_PUBLIC_URL`  | Override when using LiveKit Cloud, for example `wss://<project>.livekit.cloud`.        |

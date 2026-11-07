@@ -8,7 +8,7 @@
 # Using LiveKit Cloud instead? Delete the livekit + sip services and point
 # LIVEKIT_URL / LIVEKIT_PUBLIC_URL / keys in .env at your project.
 
-x-samata-image: &samata-version ${SAMATA_VERSION:-latest}
+x-samata-image: &samata-version ${SAMATA_VERSION:-edge}
 
 services:
   # TLS for both public hostnames. Browsers require wss:// for WebRTC
@@ -36,7 +36,7 @@ services:
       - caddy-config:/config
 
   control-plane:
-    image: ${SAMATA_IMAGE_PREFIX:?set SAMATA_IMAGE_PREFIX}/samata-control-plane:${SAMATA_VERSION:-latest}
+    image: ${SAMATA_IMAGE_PREFIX:?set SAMATA_IMAGE_PREFIX}/samata-control-plane:${SAMATA_VERSION:-edge}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -68,7 +68,7 @@ services:
       SAMATA_SIP_ALLOWED_ADDRESSES: ${SAMATA_SIP_ALLOWED_ADDRESSES:-}
 
   worker:
-    image: ${SAMATA_IMAGE_PREFIX}/samata-worker:${SAMATA_VERSION:-latest}
+    image: ${SAMATA_IMAGE_PREFIX}/samata-worker:${SAMATA_VERSION:-edge}
     restart: unless-stopped
     depends_on:
       - livekit
