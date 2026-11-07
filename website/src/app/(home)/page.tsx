@@ -122,6 +122,8 @@ export default async function HomePage() {
                 <LiveMark className="size-48 sm:size-52 lg:size-[clamp(11rem,14.5vw,18rem)]" />
                 <a
                   href={githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className={cn(
                     "mt-5 inline-flex items-center gap-2 text-sm text-zinc-300 transition-colors hover:text-white",
                     legible,
@@ -131,7 +133,7 @@ export default async function HomePage() {
                     aria-hidden="true"
                     className="size-3.5 text-fd-primary"
                   />
-                  MIT · self-hosted
+                  MIT · Self-hosted
                 </a>
                 <h1
                   className={cn(

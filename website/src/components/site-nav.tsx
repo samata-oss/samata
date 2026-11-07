@@ -71,8 +71,13 @@ export function SiteNav({ stars }: { stars: number | null }) {
           );
         })}
         <div className="flex-1" />
-        <a href={githubUrl} className={cn(item, "text-fd-foreground/80")}>
-          github
+        <a
+          href={githubUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(item, "text-fd-foreground/80")}
+        >
+          GitHub
           {stars !== null && stars >= 10 ? (
             <span className="ml-2 opacity-60">★ {stars}</span>
           ) : null}
