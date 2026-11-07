@@ -12,11 +12,11 @@ const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL ?? "https://samata.dev"),
-  title: { default: `${appName}: ${tagline}`, template: `%s | ${appName}` },
+  title: { default: `${appName} | ${tagline}`, template: `%s | ${appName}` },
   description,
   openGraph: {
     siteName: appName,
-    title: `${appName}: ${tagline}`,
+    title: `${appName} | ${tagline}`,
     description,
   },
 };

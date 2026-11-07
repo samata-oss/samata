@@ -1,7 +1,7 @@
 import { createGetUrl } from "fumadocs-core/source";
 
 export const appName = "Samata";
-export const tagline = "Voice agents you run yourself.";
+export const tagline = "The open source voice orchestration platform.";
 export const description =
   "Samata is an open-source, self-hosted, declarative voice AI orchestrator. Agents are JSON, calls run on LiveKit, and your keys and call data stay on your infrastructure.";
 
