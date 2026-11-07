@@ -145,7 +145,6 @@ export default async function HomePage() {
               aria-hidden="true"
               className="absolute inset-0 overflow-hidden rounded-[inherit]"
             >
-              <div className="absolute inset-0 bg-[radial-gradient(70%_45%_at_50%_110%,oklch(0.66_0.2_277/0.12),transparent_70%)]" />
               <Starfield className="pointer-events-none absolute inset-0 size-full" />
             </div>
             <div className="relative flex h-full flex-col gap-8 px-6 py-10 sm:px-8 lg:justify-center lg:gap-6 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:px-10 lg:pt-8 lg:pb-40 xl:px-14">

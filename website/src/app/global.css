@@ -171,18 +171,6 @@ html > body[data-scroll-locked] {
   animation: twinkle 5s ease-in-out infinite;
 }
 
-/* Each layer slides up by one sky height (half of its own) and repeats. */
-@keyframes star-drift {
-  to {
-    transform: translate3d(0, -50%, 0);
-  }
-}
-
-.star-drift {
-  will-change: transform;
-  animation: star-drift 120s linear infinite;
-}
-
 .star-bright {
   filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.9));
 }
@@ -214,7 +202,6 @@ html > body[data-scroll-locked] {
   .caret,
   .shimmer,
   .star-twinkle,
-  .star-drift,
   .flare-pulse,
   .flow-line {
     animation: none;

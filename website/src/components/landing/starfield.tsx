@@ -3,8 +3,8 @@ import type { CSSProperties } from "react";
 /**
  * A field of stars behind the hero pane. Positions come from a seeded
  * generator, so the server and client render the same sky and there is no
- * JavaScript at runtime. The stars drift upward in three layers at different
- * speeds, and a third of them twinkle, all in CSS.
+ * JavaScript at runtime. The stars stay in place, and a third of them twinkle
+ * in CSS.
  */
 
 function mulberry32(seed: number) {
@@ -59,21 +59,11 @@ function makeStars(): Star[] {
 
 const stars = makeStars();
 
-/** Far stars drift slowest and the bright ones fastest, which reads as depth. */
-const layers = [
-  { stars: stars.filter((star) => star.r < 1.0 && !star.bright), seconds: 220 },
-  {
-    stars: stars.filter((star) => star.r >= 1.0 && !star.bright),
-    seconds: 140,
-  },
-  { stars: stars.filter((star) => star.bright), seconds: 90 },
-];
-
 function Sky({ stars }: { stars: Star[] }) {
   return (
     <svg
       aria-hidden="true"
-      className="block h-1/2 w-full"
+      className="block h-full w-full"
       width="100%"
       height="100%"
       xmlns="http://www.w3.org/2000/svg"
@@ -113,17 +103,9 @@ function Sky({ stars }: { stars: Star[] }) {
 export function Starfield({ className }: { className?: string }) {
   return (
     <div aria-hidden="true" className={`overflow-hidden ${className ?? ""}`}>
-      {layers.map((layer) => (
-        <div
-          key={layer.seconds}
-          className="star-drift absolute inset-x-0 top-0 h-[200%]"
-          style={{ animationDuration: `${layer.seconds}s` }}
-        >
-          {/* Two identical skies stacked, so sliding up by one loops with no seam. */}
-          <Sky stars={layer.stars} />
-          <Sky stars={layer.stars} />
-        </div>
-      ))}
+      <div className="absolute inset-0">
+        <Sky stars={stars} />
+      </div>
     </div>
   );
 }
