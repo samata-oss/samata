@@ -155,10 +155,10 @@ export default async function HomePage() {
                 </p>
                 <div className="mt-6 flex flex-wrap items-center gap-3">
                   <Link href="/docs/quickstart" className={primary}>
-                    get started
+                    Get started
                   </Link>
                   <a href={githubUrl} className={cn(ghost, legible)}>
-                    github
+                    GitHub
                   </a>
                 </div>
               </div>
