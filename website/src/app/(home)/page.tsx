@@ -149,17 +149,8 @@ export default async function HomePage() {
       <DitherSky className="fixed inset-0 -z-10 [mask-image:linear-gradient(to_right,black_20%,rgb(0_0_0/0.45)_55%,transparent_95%)]" />
       <Nav stars={stars} />
       <div className="lg:grid lg:grid-cols-[minmax(22rem,42%)_minmax(0,1fr)] lg:items-start lg:gap-3 lg:p-3">
-        <aside className="m-3 lg:sticky lg:top-[3.75rem] lg:m-0 lg:h-[calc(100svh-4.5rem)]">
-          <Panel
-            title="samata"
-            meta={
-              <span className="inline-flex items-center gap-1.5">
-                <Scale aria-hidden="true" className="size-3" />
-                MIT
-              </span>
-            }
-            className="h-full bg-transparent [--color-fd-card:transparent]"
-          >
+        <aside className="m-3 lg:sticky lg:top-[4.25rem] lg:m-0 lg:h-[calc(100svh-5rem)]">
+          <div className="relative h-full rounded-lg border border-white/[0.11]">
             <div className="relative flex h-full flex-col gap-8 px-6 py-10 sm:px-8 lg:justify-center lg:gap-6 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:px-10 lg:pt-8 lg:pb-40 xl:px-14">
               <div className="@container relative mx-auto w-full max-w-2xl">
                 <LiveMark className="size-48 sm:size-52 lg:size-[clamp(11rem,14.5vw,18rem)]" />
@@ -192,13 +183,13 @@ export default async function HomePage() {
                 </div>
               </div>
             </div>
-          </Panel>
+          </div>
         </aside>
 
         <main className="relative isolate min-w-0">
           <section
             id="product"
-            className="scroll-mt-14 px-6 py-14 sm:px-8 lg:px-12 lg:py-16"
+            className="scroll-mt-16 px-6 py-14 sm:px-8 lg:px-12 lg:py-16"
           >
             <Kicker>readme</Kicker>
             <p className="mt-4 text-[13px] leading-[1.8] text-zinc-400">
@@ -343,14 +334,14 @@ function Nav({ stars }: { stars: number | null }) {
     { href: "/docs/deploy", label: "deploy" },
   ];
   const item =
-    "rounded-sm px-2 py-1 text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-white";
+    "rounded-md px-3 py-1.5 text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-white";
   return (
-    <header className="sticky top-0 z-40 flex h-12 items-center gap-1 border-b border-fd-border bg-fd-background/80 px-3 text-xs backdrop-blur-md">
+    <header className="sticky top-0 z-40 flex h-14 items-center gap-1 border-b border-fd-border bg-fd-background/80 px-4 text-sm backdrop-blur-md">
       <Link
         href="/"
-        className="flex items-center gap-2 rounded-sm px-2 py-1 font-medium transition-colors hover:bg-white/[0.06]"
+        className="flex items-center gap-2.5 rounded-md px-3 py-1.5 font-medium transition-colors hover:bg-white/[0.06]"
       >
-        <LogoMark className="size-4 rounded-sm" />
+        <LogoMark className="size-5 rounded-sm" />
         samata
       </Link>
       <span aria-hidden="true" className="px-1 text-zinc-700">
@@ -406,7 +397,7 @@ function Block({
   return (
     <section
       id={id}
-      className="scroll-mt-14 border-t border-dashed border-white/[0.1] px-6 py-14 sm:px-8 lg:px-12 lg:py-16"
+      className="scroll-mt-16 border-t border-dashed border-white/[0.1] px-6 py-14 sm:px-8 lg:px-12 lg:py-16"
     >
       <Reveal>
         <Kicker>{kicker}</Kicker>
