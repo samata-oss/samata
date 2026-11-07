@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-// The chip that interrupts the border: page colour above the line, card colour
-// below it, so it reads as a notch cut into the frame.
+// The chip that interrupts the border. Cards are frosted glass over the
+// dithered backdrop, so the chip is a solid tab cut into the frame.
 const chip =
-  "absolute -top-[7px] z-10 bg-gradient-to-b from-fd-background from-50% to-fd-card to-50% px-2 text-[11px] leading-[13px]";
+  "absolute -top-[7px] z-10 bg-[oklch(0.15_0.006_270)] px-2 text-[11px] leading-[13px]";
 
 /**
  * A terminal-style frame: a hairline border with the title set into the top
@@ -26,7 +26,7 @@ export function Panel({
   return (
     <div
       className={cn(
-        "group/panel relative border border-white/[0.11] bg-fd-card transition-colors hover:border-white/20",
+        "group/panel relative border border-white/[0.11] bg-fd-card/70 backdrop-blur-sm transition-colors hover:border-white/20",
         className,
       )}
     >

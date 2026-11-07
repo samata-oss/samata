@@ -1,9 +1,12 @@
+import { AsciiWave } from "@/components/landing/ascii-wave";
 import { Compare } from "@/components/landing/compare";
+import { DitherField } from "@/components/landing/dither-field";
 import { DitherSky } from "@/components/landing/dither-sky";
 import { Reveal } from "@/components/landing/fx";
 import { InstallTabs } from "@/components/landing/install-tabs";
 import { LiveMark } from "@/components/landing/live-mark";
 import { Panel } from "@/components/landing/panel";
+import { PixelIcon, type Sprite } from "@/components/landing/pixel-icon";
 import { TerminalHero } from "@/components/landing/terminal-hero";
 import { cn } from "@/lib/cn";
 import { getStars } from "@/lib/github";
@@ -77,21 +80,19 @@ const questions = [
   },
 ];
 
-const openSource = [
+const openSource: { icon: Sprite; title: string; body: string }[] = [
   {
-    title: (
-      <span className="inline-flex items-center gap-1.5">
-        <Scale aria-hidden="true" className="size-3 text-fd-primary" />
-        MIT licensed
-      </span>
-    ),
+    icon: "heart",
+    title: "MIT licensed",
     body: "Use it commercially, fork it, change it. The licence is in the repo.",
   },
   {
+    icon: "lock",
     title: "your data stays put",
     body: "API keys are encrypted at rest. Transcripts, usage and call logs sit in your Postgres.",
   },
   {
+    icon: "mic",
     title: "bring your own models",
     body: "A transcriber, a model and a voice per agent: OpenAI, Groq, Deepgram, Cartesia, ElevenLabs, AssemblyAI, OpenRouter, or a custom endpoint.",
   },
@@ -100,6 +101,10 @@ const openSource = [
 /** A tight dark halo, so small text stays readable over the dither. */
 const legible =
   "[text-shadow:0_0_3px_oklch(0.125_0.005_270),0_0_8px_oklch(0.125_0.005_270),0_0_16px_oklch(0.125_0.005_270)]";
+
+/** A frosted card: the dither shows through the gaps and, blurred, through the card. */
+const card =
+  "border border-white/[0.11] bg-[oklch(0.125_0.005_270/0.4)] backdrop-blur-[5px]";
 
 const primary =
   "inline-flex h-9 items-center bg-fd-primary px-4 text-xs font-medium text-fd-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.18)] transition-colors hover:bg-fd-primary/85";
@@ -114,6 +119,8 @@ export default async function HomePage() {
       {/* One backdrop for the whole page, so the glow runs under both columns. */}
       {/* Dimmed, and it falls away once it leaves the left pane (~42% wide). */}
       <DitherSky className="fixed inset-0 -z-10 opacity-55 [mask-image:linear-gradient(to_right,black_25%,rgb(0_0_0/0.3)_42%,rgb(0_0_0/0.1)_58%,transparent_80%)]" />
+      {/* The content column gets its own light: a dithered band the cards float over. */}
+      <DitherField className="fixed inset-x-0 top-14 bottom-0 -z-10 opacity-60 lg:left-[max(22rem,42%)] lg:opacity-100 [mask-image:linear-gradient(to_right,transparent,black_14%)]" />
       <div className="lg:grid lg:grid-cols-[minmax(22rem,42%)_minmax(0,1fr)] lg:items-start">
         <aside className="lg:sticky lg:top-14 lg:h-[calc(100svh-3.5rem)]">
           <div className="relative h-full border-b border-white/[0.11] lg:border-r lg:border-b-0">
@@ -166,11 +173,22 @@ export default async function HomePage() {
           </div>
         </aside>
 
-        <main className="relative isolate min-w-0">
+        <main className="relative min-w-0 space-y-4 p-4 sm:p-5 lg:space-y-5 lg:p-6">
           <section
             id="product"
-            className="scroll-mt-16 px-6 py-14 sm:px-8 lg:px-12 lg:py-16"
+            className={cn(
+              card,
+              "scroll-mt-20 px-6 py-8 sm:px-8 lg:px-10 lg:py-10",
+            )}
           >
+            <div className="mb-6 flex items-center justify-between text-[11px] text-zinc-500">
+              <span className="flex items-center gap-2">
+                <span className="size-1.5 animate-pulse bg-fd-primary" />
+                live
+              </span>
+              <span>samata/voice</span>
+            </div>
+            <AsciiWave className="mb-8" />
             <h2 className="max-w-xl text-lg font-medium tracking-tight sm:text-xl">
               Voice agents you run yourself.
             </h2>
@@ -248,9 +266,12 @@ export default async function HomePage() {
             <div className="grid gap-5 sm:grid-cols-3">
               {openSource.map((item) => (
                 <Panel key={item.body} title={item.title}>
-                  <p className="px-4 pt-5 pb-4 text-[13px] leading-relaxed text-zinc-400">
-                    {item.body}
-                  </p>
+                  <div className="px-4 pt-6 pb-4">
+                    <PixelIcon name={item.icon} className="size-9" />
+                    <p className="mt-4 text-[13px] leading-relaxed text-zinc-400">
+                      {item.body}
+                    </p>
+                  </div>
                 </Panel>
               ))}
             </div>
@@ -308,7 +329,7 @@ function Block({
   return (
     <section
       id={id}
-      className="scroll-mt-16 border-t border-dashed border-white/[0.1] px-6 py-14 sm:px-8 lg:px-12 lg:py-16"
+      className={cn(card, "scroll-mt-20 px-6 py-10 sm:px-8 lg:px-10 lg:py-12")}
     >
       <Reveal>
         <h2 className="max-w-xl text-lg font-medium tracking-tight sm:text-xl">
