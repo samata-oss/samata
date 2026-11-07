@@ -123,9 +123,9 @@ export default async function HomePage() {
       <div className="lg:grid lg:grid-cols-[minmax(22rem,42%)_minmax(0,1fr)] lg:items-start">
         <aside className="lg:sticky lg:top-14 lg:h-[calc(100svh-3.5rem)]">
           <div className="relative h-full border-b border-white/[0.11] lg:border-r lg:border-b-0">
-            <div className="relative flex h-full flex-col px-6 py-10 sm:px-8 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:px-8 lg:pt-6 lg:pb-28 xl:px-10">
-              {/* The mark floats on its own, centred in the space above the copy. */}
-              <div className="flex flex-1 items-center justify-center pb-8 lg:min-h-[12rem] lg:pb-4">
+            <div className="relative flex h-full flex-col px-6 py-10 sm:px-8 lg:justify-center lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:px-8 lg:pt-6 lg:pb-28 xl:px-10">
+              {/* The mark and the copy sit together as one block, centred in the pane. */}
+              <div className="flex justify-center pb-8 lg:pb-[clamp(1.5rem,4vh,3.5rem)]">
                 <LiveMark className="size-48 sm:size-52 lg:size-[clamp(11rem,16vw,20rem)]" />
               </div>
 
@@ -162,7 +162,7 @@ export default async function HomePage() {
                 </h1>
                 <p
                   className={cn(
-                    "mt-4 max-w-sm text-[13px] leading-relaxed text-zinc-300",
+                    "mt-4 max-w-sm text-[13px] leading-relaxed text-zinc-300 xl:max-w-none xl:whitespace-nowrap xl:text-[clamp(9px,2.05cqw,13px)]",
                     legible,
                   )}
                 >
@@ -173,31 +173,12 @@ export default async function HomePage() {
                   <Link href="/docs/quickstart" className={hero}>
                     Get started
                   </Link>
-                  <span className="relative inline-flex">
-                    <a
-                      href={githubUrl}
-                      className={cn(ghost.replace("h-9 ", "h-10 "), legible)}
-                    >
-                      GitHub
-                    </a>
-                    {/* Guide lines that run past the border, like a drafting mark. */}
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute -inset-x-3 top-0 h-px bg-white/[0.14]"
-                    />
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute -inset-x-3 bottom-0 h-px bg-white/[0.14]"
-                    />
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute -inset-y-3 left-0 w-px bg-white/[0.14]"
-                    />
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute -inset-y-3 right-0 w-px bg-white/[0.14]"
-                    />
-                  </span>
+                  <a
+                    href={githubUrl}
+                    className={cn(ghost.replace("h-9 ", "h-10 "), legible)}
+                  >
+                    GitHub
+                  </a>
                 </div>
               </div>
 
