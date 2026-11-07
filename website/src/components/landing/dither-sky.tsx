@@ -184,7 +184,7 @@ export function DitherSky({ className }: { className?: string }) {
     >
       <canvas ref={canvas} className="size-full [image-rendering:pixelated]" />
       {/* Cut a gap between cells so each one reads as a dot, not a pixel. */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_1.1px,oklch(0.135_0.005_270)_1.9px)] [background-size:4px_4px]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_1.1px,oklch(0.125_0.005_270)_1.9px)] [background-size:4px_4px]" />
     </div>
   );
 }

@@ -143,7 +143,10 @@ export default async function HomePage() {
   const stars = await getStars();
 
   return (
-    <div className="flex min-h-screen flex-col font-mono">
+    <div className="relative isolate flex min-h-screen flex-col font-mono">
+      {/* One backdrop for the whole page, so the glow runs under both columns. */}
+      {/* It fades out toward the right so the copy there stays easy to read. */}
+      <DitherSky className="fixed inset-0 -z-10 [mask-image:linear-gradient(to_right,black_20%,rgb(0_0_0/0.45)_55%,transparent_95%)]" />
       <Nav stars={stars} />
       <div className="lg:grid lg:grid-cols-[minmax(22rem,42%)_minmax(0,1fr)] lg:items-start lg:gap-3 lg:p-3">
         <aside className="m-3 lg:sticky lg:top-[3.75rem] lg:m-0 lg:h-[calc(100svh-4.5rem)]">
@@ -155,9 +158,8 @@ export default async function HomePage() {
                 MIT
               </span>
             }
-            className="h-full [--color-fd-card:oklch(0.135_0.005_270)]"
+            className="h-full bg-transparent [--color-fd-card:transparent]"
           >
-            <DitherSky className="absolute inset-0 rounded-[inherit]" />
             <div className="relative flex h-full flex-col gap-8 px-6 py-10 sm:px-8 lg:justify-center lg:gap-6 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:px-10 lg:pt-8 lg:pb-40 xl:px-14">
               <div className="@container relative mx-auto w-full max-w-2xl">
                 <LiveMark className="size-48 sm:size-52 lg:size-[clamp(11rem,14.5vw,18rem)]" />
