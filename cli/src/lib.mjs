@@ -8,6 +8,9 @@ export const DEFAULT_REF = "main";
 export const DEFAULT_PORT = 4747;
 /** Ports the bundled LiveKit server publishes on the host. */
 export const LIVEKIT_PORTS = [7880, 7881];
+/** The account the local quickstart signs you in as (see the control plane's local-login). */
+export const LOCAL_EMAIL = "admin@samata.local";
+export const LOCAL_PASSWORD = "12345678";
 /** `name:` in the compose file. The CLI looks up its volumes by it. */
 export const COMPOSE_PROJECT = "samata-local";
 

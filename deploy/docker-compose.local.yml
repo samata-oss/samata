@@ -24,12 +24,18 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "${SAMATA_PORT:-4747}:3000"
+      # Loopback only: the local login below has a public password, so the
+      # dashboard must not be reachable from the rest of your network.
+      - "127.0.0.1:${SAMATA_PORT:-4747}:3000"
     environment:
       DATABASE_URL: postgres://samata:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/samata
       SAMATA_WEBHOOK_SECRET: ${SAMATA_WEBHOOK_SECRET:?set SAMATA_WEBHOOK_SECRET}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: http://localhost:${SAMATA_PORT:-4747}
+      # Opening the dashboard signs you in as admin@samata.local (password
+      # 12345678) instead of asking you to sign up. Laptop only: never set this
+      # on a server.
+      SAMATA_LOCAL_LOGIN: "true"
       # The control plane reaches LiveKit over the compose network, but hands
       # browsers a URL that works from your machine.
       LIVEKIT_URL: ws://livekit:7880

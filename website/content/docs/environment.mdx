@@ -17,6 +17,7 @@ the dashboard's Provider Keys page.
 | `SAMATA_WEBHOOK_SECRET`        | Shared secret the worker sends as `x-samata-secret`. Must match the worker's. Webhooks refuse all requests if it is unset.   |
 | `BETTER_AUTH_SECRET`           | Signs dashboard sessions. Generate with `openssl rand -hex 32`.                                                             |
 | `BETTER_AUTH_URL`              | Public URL of the dashboard, used for invitation links and cookies. Unset in dev. The production compose derives it from `SAMATA_DOMAIN`. |
+| `SAMATA_LOCAL_LOGIN`           | `true` signs every visitor in as `admin@samata.local` (password `12345678`). Only the laptop quickstart sets it, bound to `127.0.0.1`. Never set it on a server. |
 | `SAMATA_PUBLIC_URL`            | Fallback for `BETTER_AUTH_URL`.                                                                                             |
 | `SAMATA_ENCRYPTION_KEY`        | Encrypts provider keys and imported phone number keys. Defaults to `BETTER_AUTH_SECRET`. Changing either makes stored keys unreadable, so re-enter them. Set it separately so rotating the auth secret doesn't break them. |
 | `LIVEKIT_URL`                  | LiveKit server URL, for example `ws://localhost:7880`.                                                                      |

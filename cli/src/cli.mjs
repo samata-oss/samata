@@ -7,6 +7,8 @@ import {
   COMPOSE_PROJECT,
   DEFAULT_PORT,
   LIVEKIT_PORTS,
+  LOCAL_EMAIL,
+  LOCAL_PASSWORD,
   composeUrl,
   findFreePort,
   generateEnv,
@@ -232,7 +234,8 @@ ${green("✔")} ${bold("Samata is running")}
   Files       ${dir}
 
 ${bold("Next")}
-  1. Open the dashboard and sign up. ${bold("The first account becomes the owner.")}
+  1. Open the dashboard. You're signed in automatically as ${bold(LOCAL_EMAIL)}
+     ${dim(`(password ${LOCAL_PASSWORD}, for this machine only)`)}
   2. Provider Keys: add your OpenAI (or Deepgram + Cartesia) key.
   3. Create an assistant and talk to it from its Test tab.
 

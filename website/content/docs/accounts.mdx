@@ -12,6 +12,11 @@ on [Better Auth](https://better-auth.com).
 - **The first account becomes the owner.** Sign up as soon as you deploy, because whoever gets there first owns the install.
 - **After that, sign-up is invitation-only.** Samata spends your workspace's provider keys on every call, so open registration would let anyone on the internet run up your bill.
 
+The laptop quickstart skips sign-up: `SAMATA_LOCAL_LOGIN=true` (set only in the
+quickstart compose file) signs you in as `admin@samata.local` with password
+`12345678`, creating the account on first visit. The password is public, so never
+set this on a server.
+
 Invite people from **Team**. Samata doesn't send email, so creating an invitation
 gives you a link to share; the link is what lets them create their account.
 
