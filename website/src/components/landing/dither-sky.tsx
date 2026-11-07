@@ -4,12 +4,14 @@ import { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 
 /**
- * The hero pane's backdrop, rendered as ordered dither: a scrolling
- * spectrogram of speech, or (see `SCENE`) two sources whose ripples interfere. A smooth scene is evaluated per cell, then each
- * cell is either lit in full or left dim depending on a Bayer threshold, so
- * the waves dissolve into coloured dots on black. It shares the dither language of the
- * `LiveMark` waveform. The canvas is drawn at one pixel per cell and scaled up
- * without smoothing, so every cell stays crisp.
+ * The hero pane's backdrop: a ridgeline spectrum, rendered as ordered dither.
+ * Stacked lines carry a voice-shaped signal. Each line shows the same signal a
+ * moment earlier than the line behind it, so the waveform rolls toward the
+ * viewer like a waterfall. Near lines hide the ones behind. Brightness and
+ * height grow toward the front; the peaks run hottest. Each cell is lit or left
+ * dim by a Bayer threshold, which shares the dither language of the `LiveMark`
+ * waveform. The canvas is drawn at one pixel per cell and scaled up without
+ * smoothing, so every cell stays crisp.
  */
 
 const BAYER8 = [
@@ -21,8 +23,21 @@ const BAYER8 = [
 
 /** CSS pixels per dither cell. */
 const CELL = 4;
-/** Frames per second for the slow drift. The scene barely moves. */
+/** Frames per second. The signal rolls slowly, so this can stay low. */
 const FPS = 20;
+
+/** How many lines are stacked, back to front. */
+const LINES = 30;
+/** Seconds between neighbouring lines: how long a signal takes to roll by. */
+const STEP = 0.28;
+/** Vertical band the lines sit in (0..1 of the viewport height). */
+const BACK = 0.4;
+const FRONT = 0.97;
+/** Where the signal is strongest across the width, and how wide it spreads. */
+const CENTER = 0.21;
+const SPREAD = 0.15;
+/** Columns past this fraction are masked away anyway, so skip them. */
+const REACH = 0.85;
 
 const clamp = (v: number, lo: number, hi: number) =>
   Math.min(hi, Math.max(lo, v));
@@ -33,162 +48,18 @@ function hash(x: number, y: number) {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
-type Rgb = [number, number, number];
-
-/** Ripple wavelength, in viewport heights. */
-const WAVELENGTH = 0.085;
-const K = (Math.PI * 2) / WAVELENGTH;
-/** Radians per second: how fast the crests travel outward. */
-const SPEED = 1.1;
-
-/** Which backdrop to draw. */
-const SCENE: "spectrogram" | "ripples" = "spectrogram";
-
-/**
- * Indigo throughout, matching the site's primary (hue ~277). Low energy is
- * deep navy; the strongest runs toward white-lavender.
- */
-function tint(l: number, out: Rgb) {
-  const hot = l * l;
-  out[0] = 0.02 + 0.5 * l + 0.55 * hot;
-  out[1] = 0.025 + 0.45 * l + 0.5 * hot;
-  out[2] = 0.07 + 1.1 * l + 0.4 * hot;
-}
-
-/**
- * The scene at (u, v) in 0..1, as linear-ish 0..1 colour, plus a time `t`.
- * `aspect` is width over height, so distances are the same in both axes.
- */
-function scene(u: number, v: number, t: number, aspect: number, out: Rgb) {
-  if (SCENE === "ripples") ripples(u, v, t, aspect, out);
-  else spectrogram(u, v, t, aspect, out);
-}
-
-const smooth = (a: number, b: number, x: number) => {
-  const k = clamp((x - a) / (b - a), 0, 1);
-  return k * k * (3 - 2 * k);
-};
-const bump = (x: number, centre: number, width: number) =>
-  Math.exp(-(((x - centre) / width) ** 2));
-
-/**
- * A spectrogram of someone talking, scrolling left. Time runs along x and
- * pitch up y, low at the bottom. Syllables come and go, three formant bands
- * wander as the vowels change, and fine harmonic stripes bend with intonation.
- */
-function spectrogram(
-  u: number,
-  v: number,
-  t: number,
-  aspect: number,
-  out: Rgb,
-) {
-  // The band the spectrogram lives in: the bottom of the screen.
-  const bottom = 0.97;
-  const height = 0.6;
-  const y = (bottom - v) / height;
-
-  // Time at this column. It grows with `t`, so the picture slides left.
-  const tau = u * aspect * 17 + t * 2.6;
-
-  // Syllables: bursts of speech separated by short pauses.
-  const speech =
-    0.4 +
-    0.6 *
-      smooth(
-        -0.4,
-        0.25,
-        0.55 * Math.sin(tau * 1.9) +
-          0.45 * Math.sin(tau * 0.71 + 2) +
-          0.2 * Math.sin(tau * 5.3),
-      );
-
-  // Formants drift as the vowel changes.
-  const f1 = 0.13 + 0.06 * Math.sin(tau * 0.9);
-  const f2 = 0.33 + 0.09 * Math.sin(tau * 0.6 + 1.7);
-  const f3 = 0.55 + 0.06 * Math.sin(tau * 0.45 + 0.4);
-  const formants =
-    bump(y, f1, 0.08) +
-    0.8 * bump(y, f2, 0.1) +
-    0.5 * bump(y, f3, 0.11) +
-    0.35 * Math.exp(-Math.max(y, 0) * 2.5);
-
-  // Harmonics: stripes at multiples of the pitch, which rises and falls.
-  const pitch = 0.05 + 0.012 * Math.sin(tau * 0.5);
-  const harmonic = (0.5 + 0.5 * Math.cos((Math.PI * 2 * y) / pitch)) ** 2;
-
-  // Each column and band is a slightly different brightness, like real bins.
-  const grain =
-    0.55 + 0.9 * hash(Math.floor(tau * 22), Math.floor(Math.max(y, 0) * 46));
-
-  // A quiet noise floor under everything, so pauses are not dead black.
-  const floor = 0.09 * Math.exp(-Math.max(y, 0) * 2.5) * grain;
-
-  // Fade out above the band and below the bottom edge.
-  const inside = smooth(1, 0.78, y) * smooth(-0.04, 0.02, y);
-  // And stay quieter toward the top, where the headline sits.
-  const low = 0.15 + 0.85 * v ** 3;
-
-  const l = clamp(
-    (speech * formants * (0.4 + 0.6 * harmonic) * grain * 2.7 + floor) *
-      inside *
-      low,
-    0,
-    1.3,
-  );
-  tint(l, out);
-}
-
-/** Two voices sending ripples that interfere. */
-function ripples(u: number, v: number, t: number, aspect: number, out: Rgb) {
-  // Two voices: each source sends out circular waves, and where they meet the
-  // crests add up or cancel into a fan of bright and dark fringes.
-  const sources = [
-    [
-      0.1 * aspect + 0.012 * Math.sin(t * 0.21),
-      0.84 + 0.01 * Math.cos(t * 0.17),
-    ],
-    [
-      0.3 * aspect + 0.012 * Math.cos(t * 0.19),
-      0.84 + 0.01 * Math.sin(t * 0.23),
-    ],
-  ];
-  const x = u * aspect;
-
-  let sum = 0;
-  let nearest = Infinity;
-  let source = 0;
-  for (let i = 0; i < sources.length; i++) {
-    const r = Math.hypot(x - sources[i][0], v - sources[i][1]);
-    sum +=
-      Math.cos(K * r - SPEED * Math.PI * 2 * t * 0.35 + i * 1.3) /
-      (1 + r * 2.2);
-    if (r < nearest) nearest = r;
-    source += Math.exp(-((r / 0.018) ** 2));
-  }
-
-  // Sharpen the crests so they read as rings, not a smooth gradient.
-  const crest = (0.5 + 0.5 * clamp(sum * 0.9, -1, 1)) ** 2.2;
-  // Fade with distance from the sources, and stay quieter toward the top where
-  // the headline sits.
-  const reach = Math.exp(-nearest * 0.7);
-  const low = 0.3 + 0.7 * v ** 1.5;
-  const l = clamp(crest * reach * low * 2.4, 0, 1.4);
-
-  tint(l, out);
-  let r = out[0];
-  let g = out[1];
-  let b = out[2];
-
-  // The sources themselves, pulsing a little.
-  const pulse = 0.8 + 0.2 * Math.sin(t * 2.4);
-  r += source * 0.9 * pulse;
-  g += source * 0.85 * pulse;
-  b += source * pulse;
-
-  out[0] = r;
-  out[1] = g;
-  out[2] = b;
+/** Smooth value noise in [0, 1). */
+function noise(x: number, y: number) {
+  const xi = Math.floor(x);
+  const yi = Math.floor(y);
+  const xf = x - xi;
+  const yf = y - yi;
+  const sx = xf * xf * (3 - 2 * xf);
+  const sy = yf * yf * (3 - 2 * yf);
+  const top = hash(xi, yi) + (hash(xi + 1, yi) - hash(xi, yi)) * sx;
+  const bottom =
+    hash(xi, yi + 1) + (hash(xi + 1, yi + 1) - hash(xi, yi + 1)) * sx;
+  return top + (bottom - top) * sy;
 }
 
 export function DitherSky({ className }: { className?: string }) {
@@ -204,10 +75,14 @@ export function DitherSky({ className }: { className?: string }) {
     const reduce = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
-    const rgb: Rgb = [0, 0, 0];
     let cols = 0;
     let rows = 0;
     let image: ImageData | null = null;
+    /** Per cell linear colour, three floats each. */
+    let buf = new Float32Array(0);
+    /** Per line and column: the line's row, and how hot it runs. */
+    let height = new Float32Array(0);
+    let heat = new Float32Array(0);
     let visible = true;
     let frame = 0;
     let last = 0;
@@ -219,34 +94,107 @@ export function DitherSky({ className }: { className?: string }) {
       el.width = cols;
       el.height = rows;
       image = ctx.createImageData(cols, rows);
+      buf = new Float32Array(cols * rows * 3);
+      height = new Float32Array(LINES * cols);
+      heat = new Float32Array(LINES * cols);
       draw(performance.now());
+    };
+
+    /** Lay out every line for time `t`: where it sits and how hot it is. */
+    const shape = (t: number, reach: number) => {
+      for (let i = 0; i < LINES; i++) {
+        const depth = i / (LINES - 1);
+        const base = BACK + (FRONT - BACK) * depth ** 1.3;
+        const amp = 0.05 + 0.1 * depth;
+        // Lines nearer the viewer show an earlier moment of the signal.
+        const tau = t - i * STEP;
+        const gate =
+          0.55 + 0.45 * Math.sin(tau * 1.1) * Math.sin(tau * 0.37 + 1);
+        for (let x = 0; x < reach; x++) {
+          const u = (x + 0.5) / cols;
+          const env = 0.05 + Math.exp(-(((u - CENTER) / SPREAD) ** 2));
+          const n =
+            0.6 * noise(u * 38, tau * 0.9) +
+            0.3 * noise(u * 90 + 7, tau * 1.6) +
+            0.1 * noise(u * 190 + 19, tau * 2.4);
+          const peak = clamp((n - 0.35) / 0.5, 0, 1) ** 1.6;
+          const level = peak * env * gate;
+          // A faint tremor along the whole line, so the quiet ends are alive.
+          const tremor = 0.003 * (noise(u * 60 + 31, tau * 0.5) - 0.5);
+          height[i * cols + x] = (base - amp * level + tremor) * rows;
+          heat[i * cols + x] = clamp(level * 1.3, 0, 1);
+        }
+      }
     };
 
     const draw = (time: number) => {
       if (!image) return;
       const t = time / 1000;
       const data = image.data;
+      const reach = Math.min(cols, Math.ceil(cols * REACH));
+
+      buf.fill(0);
+      shape(t, reach);
+
+      // Paint front to back. `top` is the highest row already claimed, so a
+      // line only shows above it, and what lies below a line stays dark.
+      for (let x = 0; x < reach; x++) {
+        let top = rows;
+        for (let i = LINES - 1; i >= 0; i--) {
+          const at = i * cols + x;
+          const cur = height[at];
+          const prev = x > 0 ? height[at - 1] : cur;
+          const next = x < reach - 1 ? height[at + 1] : cur;
+          const a = (prev + cur) / 2;
+          const b = (cur + next) / 2;
+          // Span the steps between neighbours so steep peaks stay connected.
+          const lo = Math.max(0, Math.floor(Math.min(cur, a, b)));
+          if (lo >= top) continue;
+          const hi = Math.min(
+            Math.floor(Math.max(cur, a, b)),
+            top - 1,
+            rows - 1,
+          );
+
+          const depth = i / (LINES - 1);
+          const h = heat[at];
+          const bright = (0.5 + 0.9 * depth) * (0.75 + 0.75 * h);
+          // Indigo along the line, lavender-white at the hottest peaks.
+          const r = (0.42 + 0.5 * h) * bright;
+          const g = (0.4 + 0.5 * h) * bright;
+          const bl = 1.0 * bright;
+          for (let y = lo; y <= hi; y++) {
+            const j = (y * cols + x) * 3;
+            buf[j] = r;
+            buf[j + 1] = g;
+            buf[j + 2] = bl;
+          }
+          top = lo;
+        }
+      }
+
       for (let y = 0; y < rows; y++) {
-        const v = (y + 0.5) / rows;
         for (let x = 0; x < cols; x++) {
-          const u = (x + 0.5) / cols;
-          scene(u, v, t, cols / rows, rgb);
-          const lum = 0.3 * rgb[0] + 0.59 * rgb[1] + 0.11 * rgb[2];
+          const j = (y * cols + x) * 3;
+          const cr = buf[j];
+          const cg = buf[j + 1];
+          const cb = buf[j + 2];
+          const lum = 0.3 * cr + 0.59 * cg + 0.11 * cb;
           const threshold =
             (BAYER8[(y & 7) * 8 + (x & 7)] + 0.5) / 64 +
             (hash(x, y) - 0.5) * 0.14;
           const lit = lum ** 0.8 > threshold;
           // Hue comes from the scene, brightness from how lit the cell is. Unlit
           // cells keep a faint trace so the dark reads as a screen, not a void.
-          const peak = Math.max(rgb[0], rgb[1], rgb[2], 1e-4);
+          const peak = Math.max(cr, cg, cb, 1e-4);
           const k = lit
             ? 255 * (0.5 + 0.5 * clamp(lum * 1.6, 0, 1))
             : 255 * 0.3;
           const a = lit ? 255 : clamp(lum * 700, 0, 90);
           const i = (y * cols + x) * 4;
-          data[i] = (rgb[0] / peak) * k;
-          data[i + 1] = (rgb[1] / peak) * k;
-          data[i + 2] = (rgb[2] / peak) * k;
+          data[i] = (cr / peak) * k;
+          data[i + 1] = (cg / peak) * k;
+          data[i + 2] = (cb / peak) * k;
           data[i + 3] = a;
         }
       }
@@ -275,6 +223,7 @@ export function DitherSky({ className }: { className?: string }) {
       if (visible && !frame) frame = requestAnimationFrame(loop);
     });
     io.observe(wrap);
+
     frame = requestAnimationFrame(loop);
 
     return () => {
