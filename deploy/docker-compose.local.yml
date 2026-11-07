@@ -3,13 +3,13 @@
 # next to a generated .env and starts it.
 #
 #   docker compose up -d
-#   open http://localhost:3000
+#   open http://localhost:4747
 #
 # Browser test calls work out of the box. Real phone calls need a public SIP
 # address, which a laptop doesn't have: use deploy/docker-compose.yml on a
 # server for those.
 #
-# Only the dashboard (3000) and the LiveKit ports below are published; Postgres
+# Only the dashboard (4747) and the LiveKit ports below are published; Postgres
 # stays inside the compose network.
 
 # Pinned so containers and the database volume have the same names whichever
@@ -24,12 +24,12 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "${SAMATA_PORT:-3000}:3000"
+      - "${SAMATA_PORT:-4747}:3000"
     environment:
       DATABASE_URL: postgres://samata:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/samata
       SAMATA_WEBHOOK_SECRET: ${SAMATA_WEBHOOK_SECRET:?set SAMATA_WEBHOOK_SECRET}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET}
-      BETTER_AUTH_URL: http://localhost:${SAMATA_PORT:-3000}
+      BETTER_AUTH_URL: http://localhost:${SAMATA_PORT:-4747}
       # The control plane reaches LiveKit over the compose network, but hands
       # browsers a URL that works from your machine.
       LIVEKIT_URL: ws://livekit:7880

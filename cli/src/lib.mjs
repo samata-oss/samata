@@ -3,7 +3,9 @@ import net from "node:net";
 
 export const DEFAULT_REPO = "samata-oss/samata";
 export const DEFAULT_REF = "main";
-export const DEFAULT_PORT = 3000;
+// Deliberately not 3000: that's the default for most dev servers (Next, Rails,
+// Express...), so it's usually taken.
+export const DEFAULT_PORT = 4747;
 /** Ports the bundled LiveKit server publishes on the host. */
 export const LIVEKIT_PORTS = [7880, 7881];
 /** `name:` in the compose file. The CLI looks up its volumes by it. */

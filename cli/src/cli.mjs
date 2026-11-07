@@ -291,7 +291,7 @@ async function checkPorts(ports) {
   if (busy.includes(ports[0])) {
     const free = await findFreePort(ports[0] + 1);
     lines.push(
-      `Pick another dashboard port with:  ${CMD} init --port ${free ?? 3100}`,
+      `Pick another dashboard port with:  ${CMD} init --port ${free ?? DEFAULT_PORT + 100}`,
     );
   }
   if (busy.some((p) => LIVEKIT_PORTS.includes(p))) {

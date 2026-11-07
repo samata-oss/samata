@@ -33,7 +33,7 @@ npx @samata-oss/cli
 
 This downloads `deploy/docker-compose.local.yml` into `./samata`, generates the
 secrets in `.env`, starts the whole stack from prebuilt images, and opens the
-dashboard at <http://localhost:3000>. Sign up (the first account is the owner),
+dashboard at <http://localhost:4747>. Sign up (the first account is the owner),
 add a provider key, and talk to an assistant from its Test tab. Browser calls
 work out of the box; phone calls need a server (below). See `npx @samata-oss/cli --help`
 for options.

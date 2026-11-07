@@ -15,7 +15,7 @@ npx @samata-oss/cli
 
 This downloads the stack's compose file into `./samata`, generates secrets in
 `.env`, starts everything from prebuilt images (control plane, worker, LiveKit and
-Postgres), and opens the dashboard at [localhost:3000](http://localhost:3000). The
+Postgres), and opens the dashboard at [localhost:4747](http://localhost:4747). The
 first run takes a few minutes while the images download.
 
 Then:
@@ -38,7 +38,7 @@ stack again. Options:
 | Flag                   | What it does                                                      |
 | ---------------------- | ----------------------------------------------------------------- |
 | `[dir]`                | Install somewhere other than `./samata`.                          |
-| `--port <n>`           | Dashboard port, if `3000` is taken.                               |
+| `--port <n>`           | Dashboard port, if `4747` is taken.                               |
 | `--no-start`           | Only write `docker-compose.yml` and `.env`.                       |
 | `--no-open`            | Don't open the browser.                                           |
 | `--force`              | Download `docker-compose.yml` again.                              |
