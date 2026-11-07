@@ -3,7 +3,7 @@ import { DitherField } from "@/components/landing/dither-field";
 import { DitherSky } from "@/components/landing/dither-sky";
 import { Reveal } from "@/components/landing/fx";
 import { InstallTabs } from "@/components/landing/install-tabs";
-import { LiveMark } from "@/components/landing/live-mark";
+import { HeroMark } from "@/components/landing/hero-mark";
 import { Panel } from "@/components/landing/panel";
 import { PixelIcon, type Sprite } from "@/components/landing/pixel-icon";
 import { TerminalHero } from "@/components/landing/terminal-hero";
@@ -126,7 +126,7 @@ export default async function HomePage() {
             <div className="relative flex h-full flex-col px-6 py-10 sm:px-8 lg:justify-center lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:px-8 lg:pt-6 lg:pb-28 xl:px-10">
               {/* The mark and the copy sit together as one block, centred in the pane. */}
               <div className="flex justify-center pb-8 lg:pb-[clamp(1.5rem,4vh,3.5rem)]">
-                <LiveMark className="size-48 sm:size-52 lg:size-[clamp(11rem,16vw,20rem)]" />
+                <HeroMark className="size-48 sm:size-52 lg:size-[clamp(11rem,16vw,20rem)]" />
               </div>
 
               {/* The copy sits flush left, low in the pane. */}
