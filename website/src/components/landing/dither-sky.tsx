@@ -52,9 +52,10 @@ function scene(u: number, v: number, t: number, out: Rgb) {
   const cut = Math.exp(-below / 0.01);
   const haze = Math.exp(-up / 0.17) * cut;
   const high = Math.exp(-up / 0.55) * cut;
-  let r = (0.02 + 0.03 * high) * cut + 0.08 * haze;
-  let g = (0.05 + 0.1 * high) * cut + 0.4 * haze;
-  let b = (0.12 + 0.28 * high) * cut + 0.85 * haze;
+  // Indigo throughout, matching the site's primary (hue ~277).
+  let r = (0.04 + 0.12 * high) * cut + 0.4 * haze;
+  let g = (0.04 + 0.1 * high) * cut + 0.38 * haze;
+  let b = (0.14 + 0.4 * high) * cut + 0.95 * haze;
 
   // The line itself runs hotter in some places than others.
   const heat =
@@ -67,14 +68,15 @@ function scene(u: number, v: number, t: number, out: Rgb) {
   const flame = (d >= 0 ? Math.exp(-below / 0.03) : Math.exp(-up / 0.02)) * hot;
   const ember = (d >= 0 ? Math.exp(-below / 0.07) : 0) * hot;
 
-  r += core * 1.0 + flame * 1.0 + ember * 0.55;
-  g += core * 0.7 + flame * 0.46 + ember * 0.1;
-  b += core * 0.16 + flame * 0.02;
+  // White-lavender core, then violet flame, then a deep purple ember.
+  r += core * 0.95 + flame * 0.62 + ember * 0.42;
+  g += core * 0.88 + flame * 0.45 + ember * 0.12;
+  b += core * 1.0 + flame * 1.0 + ember * 0.8;
 
   // Below the limb the planet is dark, with a cold wash far from the glow.
   const wash = d > 0 ? 0.03 * Math.exp(-below / 0.5) : 0;
   b += wash;
-  g += wash * 0.3;
+  r += wash * 0.4;
 
   out[0] = r;
   out[1] = g;
