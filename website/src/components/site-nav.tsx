@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLayoutEffect, useRef, useState } from "react";
 import { LogoMark } from "@/components/logo";
 import { cn } from "@/lib/cn";
 import { githubUrl } from "@/lib/shared";
@@ -26,6 +27,33 @@ const links = [
 export function SiteNav({ stars }: { stars: number | null }) {
   const pathname = usePathname();
   const home = pathname === "/";
+
+  const navRef = useRef<HTMLElement>(null);
+  const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const [indicator, setIndicator] = useState<{
+    left: number;
+    width: number;
+  } | null>(null);
+  // Skip the transition on the first placement so the line doesn't slide in.
+  const [ready, setReady] = useState(false);
+
+  const activeIndex = links.findIndex((link) => link.match(pathname));
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = linkRefs.current[activeIndex];
+      setIndicator(
+        el ? { left: el.offsetLeft, width: el.offsetWidth } : null,
+      );
+    };
+    measure();
+    const frame = requestAnimationFrame(() => setReady(true));
+    window.addEventListener("resize", measure);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", measure);
+    };
+  }, [activeIndex]);
 
   /** Full height, so the current-page line sits right on the header border. */
   const item =
@@ -52,19 +80,34 @@ export function SiteNav({ stars }: { stars: number | null }) {
       >
         /
       </span>
-      <nav className="flex min-w-0 flex-1 items-stretch gap-1">
-        {links.map((link) => {
+      <nav
+        ref={navRef}
+        className="relative flex min-w-0 flex-1 items-stretch gap-1"
+      >
+        {/* The current-page line. It slides between links instead of jumping. */}
+        <span
+          aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute bottom-0 left-0 h-px bg-fd-foreground",
+            ready && "transition-[transform,width,opacity] duration-150 ease-out",
+          )}
+          style={{
+            width: indicator?.width ?? 0,
+            transform: `translateX(${indicator?.left ?? 0}px)`,
+            opacity: indicator ? 1 : 0,
+          }}
+        />
+        {links.map((link, i) => {
           const current = link.match(pathname);
           return (
             <Link
               key={link.href}
+              ref={(el) => {
+                linkRefs.current[i] = el;
+              }}
               href={link.href}
               aria-current={current ? "page" : undefined}
-              className={cn(
-                item,
-                current &&
-                  "text-fd-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-fd-foreground",
-              )}
+              className={cn(item, current && "text-fd-foreground")}
             >
               {link.label}
             </Link>
