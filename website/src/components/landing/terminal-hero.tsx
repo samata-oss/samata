@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
+import { Panel } from "./panel";
 
 /** Colours for the little bit of syntax highlighting the terminal needs. */
 const c = {
   prompt: "text-fd-muted-foreground",
   cmd: "text-fd-foreground",
   flag: "text-fd-muted-foreground",
-  str: "text-fd-primary",
+  str: "text-emerald-300/90",
   ok: "text-emerald-400",
   dim: "text-fd-muted-foreground",
 };
@@ -38,20 +39,9 @@ export function TerminalHero() {
   const n = () => i++;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-white/[0.09] bg-white/[0.02]">
+    <Panel title="~/acme — zsh">
       <div>
-        <div className="flex items-center gap-3 border-b border-white/[0.07] px-4 py-2.5">
-          <div className="flex gap-1.5" aria-hidden="true">
-            <span className="size-2.5 rounded-full bg-white/15" />
-            <span className="size-2.5 rounded-full bg-white/15" />
-            <span className="size-2.5 rounded-full bg-white/15" />
-          </div>
-          <span className="font-mono text-xs text-fd-muted-foreground">
-            ~/acme — zsh
-          </span>
-        </div>
-
-        <pre className="overflow-x-auto p-5 font-mono text-[12.5px] leading-[1.7]">
+        <pre className="overflow-x-auto px-5 pt-6 pb-5 font-mono text-[12.5px] leading-[1.7]">
           <Line i={n()}>
             <span className={c.prompt}>$ </span>
             <span className={c.cmd}>curl</span>{" "}
@@ -124,10 +114,10 @@ export function TerminalHero() {
           <Line i={n()}>{"}"}</Line>
           <Line i={n()}>
             <span className={c.prompt}>$ </span>
-            <span className="caret inline-block h-[1.1em] w-[0.55em] translate-y-[0.2em] bg-fd-foreground/80" />
+            <span className="caret inline-block h-[1.1em] w-[0.55em] translate-y-[0.2em] bg-emerald-300" />
           </Line>
         </pre>
       </div>
-    </div>
+    </Panel>
   );
 }

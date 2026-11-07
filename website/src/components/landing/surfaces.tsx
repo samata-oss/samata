@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Spotlight } from "./fx";
+import { Panel } from "./panel";
 
 const cards = [
   {
@@ -34,30 +34,27 @@ const cards = [
 
 export function ProductCards() {
   return (
-    <Spotlight className="grid gap-3 sm:grid-cols-2">
+    <div className="grid gap-5 sm:grid-cols-2">
       {cards.map((card) => (
-        <article
-          key={card.title}
-          className="spot-card flex flex-col overflow-hidden"
-        >
-          <div className="relative m-1.5 h-44 overflow-hidden rounded-xl border border-white/[0.07] bg-black">
-            {card.visual}
-          </div>
-          <div className="flex flex-1 flex-col px-4 pt-3 pb-4">
-            <h3 className="text-sm font-medium">{card.title}</h3>
-            <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-400">
+        <Panel key={card.title} title={card.title.toLowerCase()}>
+          <div className="flex h-full flex-col p-3 pt-4">
+            <div className="relative h-44 overflow-hidden rounded-sm border border-white/10 bg-black">
+              {card.visual}
+            </div>
+            <p className="mt-4 text-[13px] leading-relaxed text-zinc-400">
               {card.body}
             </p>
             <Link
               href={card.href}
-              className="mt-4 inline-flex h-8 w-fit items-center rounded-full bg-white px-4 text-xs font-medium text-black transition-colors hover:bg-zinc-200"
+              className="mt-3 -ml-1 inline-flex w-fit items-center gap-2 px-1 text-xs text-emerald-300 transition-colors hover:bg-emerald-300 hover:text-black"
             >
-              {card.cta}
+              <span aria-hidden="true">→</span>
+              {card.cta.toLowerCase()}
             </Link>
           </div>
-        </article>
+        </Panel>
       ))}
-    </Spotlight>
+    </div>
   );
 }
 
@@ -100,12 +97,7 @@ function BrowserVisual() {
   ] as const;
   return (
     <div className="flex h-full flex-col p-4 font-mono text-[11px] leading-relaxed">
-      <div className="mb-3 flex items-center gap-1.5 text-zinc-600">
-        <span className="size-1.5 rounded-full bg-white/20" />
-        <span className="size-1.5 rounded-full bg-white/20" />
-        <span className="size-1.5 rounded-full bg-white/20" />
-        <span className="ml-2">acme.com/support</span>
-      </div>
+      <div className="mb-3 text-zinc-600">acme.com/support</div>
       <div className="space-y-1.5">
         {lines.map(([role, text]) => (
           <p key={text} className="text-zinc-300">

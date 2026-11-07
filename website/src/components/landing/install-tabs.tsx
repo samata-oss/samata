@@ -3,6 +3,7 @@
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
+import { Panel } from "./panel";
 
 export type InstallTab = { id: string; label: string; command: string };
 
@@ -13,11 +14,8 @@ export function InstallTabs({ tabs }: { tabs: InstallTab[] }) {
   const current = tabs.find((t) => t.id === active) ?? tabs[0];
 
   return (
-    <div className="overflow-hidden rounded-xl border border-white/[0.09] bg-white/[0.02]">
-      <div
-        role="tablist"
-        className="flex gap-1 border-b border-white/[0.07] p-1.5"
-      >
+    <Panel title="install">
+      <div role="tablist" className="flex gap-1 px-3 pt-4">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -29,18 +27,24 @@ export function InstallTabs({ tabs }: { tabs: InstallTab[] }) {
               setCopied(false);
             }}
             className={cn(
-              "rounded-md px-3.5 py-1.5 font-mono text-[11px] transition-colors",
+              "px-2 py-0.5 font-mono text-[11px] lowercase transition-colors",
               tab.id === active
-                ? "bg-white/[0.08] text-fd-foreground"
-                : "text-fd-muted-foreground hover:text-fd-foreground",
+                ? "bg-white text-black"
+                : "text-zinc-500 hover:bg-white/10 hover:text-white",
             )}
           >
             {tab.label}
           </button>
         ))}
       </div>
-      <div className="flex items-center gap-3 bg-black/30 px-4 py-4 font-mono text-[13px]">
+      <div className="flex items-center gap-3 px-4 pt-3 pb-4 font-mono text-[13px]">
         <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap">
+          <span
+            aria-hidden="true"
+            className="mr-2 select-none text-emerald-300"
+          >
+            $
+          </span>
           <Highlighted command={current.command} />
         </code>
         <button
@@ -56,7 +60,7 @@ export function InstallTabs({ tabs }: { tabs: InstallTab[] }) {
           {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
         </button>
       </div>
-    </div>
+    </Panel>
   );
 }
 
@@ -65,7 +69,7 @@ function Highlighted({ command }: { command: string }) {
   const [head, ...rest] = command.split(" ");
   return (
     <>
-      <span className="text-fd-primary">{head}</span>
+      <span className="text-emerald-300">{head}</span>
       {rest.length ? ` ${rest.join(" ")}` : ""}
     </>
   );

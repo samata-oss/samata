@@ -197,48 +197,6 @@ html > body[data-scroll-locked] {
   animation: blink 1.1s steps(1) infinite;
 }
 
-/* Rounded cards with a 1px border that lights up under the pointer. See
-   `Spotlight`, which sets --mx and --my on each card. */
-.spot-card {
-  --mx: -999px;
-  --my: -999px;
-  position: relative;
-  border-radius: 1rem;
-  background:
-    radial-gradient(
-      360px circle at var(--mx) var(--my),
-      oklch(0.7 0.18 277 / 0.1),
-      transparent 70%
-    ),
-    oklch(1 0 0 / 2.5%);
-}
-
-.spot-card::before {
-  content: "";
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background:
-    radial-gradient(
-      260px circle at var(--mx) var(--my),
-      oklch(0.78 0.16 277),
-      transparent 70%
-    ),
-    oklch(1 0 0 / 9%);
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-}
-
-.landing-fade {
-  opacity: 0;
-  animation: fade-up 0.45s ease-out forwards;
-}
-
 /* A line with light travelling along it, for the architecture diagram. */
 .flow-line {
   background-image: linear-gradient(
