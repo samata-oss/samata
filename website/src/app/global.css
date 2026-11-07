@@ -174,25 +174,6 @@ html > body[data-scroll-locked] {
   animation: flare-pulse 5s ease-in-out infinite;
 }
 
-/* Starfield: each star keeps its own brightness in --o and some twinkle. */
-@keyframes twinkle {
-  0%,
-  100% {
-    opacity: calc(var(--o) * 0.15);
-  }
-  50% {
-    opacity: var(--o);
-  }
-}
-
-.star-twinkle {
-  animation: twinkle 5s ease-in-out infinite;
-}
-
-.star-bright {
-  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.9));
-}
-
 /* Film grain over the hero. */
 .grain {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
@@ -219,7 +200,6 @@ html > body[data-scroll-locked] {
 @media (prefers-reduced-motion: reduce) {
   .caret,
   .shimmer,
-  .star-twinkle,
   .flare-pulse,
   .flow-line {
     animation: none;

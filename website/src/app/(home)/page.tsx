@@ -1,9 +1,9 @@
 import { Compare } from "@/components/landing/compare";
+import { DitherSky } from "@/components/landing/dither-sky";
 import { Reveal } from "@/components/landing/fx";
 import { InstallTabs } from "@/components/landing/install-tabs";
 import { LiveMark } from "@/components/landing/live-mark";
 import { Panel } from "@/components/landing/panel";
-import { Starfield } from "@/components/landing/starfield";
 import { ProductCards } from "@/components/landing/surfaces";
 import { TerminalHero } from "@/components/landing/terminal-hero";
 import { LogoMark } from "@/components/logo";
@@ -157,13 +157,7 @@ export default async function HomePage() {
             }
             className="h-full [--color-fd-card:oklch(0.135_0.005_270)]"
           >
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 overflow-hidden rounded-[inherit]"
-            >
-              <Starfield className="pointer-events-none absolute inset-0 size-full opacity-35" />
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_55%_at_50%_0%,oklch(0.6_0.2_277/0.16),transparent_70%)]" />
-            </div>
+            <DitherSky className="absolute inset-0 rounded-[inherit]" />
             <div className="relative flex h-full flex-col gap-8 px-6 py-10 sm:px-8 lg:justify-center lg:gap-6 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:px-10 lg:pt-8 lg:pb-40 xl:px-14">
               <div className="@container relative mx-auto w-full max-w-2xl">
                 <LiveMark className="size-48 sm:size-52 lg:size-[clamp(11rem,14.5vw,18rem)]" />
