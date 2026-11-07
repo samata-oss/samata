@@ -6,7 +6,7 @@ const c = {
   prompt: "text-fd-muted-foreground",
   cmd: "text-fd-foreground",
   flag: "text-fd-muted-foreground",
-  str: "text-emerald-300/90",
+  str: "text-indigo-300",
   ok: "text-emerald-400",
   dim: "text-fd-muted-foreground",
 };
@@ -114,7 +114,7 @@ export function TerminalHero() {
           <Line i={n()}>{"}"}</Line>
           <Line i={n()}>
             <span className={c.prompt}>$ </span>
-            <span className="caret inline-block h-[1.1em] w-[0.55em] translate-y-[0.2em] bg-emerald-300" />
+            <span className="caret inline-block h-[1.1em] w-[0.55em] translate-y-[0.2em] bg-fd-primary" />
           </Line>
         </pre>
       </div>

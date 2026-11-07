@@ -51,7 +51,7 @@ export function GrainMark({ className }: { className?: string }) {
     <svg
       viewBox={`0 0 ${size} ${size}`}
       aria-hidden="true"
-      className={cn("size-40 text-white", className)}
+      className={cn("size-40 text-[#eef0ff]", className)}
     >
       <path d={halo} fill="currentColor" opacity="0.28" />
       <path d={bars} fill="currentColor" />

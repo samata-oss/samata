@@ -74,7 +74,7 @@ function Sky({ stars }: { stars: Star[] }) {
           cx={`${star.x.toFixed(2)}%`}
           cy={`${star.y.toFixed(2)}%`}
           r={star.r.toFixed(2)}
-          fill={star.tint ? "#a5b4fc" : "#fff"}
+          fill={star.tint ? "#a5b4fc" : "#e4e7ff"}
           opacity={star.o.toFixed(2)}
           className={
             star.bright

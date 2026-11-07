@@ -105,7 +105,7 @@ export function LiveMark({ className }: { className?: string }) {
 
       ctx.fillStyle = "rgba(165,180,252,0.3)";
       ctx.fill(halo);
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = "#eef0ff";
       ctx.fill(bars);
     };
 

@@ -128,15 +128,15 @@ const openSource = [
 ];
 
 const primary =
-  "inline-flex h-9 items-center rounded-sm bg-emerald-300 px-4 text-xs font-medium text-black transition-colors hover:bg-white";
+  "inline-flex h-9 items-center rounded-md bg-fd-primary px-4 text-xs font-medium text-fd-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.18)] transition-colors hover:bg-fd-primary/85";
 const ghost =
-  "inline-flex h-9 items-center rounded-sm border border-white/25 px-4 text-xs text-zinc-300 transition-colors hover:bg-white hover:text-black";
+  "inline-flex h-9 items-center rounded-md border border-white/[0.14] px-4 text-xs text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white";
 
 export default async function HomePage() {
   const stars = await getStars();
 
   return (
-    <div className="flex min-h-screen flex-col bg-black font-mono text-white">
+    <div className="flex min-h-screen flex-col font-mono">
       <Nav stars={stars} />
       <div className="lg:grid lg:grid-cols-[minmax(22rem,42%)_minmax(0,1fr)] lg:items-start lg:gap-3 lg:p-3">
         <aside className="m-3 lg:sticky lg:top-[3.75rem] lg:m-0 lg:h-[calc(100svh-4.5rem)]">
@@ -145,7 +145,8 @@ export default async function HomePage() {
               aria-hidden="true"
               className="absolute inset-0 overflow-hidden rounded-[inherit]"
             >
-              <Starfield className="pointer-events-none absolute inset-0 size-full" />
+              <Starfield className="pointer-events-none absolute inset-0 size-full opacity-35" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_55%_at_50%_0%,oklch(0.6_0.2_277/0.16),transparent_70%)]" />
             </div>
             <div className="relative flex h-full flex-col gap-8 px-6 py-10 sm:px-8 lg:justify-center lg:gap-6 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:px-10 lg:pt-8 lg:pb-40 xl:px-14">
               <div className="@container relative mx-auto w-full max-w-2xl">
@@ -154,7 +155,7 @@ export default async function HomePage() {
                   href={githubUrl}
                   className="mt-5 inline-flex items-center gap-2 text-xs text-zinc-500 transition-colors hover:text-white"
                 >
-                  <span className="text-emerald-300">●</span>
+                  <span className="text-fd-primary">●</span>
                   apache 2.0 · self-hosted
                 </a>
                 <h1 className="mt-3 text-[1.9rem] font-medium leading-[1.12] tracking-[-0.04em] sm:text-4xl lg:whitespace-nowrap lg:text-[clamp(1.1rem,5.4cqw,3.25rem)]">
@@ -162,7 +163,7 @@ export default async function HomePage() {
                   voice platform
                   <span
                     aria-hidden="true"
-                    className="caret ml-[0.12em] inline-block h-[0.85em] w-[0.5em] translate-y-[0.1em] bg-emerald-300"
+                    className="caret ml-[0.12em] inline-block h-[0.85em] w-[0.5em] translate-y-[0.1em] bg-fd-primary"
                   />
                 </h1>
                 <p className="mt-4 max-w-sm text-[13px] leading-relaxed text-zinc-400 xl:max-w-none xl:whitespace-nowrap xl:text-[clamp(0.55rem,2.05cqw,0.8125rem)]">
@@ -273,7 +274,7 @@ export default async function HomePage() {
               <a href={githubUrl} className={primary}>
                 star on github
                 {stars !== null && stars >= 10 ? (
-                  <span className="ml-2 text-black/60">★ {stars}</span>
+                  <span className="ml-2 opacity-70">★ {stars}</span>
                 ) : null}
               </a>
               <a href={`${githubUrl}/issues`} className={ghost}>
@@ -283,13 +284,13 @@ export default async function HomePage() {
           </Block>
 
           <Block id="faq" kicker="faq" title="Questions.">
-            <div className="border-t border-dashed border-white/15">
+            <div className="border-t border-dashed border-white/[0.1]">
               {questions.map((item) => (
                 <details
                   key={item.q}
-                  className="group border-b border-dashed border-white/15"
+                  className="group border-b border-dashed border-white/[0.1]"
                 >
-                  <summary className="flex cursor-pointer list-none items-center gap-3 px-1 py-3 text-[13px] transition-colors hover:bg-white hover:text-black group-open:text-emerald-300 group-open:hover:bg-emerald-300 group-open:hover:text-black [&::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none items-center gap-3 rounded-sm px-1 py-3 text-[13px] transition-colors hover:bg-white/[0.04] group-open:text-fd-primary [&::-webkit-details-marker]:hidden">
                     <span aria-hidden="true" className="w-3 shrink-0">
                       <span className="group-open:hidden">▸</span>
                       <span className="hidden group-open:inline">▾</span>
@@ -317,12 +318,12 @@ function Nav({ stars }: { stars: number | null }) {
     { href: "/docs/deploy", label: "deploy" },
   ];
   const item =
-    "px-2 py-1 text-zinc-500 transition-colors hover:bg-white hover:text-black";
+    "rounded-sm px-2 py-1 text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-white";
   return (
-    <header className="sticky top-0 z-40 flex h-12 items-center gap-1 border-b border-white/10 bg-black/80 px-3 text-xs backdrop-blur-md">
+    <header className="sticky top-0 z-40 flex h-12 items-center gap-1 border-b border-fd-border bg-fd-background/80 px-3 text-xs backdrop-blur-md">
       <Link
         href="/"
-        className="flex items-center gap-2 px-2 py-1 font-medium transition-colors hover:bg-white hover:text-black"
+        className="flex items-center gap-2 rounded-sm px-2 py-1 font-medium transition-colors hover:bg-white/[0.06]"
       >
         <LogoMark className="size-4 rounded-sm" />
         samata
@@ -359,7 +360,7 @@ function Nav({ stars }: { stars: number | null }) {
 function Kicker({ children }: { children: string }) {
   return (
     <p className="text-xs text-zinc-500">
-      <span className="text-emerald-300">##</span> {children}
+      <span className="text-fd-primary">##</span> {children}
     </p>
   );
 }
@@ -380,7 +381,7 @@ function Block({
   return (
     <section
       id={id}
-      className="scroll-mt-14 border-t border-dashed border-white/15 px-6 py-14 sm:px-8 lg:px-12 lg:py-16"
+      className="scroll-mt-14 border-t border-dashed border-white/[0.1] px-6 py-14 sm:px-8 lg:px-12 lg:py-16"
     >
       <Reveal>
         <Kicker>{kicker}</Kicker>
@@ -400,7 +401,7 @@ function More({ href, children }: { href: string; children: string }) {
   return (
     <Link
       href={href}
-      className="mt-4 -ml-1 inline-flex items-center gap-2 px-1 text-xs text-emerald-300 transition-colors hover:bg-emerald-300 hover:text-black"
+      className="mt-4 -ml-1 inline-flex items-center gap-2 rounded-sm px-1 text-xs text-fd-primary transition-colors hover:bg-fd-primary/15"
     >
       <span aria-hidden="true">→</span>
       {children}
@@ -410,10 +411,11 @@ function More({ href, children }: { href: string; children: string }) {
 
 /** The footer as an editor status bar: a filled mode label, then the links. */
 function Footer() {
-  const link = "px-3 py-1.5 transition-colors hover:bg-white hover:text-black";
+  const link =
+    "px-3 py-1.5 transition-colors hover:bg-white/[0.06] hover:text-white";
   return (
-    <footer className="flex flex-wrap items-stretch border-t border-white/10 bg-white/[0.04] text-[11px] text-zinc-400">
-      <span className="bg-emerald-300 px-3 py-1.5 font-medium text-black">
+    <footer className="flex flex-wrap items-stretch border-t border-fd-border bg-white/[0.03] text-[11px] text-zinc-400">
+      <span className="bg-fd-primary px-3 py-1.5 font-medium text-fd-primary-foreground">
         SAMATA
       </span>
       <span className="px-3 py-1.5">apache-2.0</span>
@@ -449,7 +451,7 @@ function Step({
   return (
     <div>
       <div className="mb-3 flex items-baseline gap-3 text-xs">
-        <span className="text-emerald-300">{n}</span>
+        <span className="text-fd-primary">{n}</span>
         <span className="text-zinc-300">{title}</span>
       </div>
       {children}

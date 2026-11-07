@@ -38,7 +38,7 @@ export function ProductCards() {
       {cards.map((card) => (
         <Panel key={card.title} title={card.title.toLowerCase()}>
           <div className="flex h-full flex-col p-3 pt-4">
-            <div className="relative h-44 overflow-hidden rounded-sm border border-white/10 bg-black">
+            <div className="relative h-44 overflow-hidden rounded-md border border-fd-border bg-fd-background/60">
               {card.visual}
             </div>
             <p className="mt-4 text-[13px] leading-relaxed text-zinc-400">
@@ -46,7 +46,7 @@ export function ProductCards() {
             </p>
             <Link
               href={card.href}
-              className="mt-3 -ml-1 inline-flex w-fit items-center gap-2 px-1 text-xs text-emerald-300 transition-colors hover:bg-emerald-300 hover:text-black"
+              className="mt-3 -ml-1 inline-flex w-fit items-center gap-2 rounded-sm px-1 text-xs text-fd-primary transition-colors hover:bg-fd-primary/15"
             >
               <span aria-hidden="true">→</span>
               {card.cta.toLowerCase()}
@@ -67,7 +67,7 @@ function PhoneVisual() {
           <span
             // biome-ignore lint/suspicious/noArrayIndexKey: static decorative bars
             key={index}
-            className="w-[3px] bg-white/85"
+            className="w-[3px] rounded-[1px] bg-fd-primary/80"
             style={{ height: `${height}%` }}
           />
         ))}

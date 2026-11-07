@@ -27,10 +27,10 @@ export function InstallTabs({ tabs }: { tabs: InstallTab[] }) {
               setCopied(false);
             }}
             className={cn(
-              "px-2 py-0.5 font-mono text-[11px] lowercase transition-colors",
+              "rounded-sm px-2 py-0.5 font-mono text-[11px] lowercase transition-colors",
               tab.id === active
-                ? "bg-white text-black"
-                : "text-zinc-500 hover:bg-white/10 hover:text-white",
+                ? "bg-fd-primary/20 text-fd-primary"
+                : "text-zinc-500 hover:bg-white/[0.06] hover:text-white",
             )}
           >
             {tab.label}
@@ -41,7 +41,7 @@ export function InstallTabs({ tabs }: { tabs: InstallTab[] }) {
         <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap">
           <span
             aria-hidden="true"
-            className="mr-2 select-none text-emerald-300"
+            className="mr-2 select-none text-fd-primary"
           >
             $
           </span>
@@ -69,7 +69,7 @@ function Highlighted({ command }: { command: string }) {
   const [head, ...rest] = command.split(" ");
   return (
     <>
-      <span className="text-emerald-300">{head}</span>
+      <span className="text-fd-primary">{head}</span>
       {rest.length ? ` ${rest.join(" ")}` : ""}
     </>
   );
