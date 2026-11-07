@@ -4,10 +4,10 @@ import { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 
 /**
- * The hero pane's backdrop: the limb of a planet seen from orbit, rendered as
- * ordered dither. A smooth scene is evaluated per cell, then each cell is
- * either lit in full or left dim depending on a Bayer threshold, so the glow
- * dissolves into coloured dots on black. It shares the dither language of the
+ * The hero pane's backdrop, rendered as ordered dither: a scrolling
+ * spectrogram of speech, or (see `SCENE`) two sources whose ripples interfere. A smooth scene is evaluated per cell, then each
+ * cell is either lit in full or left dim depending on a Bayer threshold, so
+ * the waves dissolve into coloured dots on black. It shares the dither language of the
  * `LiveMark` waveform. The canvas is drawn at one pixel per cell and scaled up
  * without smoothing, so every cell stays crisp.
  */
@@ -35,48 +35,156 @@ function hash(x: number, y: number) {
 
 type Rgb = [number, number, number];
 
-/** The scene at (u, v) in 0..1, as linear-ish 0..1 colour, plus a time `t`. */
-function scene(u: number, v: number, t: number, out: Rgb) {
-  // The limb: a shallow arc that falls from left to right.
-  const limb =
-    0.7 +
-    0.2 * u -
-    0.06 * Math.sin(u * Math.PI) +
-    0.004 * Math.sin(t * 0.35 + u * 3);
-  const d = v - limb;
+/** Ripple wavelength, in viewport heights. */
+const WAVELENGTH = 0.085;
+const K = (Math.PI * 2) / WAVELENGTH;
+/** Radians per second: how fast the crests travel outward. */
+const SPEED = 1.1;
 
-  // Sky above the limb: navy overhead, a bright blue haze hugging the line.
-  const up = Math.max(0, -d);
-  const below = Math.max(0, d);
-  // The sky stops at the limb, so the haze fades just under the line.
-  const cut = Math.exp(-below / 0.01);
-  const haze = Math.exp(-up / 0.17) * cut;
-  const high = Math.exp(-up / 0.55) * cut;
-  // Indigo throughout, matching the site's primary (hue ~277).
-  let r = (0.04 + 0.12 * high) * cut + 0.4 * haze;
-  let g = (0.04 + 0.1 * high) * cut + 0.38 * haze;
-  let b = (0.14 + 0.4 * high) * cut + 0.95 * haze;
+/** Which backdrop to draw. */
+const SCENE: "spectrogram" | "ripples" = "spectrogram";
 
-  // The line itself runs hotter in some places than others.
-  const heat =
-    0.62 +
-    0.38 * Math.sin(u * 4.2 + 1.1 + t * 0.25) * Math.sin(u * 1.7 + 0.4) +
-    0.25 * Math.exp(-(((u - 0.55) / 0.3) ** 2));
-  const hot = clamp(heat, 0.25, 1.2);
+/**
+ * Indigo throughout, matching the site's primary (hue ~277). Low energy is
+ * deep navy; the strongest runs toward white-lavender.
+ */
+function tint(l: number, out: Rgb) {
+  const hot = l * l;
+  out[0] = 0.02 + 0.5 * l + 0.55 * hot;
+  out[1] = 0.025 + 0.45 * l + 0.5 * hot;
+  out[2] = 0.07 + 1.1 * l + 0.4 * hot;
+}
 
-  const core = Math.exp(-((d / 0.012) ** 2)) * hot;
-  const flame = (d >= 0 ? Math.exp(-below / 0.03) : Math.exp(-up / 0.02)) * hot;
-  const ember = (d >= 0 ? Math.exp(-below / 0.07) : 0) * hot;
+/**
+ * The scene at (u, v) in 0..1, as linear-ish 0..1 colour, plus a time `t`.
+ * `aspect` is width over height, so distances are the same in both axes.
+ */
+function scene(u: number, v: number, t: number, aspect: number, out: Rgb) {
+  if (SCENE === "ripples") ripples(u, v, t, aspect, out);
+  else spectrogram(u, v, t, aspect, out);
+}
 
-  // White-lavender core, then violet flame, then a deep purple ember.
-  r += core * 0.95 + flame * 0.62 + ember * 0.42;
-  g += core * 0.88 + flame * 0.45 + ember * 0.12;
-  b += core * 1.0 + flame * 1.0 + ember * 0.8;
+const smooth = (a: number, b: number, x: number) => {
+  const k = clamp((x - a) / (b - a), 0, 1);
+  return k * k * (3 - 2 * k);
+};
+const bump = (x: number, centre: number, width: number) =>
+  Math.exp(-(((x - centre) / width) ** 2));
 
-  // Below the limb the planet is dark, with a cold wash far from the glow.
-  const wash = d > 0 ? 0.03 * Math.exp(-below / 0.5) : 0;
-  b += wash;
-  r += wash * 0.4;
+/**
+ * A spectrogram of someone talking, scrolling left. Time runs along x and
+ * pitch up y, low at the bottom. Syllables come and go, three formant bands
+ * wander as the vowels change, and fine harmonic stripes bend with intonation.
+ */
+function spectrogram(
+  u: number,
+  v: number,
+  t: number,
+  aspect: number,
+  out: Rgb,
+) {
+  // The band the spectrogram lives in: the bottom of the screen.
+  const bottom = 0.97;
+  const height = 0.6;
+  const y = (bottom - v) / height;
+
+  // Time at this column. It grows with `t`, so the picture slides left.
+  const tau = u * aspect * 17 + t * 2.6;
+
+  // Syllables: bursts of speech separated by short pauses.
+  const speech =
+    0.4 +
+    0.6 *
+      smooth(
+        -0.4,
+        0.25,
+        0.55 * Math.sin(tau * 1.9) +
+          0.45 * Math.sin(tau * 0.71 + 2) +
+          0.2 * Math.sin(tau * 5.3),
+      );
+
+  // Formants drift as the vowel changes.
+  const f1 = 0.13 + 0.06 * Math.sin(tau * 0.9);
+  const f2 = 0.33 + 0.09 * Math.sin(tau * 0.6 + 1.7);
+  const f3 = 0.55 + 0.06 * Math.sin(tau * 0.45 + 0.4);
+  const formants =
+    bump(y, f1, 0.08) +
+    0.8 * bump(y, f2, 0.1) +
+    0.5 * bump(y, f3, 0.11) +
+    0.35 * Math.exp(-Math.max(y, 0) * 2.5);
+
+  // Harmonics: stripes at multiples of the pitch, which rises and falls.
+  const pitch = 0.05 + 0.012 * Math.sin(tau * 0.5);
+  const harmonic = (0.5 + 0.5 * Math.cos((Math.PI * 2 * y) / pitch)) ** 2;
+
+  // Each column and band is a slightly different brightness, like real bins.
+  const grain =
+    0.55 + 0.9 * hash(Math.floor(tau * 22), Math.floor(Math.max(y, 0) * 46));
+
+  // A quiet noise floor under everything, so pauses are not dead black.
+  const floor = 0.09 * Math.exp(-Math.max(y, 0) * 2.5) * grain;
+
+  // Fade out above the band and below the bottom edge.
+  const inside = smooth(1, 0.78, y) * smooth(-0.04, 0.02, y);
+  // And stay quieter toward the top, where the headline sits.
+  const low = 0.15 + 0.85 * v ** 3;
+
+  const l = clamp(
+    (speech * formants * (0.4 + 0.6 * harmonic) * grain * 2.7 + floor) *
+      inside *
+      low,
+    0,
+    1.3,
+  );
+  tint(l, out);
+}
+
+/** Two voices sending ripples that interfere. */
+function ripples(u: number, v: number, t: number, aspect: number, out: Rgb) {
+  // Two voices: each source sends out circular waves, and where they meet the
+  // crests add up or cancel into a fan of bright and dark fringes.
+  const sources = [
+    [
+      0.1 * aspect + 0.012 * Math.sin(t * 0.21),
+      0.84 + 0.01 * Math.cos(t * 0.17),
+    ],
+    [
+      0.3 * aspect + 0.012 * Math.cos(t * 0.19),
+      0.84 + 0.01 * Math.sin(t * 0.23),
+    ],
+  ];
+  const x = u * aspect;
+
+  let sum = 0;
+  let nearest = Infinity;
+  let source = 0;
+  for (let i = 0; i < sources.length; i++) {
+    const r = Math.hypot(x - sources[i][0], v - sources[i][1]);
+    sum +=
+      Math.cos(K * r - SPEED * Math.PI * 2 * t * 0.35 + i * 1.3) /
+      (1 + r * 2.2);
+    if (r < nearest) nearest = r;
+    source += Math.exp(-((r / 0.018) ** 2));
+  }
+
+  // Sharpen the crests so they read as rings, not a smooth gradient.
+  const crest = (0.5 + 0.5 * clamp(sum * 0.9, -1, 1)) ** 2.2;
+  // Fade with distance from the sources, and stay quieter toward the top where
+  // the headline sits.
+  const reach = Math.exp(-nearest * 0.7);
+  const low = 0.3 + 0.7 * v ** 1.5;
+  const l = clamp(crest * reach * low * 2.4, 0, 1.4);
+
+  tint(l, out);
+  let r = out[0];
+  let g = out[1];
+  let b = out[2];
+
+  // The sources themselves, pulsing a little.
+  const pulse = 0.8 + 0.2 * Math.sin(t * 2.4);
+  r += source * 0.9 * pulse;
+  g += source * 0.85 * pulse;
+  b += source * pulse;
 
   out[0] = r;
   out[1] = g;
@@ -122,7 +230,7 @@ export function DitherSky({ className }: { className?: string }) {
         const v = (y + 0.5) / rows;
         for (let x = 0; x < cols; x++) {
           const u = (x + 0.5) / cols;
-          scene(u, v, t, rgb);
+          scene(u, v, t, cols / rows, rgb);
           const lum = 0.3 * rgb[0] + 0.59 * rgb[1] + 0.11 * rgb[2];
           const threshold =
             (BAYER8[(y & 7) * 8 + (x & 7)] + 0.5) / 64 +
