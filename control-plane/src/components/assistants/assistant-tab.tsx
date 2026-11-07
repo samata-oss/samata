@@ -8,7 +8,7 @@ import {
   EarIcon,
   ScrollTextIcon,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Field, NumberField } from "@/components/assistants/fields";
 import type {
   AssistantCall,
@@ -291,13 +291,9 @@ export function AssistantTab({
             <PipelineStage
               icon={<EarIcon className="size-4" />}
               title="Listen"
-              summary={[
-                STT_PRESETS[config.transcriber.provider].label,
-                config.transcriber.model,
-                config.transcriber.language,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
+              provider={STT_PRESETS[config.transcriber.provider].label}
+              model={config.transcriber.model}
+              detail={config.transcriber.language || undefined}
               missingKey={lacksKey(config.transcriber.provider, configuredKeys)}
               measured={fmtMs(transcription)}
               measuredLabel="Transcription delay"
@@ -386,12 +382,8 @@ export function AssistantTab({
             <PipelineStage
               icon={<BrainIcon className="size-4" />}
               title="Think"
-              summary={[
-                LLM_PRESETS[config.model.provider].label,
-                config.model.model,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
+              provider={LLM_PRESETS[config.model.provider].label}
+              model={config.model.model}
               missingKey={lacksKey(config.model.provider, configuredKeys)}
               measured={fmtMs(llmTtft)}
               measuredLabel="Time to first token"
@@ -492,15 +484,13 @@ export function AssistantTab({
               last
               icon={<AudioLinesIcon className="size-4" />}
               title="Speak"
-              summary={[
-                TTS_PRESETS[config.voice.provider].label,
-                config.voice.model,
+              provider={TTS_PRESETS[config.voice.provider].label}
+              model={config.voice.model}
+              detail={
                 config.voice.voiceId && config.voice.voiceId.length <= 24
-                  ? config.voice.voiceId
-                  : undefined,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
+                  ? `Voice: ${config.voice.voiceId}`
+                  : undefined
+              }
               missingKey={lacksKey(config.voice.provider, configuredKeys)}
               measured={fmtMs(ttsTtfb)}
               measuredLabel="Time to first byte"
@@ -644,43 +634,6 @@ function StagePill({
   );
 }
 
-/**
- * Text that ends in an ellipsis when it doesn't fit. It gets a native browser
- * tooltip (the one that appears after resting the pointer) only while it is cut
- * off, so short text gets none.
- */
-function TruncatedText({
-  children,
-  className,
-}: {
-  children: string;
-  className?: string;
-}) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const [truncated, setTruncated] = useState(false);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure when the text changes
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const measure = () => setTruncated(el.scrollWidth > el.clientWidth);
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [children]);
-
-  return (
-    <span
-      ref={ref}
-      title={truncated ? children : undefined}
-      className={cn("truncate", className)}
-    >
-      {children}
-    </span>
-  );
-}
-
 type StageCost = { label: string; details: string[] };
 
 /** The cost pill for one leg: the selected model's estimate, plus what recent calls cost. */
@@ -709,13 +662,15 @@ function stageCost(
 
 /**
  * One step of the call pipeline, on a vertical rail: what the caller says is
- * heard, thought about, then spoken back. Collapsed it is a one-line summary
- * (provider, model, latency); the fields stay mounted so edits survive.
+ * heard, thought about, then spoken back. Collapsed it shows the provider and
+ * full model name plus latency and cost; the fields stay mounted so edits survive.
  */
 function PipelineStage({
   icon,
   title,
-  summary,
+  provider,
+  model,
+  detail,
   measured,
   measuredLabel,
   cost,
@@ -726,7 +681,12 @@ function PipelineStage({
 }: {
   icon: React.ReactNode;
   title: string;
-  summary: string;
+  /** Provider label, shown next to the title. */
+  provider: string;
+  /** The selected model, shown prominently so it reads when collapsed. */
+  model: string;
+  /** Extra context under the model (language, voice). */
+  detail?: string;
   measured?: string;
   measuredLabel?: string;
   /** Estimated spend per minute of call for the selected model. */
@@ -761,34 +721,48 @@ function PipelineStage({
             aria-expanded={open}
             aria-controls={bodyId}
             onClick={() => setOpen((o) => !o)}
-            className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="flex w-full flex-col gap-1.5 rounded-lg px-4 py-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
-            <span className="text-sm font-semibold">{title}</span>
-            <TruncatedText className="min-w-0 flex-1 font-mono text-xs text-muted-foreground">
-              {summary}
-            </TruncatedText>
-            {measured && (
-              <StagePill
-                label={measured}
-                heading={measuredLabel}
-                details={[
-                  "Averaged over this assistant's recent calls. Shows — until a call has been measured.",
-                ]}
-              />
-            )}
-            {cost && (
-              <StagePill
-                label={cost.label}
-                heading="Estimated cost per minute of call"
-                details={cost.details}
-              />
-            )}
-            <ChevronDownIcon
-              className={cn(
-                "size-4 shrink-0 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none",
-                open && "rotate-180",
+            <span className="flex items-center gap-2">
+              <span className="min-w-0 flex-1 text-sm font-semibold">
+                {title}
+              </span>
+              {measured && (
+                <StagePill
+                  label={measured}
+                  heading={measuredLabel}
+                  details={[
+                    "Averaged over this assistant's recent calls. Shows a dash (—) until a call has been measured.",
+                  ]}
+                />
               )}
-            />
+              {cost && (
+                <StagePill
+                  label={cost.label}
+                  heading="Estimated cost per minute of call"
+                  details={cost.details}
+                />
+              )}
+              <ChevronDownIcon
+                className={cn(
+                  "size-4 shrink-0 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none",
+                  open && "rotate-180",
+                )}
+              />
+            </span>
+            <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 font-mono text-xs">
+              <span
+                className={cn(
+                  "break-words",
+                  model ? "text-foreground" : "text-muted-foreground italic",
+                )}
+              >
+                {model || "No model set"}
+              </span>
+              <span className="text-muted-foreground">
+                {[provider, detail].filter(Boolean).join(" · ")}
+              </span>
+            </span>
           </button>
         </h2>
         {/* 0fr -> 1fr animates to the content's natural height. `inert` keeps
