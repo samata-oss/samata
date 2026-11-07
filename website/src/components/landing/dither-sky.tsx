@@ -27,11 +27,11 @@ const CELL = 4;
 const FPS = 20;
 
 /** How many lines are stacked, back to front. */
-const LINES = 30;
+const LINES = 20;
 /** Seconds between neighbouring lines: how long a signal takes to roll by. */
 const STEP = 0.28;
 /** Vertical band the lines sit in (0..1 of the viewport height). */
-const BACK = 0.4;
+const BACK = 0.72;
 const FRONT = 0.97;
 /** Where the signal is strongest across the width, and how wide it spreads. */
 const CENTER = 0.21;
@@ -104,8 +104,9 @@ export function DitherSky({ className }: { className?: string }) {
     const shape = (t: number, reach: number) => {
       for (let i = 0; i < LINES; i++) {
         const depth = i / (LINES - 1);
-        const base = BACK + (FRONT - BACK) * depth ** 1.3;
-        const amp = 0.05 + 0.1 * depth;
+        const base = BACK + (FRONT - BACK) * depth ** 1.15;
+        // Peaks stay low enough to clear the text above the band.
+        const amp = 0.025 + 0.075 * depth;
         // Lines nearer the viewer show an earlier moment of the signal.
         const tau = t - i * STEP;
         const gate =
@@ -158,7 +159,7 @@ export function DitherSky({ className }: { className?: string }) {
 
           const depth = i / (LINES - 1);
           const h = heat[at];
-          const bright = (0.5 + 0.9 * depth) * (0.75 + 0.75 * h);
+          const bright = (0.3 + 1.1 * depth) * (0.75 + 0.75 * h);
           // Indigo along the line, lavender-white at the hottest peaks.
           const r = (0.42 + 0.5 * h) * bright;
           const g = (0.4 + 0.5 * h) * bright;
