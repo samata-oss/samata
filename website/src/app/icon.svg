@@ -1,22 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
   <title>Samata</title>
-  <defs>
-    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#fff" stop-opacity="0.22"/>
-      <stop offset="0.55" stop-color="#fff" stop-opacity="0"/>
-    </linearGradient>
-  </defs>
-  <rect width="32" height="32" rx="7" fill="#676cf4"/>
-  <rect width="32" height="32" rx="7" fill="url(#shine)"/>
+  <rect width="32" height="32" fill="#000"/>
   <g fill="#fff">
-    <rect x="3.55" y="12.35" width="2.1" height="7.3" rx="0.35"/>
-    <rect x="6.40" y="10.25" width="2.1" height="11.5" rx="0.35"/>
-    <rect x="9.25" y="6.05" width="2.1" height="19.9" rx="0.35"/>
-    <rect x="12.10" y="5.55" width="2.1" height="20.9" rx="0.35"/>
-    <rect x="14.95" y="7.10" width="2.1" height="17.8" rx="0.35"/>
-    <rect x="17.80" y="5.00" width="2.1" height="22" rx="0.35"/>
-    <rect x="20.65" y="5.55" width="2.1" height="20.9" rx="0.35"/>
-    <rect x="23.50" y="9.45" width="2.1" height="13.1" rx="0.35"/>
-    <rect x="26.35" y="11.80" width="2.1" height="8.4" rx="0.35"/>
+    <rect x="3.55" y="10.98" width="1.79" height="10.04"/>
+    <rect x="6.44" y="7.02" width="1.79" height="17.96"/>
+    <rect x="9.33" y="4.50" width="1.79" height="23.00"/>
+    <rect x="12.22" y="8.82" width="1.79" height="14.36"/>
+    <rect x="15.10" y="11.16" width="1.79" height="9.68"/>
+    <rect x="17.99" y="9.00" width="1.79" height="14.00"/>
+    <rect x="20.88" y="7.74" width="1.79" height="16.52"/>
+    <rect x="23.77" y="9.72" width="1.79" height="12.56"/>
+    <rect x="26.66" y="11.70" width="1.79" height="8.60"/>
   </g>
 </svg>

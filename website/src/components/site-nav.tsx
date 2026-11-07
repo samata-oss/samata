@@ -43,7 +43,7 @@ export function SiteNav({ stars }: { stars: number | null }) {
         href="/"
         className="flex items-center gap-2.5 px-3 font-medium transition-colors hover:bg-fd-foreground/[0.06]"
       >
-        <LogoMark className="size-5" />
+        <LogoMark className="size-7" />
         Samata
       </Link>
       <span

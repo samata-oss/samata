@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 32 32">
+  <title>Samata</title>
+  <rect width="32" height="32" fill="#000"/>
+  <g fill="#fff">
+    <rect x="3.55" y="10.98" width="1.79" height="10.04"/>
+    <rect x="6.44" y="7.02" width="1.79" height="17.96"/>
+    <rect x="9.33" y="4.50" width="1.79" height="23.00"/>
+    <rect x="12.22" y="8.82" width="1.79" height="14.36"/>
+    <rect x="15.10" y="11.16" width="1.79" height="9.68"/>
+    <rect x="17.99" y="9.00" width="1.79" height="14.00"/>
+    <rect x="20.88" y="7.74" width="1.79" height="16.52"/>
+    <rect x="23.77" y="9.72" width="1.79" height="12.56"/>
+    <rect x="26.66" y="11.70" width="1.79" height="8.60"/>
+  </g>
+</svg>

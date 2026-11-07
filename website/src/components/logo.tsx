@@ -1,19 +1,23 @@
 import { cn } from "@/lib/cn";
 
-/** Nine rectangular bars as [x, y, height], on a 32x32 tile. */
+/**
+ * Nine bars as [x, y, height], on a 32x32 tile. Two swells of different size:
+ * a big one on the left, a dip, then a smaller one on the right. Keep this in
+ * step with `app/icon.svg` and `public/brand/samata-mark-solid-dark.svg`.
+ */
 const BARS: [number, number, number][] = [
-  [3.55, 12.35, 7.3],
-  [6.4, 10.25, 11.5],
-  [9.25, 6.05, 19.9],
-  [12.1, 5.55, 20.9],
-  [14.95, 7.1, 17.8],
-  [17.8, 5.0, 22],
-  [20.65, 5.55, 20.9],
-  [23.5, 9.45, 13.1],
-  [26.35, 11.8, 8.4],
+  [3.55, 10.98, 10.04],
+  [6.44, 7.02, 17.96],
+  [9.33, 4.5, 23],
+  [12.22, 8.82, 14.36],
+  [15.1, 11.16, 9.68],
+  [17.99, 9, 14],
+  [20.88, 7.74, 16.52],
+  [23.77, 9.72, 12.56],
+  [26.66, 11.7, 8.6],
 ];
 
-/** The Samata mark: a waveform on an indigo tile (same as the dashboard icon). */
+/** The Samata mark: white bars on a black square tile. */
 export function LogoMark({ className }: { className?: string }) {
   return (
     <svg
@@ -21,17 +25,10 @@ export function LogoMark({ className }: { className?: string }) {
       aria-hidden="true"
       className={cn("size-6 shrink-0", className)}
     >
-      <defs>
-        <linearGradient id="samata-shine" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.22" />
-          <stop offset="0.55" stopColor="#fff" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <rect width="32" height="32" rx="7" fill="#676cf4" />
-      <rect width="32" height="32" rx="7" fill="url(#samata-shine)" />
+      <rect width="32" height="32" fill="#000" />
       <g fill="#fff">
         {BARS.map(([x, y, h]) => (
-          <rect key={x} x={x} y={y} width="2.1" height={h} rx="0.35" />
+          <rect key={x} x={x} y={y} width="1.79" height={h} />
         ))}
       </g>
     </svg>
