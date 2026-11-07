@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
+import { REF, streakS, streakY } from "./streak-path";
 
 /**
  * The hero pane's backdrop: a ridgeline spectrum, rendered as ordered dither.
@@ -37,7 +38,7 @@ const FRONT = 0.97;
 const CENTER = 0.21;
 const SPREAD = 0.15;
 /** Columns past this fraction are masked away anyway, so skip them. */
-const REACH = 0.85;
+const REACH = 1;
 
 const clamp = (v: number, lo: number, hi: number) =>
   Math.min(hi, Math.max(lo, v));
@@ -106,14 +107,19 @@ export function DitherSky({ className }: { className?: string }) {
         const depth = i / (LINES - 1);
         const base = BACK + (FRONT - BACK) * depth ** 1.15;
         // Peaks stay low enough to clear the text above the band.
-        const amp = 0.025 + 0.075 * depth;
+        const amp0 = 0.025 + 0.075 * depth;
         // Lines nearer the viewer show an earlier moment of the signal.
         const tau = t - i * STEP;
         const gate =
           0.55 + 0.45 * Math.sin(tau * 1.1) * Math.sin(tau * 0.37 + 1);
         for (let x = 0; x < reach; x++) {
           const u = (x + 0.5) / cols;
-          const env = 0.05 + Math.exp(-(((u - CENTER) / SPREAD) ** 2));
+          // Past the left pane the whole stack climbs the shared path and its
+          // lines draw together, so the ridgeline becomes the streak.
+          const s = streakS(u);
+          const amp = amp0 * (1 - 0.35 * s);
+          const env =
+            0.05 + Math.exp(-(((u - CENTER) / SPREAD) ** 2)) + 0.45 * s;
           const n =
             0.6 * noise(u * 38, tau * 0.9) +
             0.3 * noise(u * 90 + 7, tau * 1.6) +
@@ -122,8 +128,13 @@ export function DitherSky({ className }: { className?: string }) {
           const level = peak * env * gate;
           // A faint tremor along the whole line, so the quiet ends are alive.
           const tremor = 0.003 * (noise(u * 60 + 31, tau * 0.5) - 0.5);
-          height[i * cols + x] = (base - amp * level + tremor) * rows;
-          heat[i * cols + x] = clamp(level * 1.3, 0, 1);
+          const y =
+            streakY(u, t) +
+            (base - REF) * (1 - 0.82 * s) -
+            amp * level +
+            tremor;
+          height[i * cols + x] = y * rows;
+          heat[i * cols + x] = clamp(level * 1.3 + 0.3 * s, 0, 1);
         }
       }
     };

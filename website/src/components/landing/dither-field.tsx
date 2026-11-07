@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
+import { streakS, streakY } from "./streak-path";
 
 /**
  * The backdrop behind the content column: a slow band of light, drawn as
@@ -101,12 +102,9 @@ export function DitherField({ className }: { className?: string }) {
       // Where the band sits in each column, and how wide it is there.
       for (let x = 0; x < cols; x++) {
         const u = x / cols;
-        center[x] =
-          0.74 -
-          0.46 * u +
-          0.05 * Math.sin(u * 5 + t * 0.35) +
-          0.03 * Math.sin(u * 12 - t * 0.6);
-        spread[x] = 0.17 + 0.08 * u;
+        // The same path the ridgeline climbs, so its strands run into this light.
+        center[x] = streakY(u, t);
+        spread[x] = 0.12 + 0.13 * streakS(u);
       }
 
       for (let y = 0; y < rows; y++) {
@@ -117,7 +115,7 @@ export function DitherField({ className }: { className?: string }) {
           // Light bleeds further above the band than below it.
           const w = d < 0 ? spread[x] * 1.5 : spread[x] * 0.7;
           const glow = Math.exp(-((d / w) ** 2));
-          const core = Math.exp(-((d / 0.016) ** 2));
+          const core = Math.exp(-((d / 0.012) ** 2));
           const n =
             0.65 * noise(u * 7 * aspect + t * 0.07, v * 7 - t * 0.05) +
             0.35 * noise(u * 22 * aspect - t * 0.1, v * 22 + t * 0.08);
