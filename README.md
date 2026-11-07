@@ -478,5 +478,5 @@ website/                  Landing page and docs (Next.js + Fumadocs): `pnpm site
 
 Copyright 2026 Samata.
 
-Licensed under the [Apache License, Version 2.0](LICENSE). You can use, modify,
+Licensed under the [MIT License](LICENSE). You can use, modify,
 self-host, and redistribute it, including commercially.

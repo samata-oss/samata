@@ -18,8 +18,8 @@ export function Panel({
   className,
   children,
 }: {
-  title: string;
-  meta?: string;
+  title: ReactNode;
+  meta?: ReactNode;
   className?: string;
   children: ReactNode;
 }) {

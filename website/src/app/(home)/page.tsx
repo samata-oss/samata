@@ -1,6 +1,4 @@
-import { ServerCodeBlock } from "fumadocs-ui/components/codeblock.rsc";
-import Link from "next/link";
-import type { ReactNode } from "react";
+import { Compare } from "@/components/landing/compare";
 import { Reveal } from "@/components/landing/fx";
 import { InstallTabs } from "@/components/landing/install-tabs";
 import { LiveMark } from "@/components/landing/live-mark";
@@ -12,6 +10,10 @@ import { LogoMark } from "@/components/logo";
 import { cn } from "@/lib/cn";
 import { getStars } from "@/lib/github";
 import { githubUrl } from "@/lib/shared";
+import { ServerCodeBlock } from "fumadocs-ui/components/codeblock.rsc";
+import { Scale } from "lucide-react";
+import Link from "next/link";
+import type { ReactNode } from "react";
 
 const installTabs = [
   {
@@ -114,15 +116,20 @@ const questions = [
 
 const openSource = [
   {
-    title: "Apache 2.0",
+    title: (
+      <span className="inline-flex items-center gap-1.5">
+        <Scale aria-hidden="true" className="size-3 text-fd-primary" />
+        MIT licensed
+      </span>
+    ),
     body: "Use it commercially, fork it, change it. The licence is in the repo.",
   },
   {
-    title: "Your data stays put",
+    title: "your data stays put",
     body: "API keys are encrypted at rest. Transcripts, usage and call logs sit in your Postgres.",
   },
   {
-    title: "Bring your own models",
+    title: "bring your own models",
     body: "A transcriber, a model and a voice per agent: OpenAI, Groq, Deepgram, Cartesia, ElevenLabs, AssemblyAI, OpenRouter, or a custom endpoint.",
   },
 ];
@@ -140,7 +147,16 @@ export default async function HomePage() {
       <Nav stars={stars} />
       <div className="lg:grid lg:grid-cols-[minmax(22rem,42%)_minmax(0,1fr)] lg:items-start lg:gap-3 lg:p-3">
         <aside className="m-3 lg:sticky lg:top-[3.75rem] lg:m-0 lg:h-[calc(100svh-4.5rem)]">
-          <Panel title="samata" meta="apache-2.0" className="h-full">
+          <Panel
+            title="samata"
+            meta={
+              <span className="inline-flex items-center gap-1.5">
+                <Scale aria-hidden="true" className="size-3" />
+                MIT
+              </span>
+            }
+            className="h-full [--color-fd-card:oklch(0.135_0.005_270)]"
+          >
             <div
               aria-hidden="true"
               className="absolute inset-0 overflow-hidden rounded-[inherit]"
@@ -155,8 +171,8 @@ export default async function HomePage() {
                   href={githubUrl}
                   className="mt-5 inline-flex items-center gap-2 text-xs text-zinc-500 transition-colors hover:text-white"
                 >
-                  <span className="text-fd-primary">●</span>
-                  apache 2.0 · self-hosted
+                  <Scale aria-hidden="true" className="size-3.5 text-fd-primary" />
+                  MIT · self-hosted
                 </a>
                 <h1 className="mt-3 text-[1.9rem] font-medium leading-[1.12] tracking-[-0.04em] sm:text-4xl lg:whitespace-nowrap lg:text-[clamp(1.1rem,5.4cqw,3.25rem)]">
                   The open source <br className="lg:hidden" />
@@ -220,6 +236,20 @@ export default async function HomePage() {
           </Block>
 
           <Block
+            id="compare"
+            kicker="compare"
+            title="Why not a hosted platform?"
+            lede="Hosted voice platforms are the fastest way to a demo. Samata is for when the calls, the keys and the margin should stay with you, without writing the plumbing yourself."
+          >
+            <Compare />
+            <div className="mt-4">
+              <More href="/docs/api/webhooks">
+                porting a Vapi webhook handler
+              </More>
+            </div>
+          </Block>
+
+          <Block
             id="get-started"
             kicker="get started"
             title="From clone to first call."
@@ -263,7 +293,7 @@ export default async function HomePage() {
           >
             <div className="grid gap-5 sm:grid-cols-3">
               {openSource.map((item) => (
-                <Panel key={item.title} title={item.title.toLowerCase()}>
+                <Panel key={item.body} title={item.title}>
                   <p className="px-4 pt-5 pb-4 text-[13px] leading-relaxed text-zinc-400">
                     {item.body}
                   </p>
@@ -306,7 +336,6 @@ export default async function HomePage() {
           </Block>
         </main>
       </div>
-      <Footer />
     </div>
   );
 }
@@ -406,36 +435,6 @@ function More({ href, children }: { href: string; children: string }) {
       <span aria-hidden="true">→</span>
       {children}
     </Link>
-  );
-}
-
-/** The footer as an editor status bar: a filled mode label, then the links. */
-function Footer() {
-  const link =
-    "px-3 py-1.5 transition-colors hover:bg-white/[0.06] hover:text-white";
-  return (
-    <footer className="flex flex-wrap items-stretch border-t border-fd-border bg-white/[0.03] text-[11px] text-zinc-400">
-      <span className="bg-fd-primary px-3 py-1.5 font-medium text-fd-primary-foreground">
-        SAMATA
-      </span>
-      <span className="px-3 py-1.5">apache-2.0</span>
-      <span className="hidden flex-1 sm:block" />
-      <nav className="flex flex-wrap items-stretch">
-        <Link href="/docs" className={link}>
-          docs
-        </Link>
-        <Link href="/docs/api" className={link}>
-          api
-        </Link>
-        <Link href="/docs/deploy" className={link}>
-          deploy
-        </Link>
-        <a href={githubUrl} className={link}>
-          github
-        </a>
-      </nav>
-      <span className="px-3 py-1.5 text-zinc-600">© 2026</span>
-    </footer>
   );
 }
 
