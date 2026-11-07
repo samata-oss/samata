@@ -23,6 +23,21 @@ Samata keeps real-time media separate from agent logic:
 - **The control plane** (`/control-plane`, Next.js + Hono + Drizzle) stores agent
   configs and call logs, runs tools, and does post-call analysis.
 
+## Quickstart
+
+With Docker installed:
+
+```bash
+npx samata init
+```
+
+This downloads `deploy/docker-compose.local.yml` into `./samata`, generates the
+secrets in `.env`, starts the whole stack from prebuilt images, and opens the
+dashboard at <http://localhost:3000>. Sign up (the first account is the owner),
+add a provider key, and talk to an assistant from its Test tab. Browser calls
+work out of the box; phone calls need a server (below). See `npx samata init --help`
+for options.
+
 ## Deploying Samata
 
 You don't need to clone or fork the repo to run Samata. Every release ships
@@ -463,7 +478,9 @@ participant attributes. To wire a trunk by hand instead, use the
 
 ```
 docker-compose.yml        Dev infra: LiveKit, LiveKit SIP, Redis, Postgres, worker (profile)
-deploy/                   Production compose (prebuilt images + Caddy) and .env.example
+deploy/                   Production compose (prebuilt images + Caddy) and .env.example,
+                          plus docker-compose.local.yml for `npx samata init`
+cli/                      The `samata` npm package (`npx samata init`), no dependencies
 infra/livekit/            Dev livekit.yaml, sip.yaml (dev keys: devkey / samata_dev_secret_…)
 control-plane/            Next.js 16, Hono under /api, Drizzle (agent, call_log), Dockerfile
 worker/                   livekit-agents 1.8 worker, Dockerfile

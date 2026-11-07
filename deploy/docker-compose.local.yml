@@ -1,0 +1,94 @@
+# Samata on your own machine: prebuilt images, no domain, no TLS, nothing to
+# clone or build. `npx samata init` downloads this file as docker-compose.yml
+# next to a generated .env and starts it.
+#
+#   docker compose up -d
+#   open http://localhost:3000
+#
+# Browser test calls work out of the box. Real phone calls need a public SIP
+# address, which a laptop doesn't have: use deploy/docker-compose.yml on a
+# server for those.
+#
+# Only the dashboard (3000) and the LiveKit ports below are published; Postgres
+# stays inside the compose network.
+
+# Pinned so containers and the database volume have the same names whichever
+# folder you run this from. The CLI looks the volume up by this name.
+name: samata-local
+
+services:
+  control-plane:
+    image: ${SAMATA_IMAGE_PREFIX:-ghcr.io/samata-oss}/samata-control-plane:${SAMATA_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${SAMATA_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgres://samata:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/samata
+      SAMATA_WEBHOOK_SECRET: ${SAMATA_WEBHOOK_SECRET:?set SAMATA_WEBHOOK_SECRET}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: http://localhost:${SAMATA_PORT:-3000}
+      # The control plane reaches LiveKit over the compose network, but hands
+      # browsers a URL that works from your machine.
+      LIVEKIT_URL: ws://livekit:7880
+      LIVEKIT_PUBLIC_URL: ws://localhost:7880
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:?set LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?set LIVEKIT_API_SECRET}
+
+  worker:
+    image: ${SAMATA_IMAGE_PREFIX:-ghcr.io/samata-oss}/samata-worker:${SAMATA_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      - livekit
+      - control-plane
+    environment:
+      LIVEKIT_URL: ws://livekit:7880
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+      SAMATA_CONTROL_PLANE_URL: http://control-plane:3000
+      SAMATA_WEBHOOK_SECRET: ${SAMATA_WEBHOOK_SECRET}
+      # No model provider keys: the control plane sends the workspace's keys
+      # with each call (dashboard -> Provider Keys).
+
+  livekit:
+    image: livekit/livekit-server:v1.13
+    restart: unless-stopped
+    ports:
+      - "7880:7880" # HTTP / WebSocket signalling
+      - "7881:7881" # WebRTC over TCP (fallback)
+      - "7882:7882/udp" # WebRTC over UDP
+    environment:
+      LIVEKIT_CONFIG: |
+        port: 7880
+        rtc:
+          tcp_port: 7881
+          udp_port: 7882
+          use_external_ip: false
+          node_ip: 127.0.0.1
+        keys:
+          ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+        room:
+          empty_timeout: 30
+          departure_timeout: 10
+        logging:
+          level: info
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: samata
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: samata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U samata -d samata"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:

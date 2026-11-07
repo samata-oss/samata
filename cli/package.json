@@ -1,0 +1,34 @@
+{
+  "name": "samata",
+  "version": "0.1.0",
+  "description": "Run Samata, the self-hosted voice AI orchestrator, on your machine with one command.",
+  "keywords": [
+    "voice",
+    "ai",
+    "livekit",
+    "voice-agents",
+    "self-hosted",
+    "samata"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/samata-oss/samata",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/samata-oss/samata.git",
+    "directory": "cli"
+  },
+  "type": "module",
+  "bin": {
+    "samata": "./bin/samata.mjs"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "engines": {
+    "node": ">=18.3"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

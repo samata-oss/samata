@@ -20,7 +20,7 @@ const TOKEN_TTL = "10m";
 const ROOM_EMPTY_TIMEOUT_S = 60;
 
 export type StartedSession = {
-  /** The SFU the browser connects to (`wss://...`). */
+  /** The SFU the browser connects to (`wss://...`): LIVEKIT_PUBLIC_URL, else LIVEKIT_URL. */
   url: string;
   /** Room-scoped JWT. It can join `roomName` and nothing else. */
   token: string;
@@ -122,5 +122,9 @@ export async function startSession(
     canPublishData: true,
   });
 
-  return { url, token: await token.toJwt(), roomName };
+  // The browser may reach LiveKit at a different address than this server does
+  // (a laptop in Docker: `ws://livekit:7880` in here, `ws://localhost:7880`
+  // out there), so LIVEKIT_PUBLIC_URL wins for what we hand back.
+  const publicUrl = process.env.LIVEKIT_PUBLIC_URL?.trim() || url;
+  return { url: publicUrl, token: await token.toJwt(), roomName };
 }

@@ -20,6 +20,7 @@ the dashboard's Provider Keys page.
 | `SAMATA_PUBLIC_URL`            | Fallback for `BETTER_AUTH_URL`.                                                                                             |
 | `SAMATA_ENCRYPTION_KEY`        | Encrypts provider keys and imported phone number keys. Defaults to `BETTER_AUTH_SECRET`. Changing either makes stored keys unreadable, so re-enter them. Set it separately so rotating the auth secret doesn't break them. |
 | `LIVEKIT_URL`                  | LiveKit server URL, for example `ws://localhost:7880`.                                                                      |
+| `LIVEKIT_PUBLIC_URL`           | Optional. The LiveKit URL handed to browsers, when they reach it at a different address than the control plane does (for example `ws://localhost:7880` while the control plane uses `ws://livekit:7880`). Defaults to `LIVEKIT_URL`. |
 | `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | LiveKit credentials. Used to mint browser tokens and manage SIP trunks. Must match `infra/livekit/livekit.yaml` locally.       |
 | `SAMATA_API_KEY`               | Optional fixed bearer key for the default workspace. Prefer keys created on the API Keys page.                              |
 | `SAMATA_DEFAULT_AGENT`         | Agent (id or slug) for calls that match nothing else.                                                                       |

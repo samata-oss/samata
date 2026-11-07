@@ -4,9 +4,61 @@ description: Run the whole stack on your laptop and talk to an agent in the brow
 icon: Rocket
 ---
 
-This runs everything locally with no accounts, except the model providers you
-choose for your agent. You need Docker, Node.js with [pnpm](https://pnpm.io), and
-Python 3.
+## One command
+
+You need [Docker](https://docs.docker.com/get-started/get-docker/) and nothing
+else. No clone, no Node project, no Python.
+
+```bash
+npx samata init
+```
+
+This downloads the stack's compose file into `./samata`, generates secrets in
+`.env`, starts everything from prebuilt images (control plane, worker, LiveKit and
+Postgres), and opens the dashboard at [localhost:3000](http://localhost:3000). The
+first run takes a few minutes while the images download.
+
+Then:
+
+1. **Sign up.** The first account becomes the owner.
+2. **Add a model provider key** on **Provider Keys**. One OpenAI key covers the
+   model, the transcriber and the voice. See [Bring your own models](/docs/models).
+3. **Create an assistant** and talk to it from its **Test** tab.
+
+```bash
+cd samata
+docker compose logs -f       # watch it work
+docker compose down          # stop (your data is kept)
+docker compose down -v       # stop and delete all data
+```
+
+Re-running `npx samata init` in the same folder keeps your `.env` and starts the
+stack again. Options:
+
+| Flag                   | What it does                                                      |
+| ---------------------- | ----------------------------------------------------------------- |
+| `[dir]`                | Install somewhere other than `./samata`.                          |
+| `--port <n>`           | Dashboard port, if `3000` is taken.                               |
+| `--no-start`           | Only write `docker-compose.yml` and `.env`.                       |
+| `--no-open`            | Don't open the browser.                                           |
+| `--force`              | Download `docker-compose.yml` again.                              |
+| `--ref <ref>`          | Download from a branch, tag or commit of the repo.                |
+| `--compose <file>`     | Use your own compose file (a URL or a path).                      |
+
+Browser test calls work out of the box. Real phone calls need a public address, so
+set up a [server](/docs/deploy) for those.
+
+<Callout type="warn">
+Keep the `.env` that `init` generates. Your database and the provider keys stored
+in it can only be read with those secrets.
+</Callout>
+
+## From source
+
+To work on Samata itself, run the infra in Docker and the apps on your machine.
+You need Docker, Node.js with [pnpm](https://pnpm.io), and Python 3. This runs
+everything locally with no accounts, except the model providers you choose for
+your agent.
 
 <Steps>
 <Step>
