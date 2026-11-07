@@ -134,6 +134,10 @@ const openSource = [
   },
 ];
 
+/** A tight dark halo, so small text stays readable over the dither. */
+const legible =
+  "[text-shadow:0_0_3px_oklch(0.125_0.005_270),0_0_8px_oklch(0.125_0.005_270),0_0_16px_oklch(0.125_0.005_270)]";
+
 const primary =
   "inline-flex h-9 items-center rounded-md bg-fd-primary px-4 text-xs font-medium text-fd-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.18)] transition-colors hover:bg-fd-primary/85";
 const ghost =
@@ -145,8 +149,8 @@ export default async function HomePage() {
   return (
     <div className="relative isolate flex min-h-screen flex-col font-mono">
       {/* One backdrop for the whole page, so the glow runs under both columns. */}
-      {/* It fades out toward the right so the copy there stays easy to read. */}
-      <DitherSky className="fixed inset-0 -z-10 [mask-image:linear-gradient(to_right,black_20%,rgb(0_0_0/0.45)_55%,transparent_95%)]" />
+      {/* Dimmed, and it falls away once it leaves the left pane (~42% wide). */}
+      <DitherSky className="fixed inset-0 -z-10 opacity-55 [mask-image:linear-gradient(to_right,black_25%,rgb(0_0_0/0.3)_42%,rgb(0_0_0/0.1)_58%,transparent_80%)]" />
       <Nav stars={stars} />
       <div className="lg:grid lg:grid-cols-[minmax(22rem,42%)_minmax(0,1fr)] lg:items-start lg:gap-3 lg:p-3">
         <aside className="m-3 lg:sticky lg:top-[4.25rem] lg:m-0 lg:h-[calc(100svh-5rem)]">
@@ -156,12 +160,20 @@ export default async function HomePage() {
                 <LiveMark className="size-48 sm:size-52 lg:size-[clamp(11rem,14.5vw,18rem)]" />
                 <a
                   href={githubUrl}
-                  className="mt-5 inline-flex items-center gap-2 text-xs text-zinc-500 transition-colors hover:text-white"
+                  className={cn(
+                    "mt-5 inline-flex items-center gap-2 text-sm text-zinc-300 transition-colors hover:text-white",
+                    legible,
+                  )}
                 >
                   <Scale aria-hidden="true" className="size-3.5 text-fd-primary" />
                   MIT · self-hosted
                 </a>
-                <h1 className="mt-3 text-[1.9rem] font-medium leading-[1.12] tracking-[-0.04em] sm:text-4xl lg:whitespace-nowrap lg:text-[clamp(1.1rem,5.4cqw,3.25rem)]">
+                <h1
+                  className={cn(
+                    "mt-3 text-[1.9rem] font-medium leading-[1.12] tracking-[-0.04em] sm:text-4xl lg:whitespace-nowrap lg:text-[clamp(1.1rem,5.4cqw,3.25rem)]",
+                    legible,
+                  )}
+                >
                   The open source <br className="lg:hidden" />
                   voice platform
                   <span
@@ -169,7 +181,12 @@ export default async function HomePage() {
                     className="caret ml-[0.12em] inline-block h-[0.85em] w-[0.5em] translate-y-[0.1em] bg-fd-primary"
                   />
                 </h1>
-                <p className="mt-4 max-w-sm text-[13px] leading-relaxed text-zinc-400 xl:max-w-none xl:whitespace-nowrap xl:text-[clamp(0.55rem,2.05cqw,0.8125rem)]">
+                <p
+                  className={cn(
+                    "mt-4 max-w-md text-sm leading-relaxed text-zinc-200",
+                    legible,
+                  )}
+                >
                   Declarative agents, tools over HTTP, and every transcript on
                   infrastructure you run.
                 </p>
@@ -177,7 +194,7 @@ export default async function HomePage() {
                   <Link href="/docs/quickstart" className={primary}>
                     get started
                   </Link>
-                  <a href={githubUrl} className={ghost}>
+                  <a href={githubUrl} className={cn(ghost, legible)}>
                     github
                   </a>
                 </div>
