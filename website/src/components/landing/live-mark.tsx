@@ -7,7 +7,7 @@ import { GrainMark } from "./grain-mark";
 /**
  * The hero mark, alive. The same ordered-dither waveform as `GrainMark`, but
  * the bars breathe like a voice and swell toward the pointer. The static SVG
- * is what the server renders; the canvas fades in over it once mounted.
+ * is only a no-JS fallback; the canvas fades in once mounted and settled.
  */
 
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
@@ -45,8 +45,8 @@ export function LiveMark({ className }: { className?: string }) {
       el.height = px;
     };
 
-    const draw = (time: number) => {
-      const t = time / 1000;
+    /** Ease the bar heights toward where they should be at time `t`. */
+    const update = (t: number) => {
       const gate = 0.55 + 0.45 * Math.sin(t * 1.1) * Math.sin(t * 0.37 + 1);
       pointer.near += (pointer.nearTarget - pointer.near) * 0.08;
 
@@ -63,6 +63,11 @@ export function LiveMark({ className }: { className?: string }) {
         );
         amps[i] += (target - amps[i]) * 0.22;
       }
+    };
+
+    const draw = (time: number) => {
+      const t = time / 1000;
+      update(t);
 
       ctx.clearRect(0, 0, px, px);
       const cell = px / N;
@@ -124,7 +129,11 @@ export function LiveMark({ className }: { className?: string }) {
     };
 
     resize();
-    draw(2600);
+    // Settle the bars where the animation really is before the first paint, so
+    // the mark fades in already in step instead of jumping once the loop starts.
+    const start = reduce ? 2600 : performance.now();
+    for (let i = 0; i < 60; i++) update(start / 1000);
+    draw(start);
     setLive(true);
 
     if (reduce) return;
@@ -152,12 +161,11 @@ export function LiveMark({ className }: { className?: string }) {
       aria-hidden="true"
       className={cn("relative", className ?? "size-44")}
     >
-      <GrainMark
-        className={cn(
-          "absolute inset-0 size-full transition-opacity duration-500",
-          live && "opacity-0",
-        )}
-      />
+      {/* No static stand-in while loading: it shows a different pose than the
+          live mark and would flash. Only visitors without JS get it. */}
+      <noscript>
+        <GrainMark className="absolute inset-0 size-full" />
+      </noscript>
       <canvas
         ref={canvas}
         className={cn(
