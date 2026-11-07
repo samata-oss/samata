@@ -1,5 +1,5 @@
 import { Compare } from "@/components/landing/compare";
-import { DitherSky } from "@/components/landing/dither-sky";
+import { DitherWaves } from "@/components/landing/dither-waves";
 import { Reveal } from "@/components/landing/fx";
 import { InstallTabs } from "@/components/landing/install-tabs";
 import { LiveMark } from "@/components/landing/live-mark";
@@ -157,7 +157,7 @@ export default async function HomePage() {
             }
             className="h-full [--color-fd-card:oklch(0.135_0.005_270)]"
           >
-            <DitherSky className="absolute inset-0 rounded-[inherit]" />
+            <DitherWaves className="absolute inset-0 rounded-[inherit]" />
             <div className="relative flex h-full flex-col gap-8 px-6 py-10 sm:px-8 lg:justify-center lg:gap-6 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:px-10 lg:pt-8 lg:pb-40 xl:px-14">
               <div className="@container relative mx-auto w-full max-w-2xl">
                 <LiveMark className="size-48 sm:size-52 lg:size-[clamp(11rem,14.5vw,18rem)]" />
