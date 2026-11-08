@@ -15,7 +15,7 @@ const CELL = 4;
 /** Edge of a speck, in CSS pixels. */
 const SIZE = 2;
 /** Chance a cell holds a speck, before the patch and fade-out are applied. */
-const DENSITY = 0.0315;
+const DENSITY = 0.01;
 /** Share of specks that twinkle. */
 const TWINKLE = 0.18;
 /** Frames per second for the twinkle. It is slow, so this can stay low. */
