@@ -22,7 +22,7 @@ const PITCH = 4;
 /** Heights snap to this step, so bars stay on the dither's grid. */
 const STEP = 2;
 /** Chance a cell starts a mark, before the patch and fade-out are applied. */
-const DENSITY = 0.0015;
+const DENSITY = 0.001;
 /**
  * Soundwave drift: the live marks' bars rise and fall slowly. Set to `false`
  * to freeze every mark at rest. The animation loop is skipped entirely then.

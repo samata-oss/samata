@@ -274,7 +274,8 @@ export default async function HomePage() {
                   code={deployScript}
                   codeblock={{
                     title: "deploy",
-                    className: "my-0 rounded-none [&_button]:rounded-none",
+                    className:
+                      "my-0 rounded-none border-white/[0.11] bg-[oklch(0.105_0.004_270)] [&_button]:rounded-none [&>div:first-child]:h-10 [&>div:first-child]:border-white/[0.09] [&>div:first-child]:text-[11px]",
                   }}
                 />
                 <More href="/docs/deploy">deployment guide</More>
@@ -289,7 +290,8 @@ export default async function HomePage() {
                   code={pushCommand}
                   codeblock={{
                     title: "deploy.sh",
-                    className: "my-0 rounded-none [&_button]:rounded-none",
+                    className:
+                      "my-0 rounded-none border-white/[0.11] bg-[oklch(0.105_0.004_270)] [&_button]:rounded-none [&>div:first-child]:h-10 [&>div:first-child]:border-white/[0.09] [&>div:first-child]:text-[11px]",
                   }}
                 />
                 <More href="/docs/api">api reference</More>
@@ -305,7 +307,7 @@ export default async function HomePage() {
             <div className="grid gap-5 sm:grid-cols-3">
               {openSource.map((item) => (
                 <Panel key={item.body} title={item.title}>
-                  <div className="px-4 pt-6 pb-4">
+                  <div className="p-4">
                     <PixelIcon name={item.icon} className="size-9" />
                     <p className="mt-4 text-[13px] leading-relaxed text-zinc-400">
                       {item.body}

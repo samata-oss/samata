@@ -17,6 +17,10 @@ export const gitConfig = {
 
 export const githubUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}`;
 
+/** The hosted Samata Cloud. Override with `NEXT_PUBLIC_CLOUD_URL`. */
+export const cloudUrl =
+  process.env.NEXT_PUBLIC_CLOUD_URL ?? "https://cloud.samata.dev";
+
 const getContentUrl = createGetUrl(docsContentRoute);
 
 export function getPageMarkdownUrl(page: { slugs: string[]; locale?: string }) {

@@ -41,7 +41,7 @@ export function TerminalHero() {
   return (
     <Panel title="~/acme — zsh">
       <div>
-        <pre className="overflow-x-auto px-5 pt-6 pb-5 font-mono text-[12.5px] leading-[1.7]">
+        <pre className="overflow-x-auto px-5 py-4 font-mono text-[12.5px] leading-[1.7]">
           <Line i={n()}>
             <span className={c.prompt}>$ </span>
             <span className={c.cmd}>curl</span>{" "}

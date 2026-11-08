@@ -5,17 +5,33 @@ import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef, useState } from "react";
 import { LogoMark } from "@/components/logo";
 import { cn } from "@/lib/cn";
-import { githubUrl } from "@/lib/shared";
+import { cloudUrl, githubUrl } from "@/lib/shared";
 
 /** Height of the bar. The docs layout reserves the same space below it. */
 export const NAV_HEIGHT = "3.5rem";
 
-const links = [
+const links: {
+  href: string;
+  label: string;
+  match: (path: string) => boolean;
+  external?: boolean;
+}[] = [
   { href: "/", label: "Home", match: (path: string) => path === "/" },
   {
     href: "/docs",
     label: "Docs",
     match: (path: string) => path.startsWith("/docs"),
+  },
+  {
+    href: "/manifesto",
+    label: "Manifesto",
+    match: (path: string) => path.startsWith("/manifesto"),
+  },
+  {
+    href: cloudUrl,
+    label: "Cloud",
+    match: () => false,
+    external: true,
   },
 ];
 
@@ -42,9 +58,7 @@ export function SiteNav({ stars }: { stars: number | null }) {
   useLayoutEffect(() => {
     const measure = () => {
       const el = linkRefs.current[activeIndex];
-      setIndicator(
-        el ? { left: el.offsetLeft, width: el.offsetWidth } : null,
-      );
+      setIndicator(el ? { left: el.offsetLeft, width: el.offsetWidth } : null);
     };
     measure();
     const frame = requestAnimationFrame(() => setReady(true));
@@ -89,7 +103,8 @@ export function SiteNav({ stars }: { stars: number | null }) {
           aria-hidden="true"
           className={cn(
             "pointer-events-none absolute bottom-0 left-0 h-px bg-fd-foreground",
-            ready && "transition-[transform,width,opacity] duration-150 ease-out",
+            ready &&
+              "transition-[transform,width,opacity] duration-150 ease-out",
           )}
           style={{
             width: indicator?.width ?? 0,
@@ -99,6 +114,25 @@ export function SiteNav({ stars }: { stars: number | null }) {
         />
         {links.map((link, i) => {
           const current = link.match(pathname);
+          if (link.external) {
+            return (
+              <a
+                key={link.href}
+                ref={(el) => {
+                  linkRefs.current[i] = el;
+                }}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={item}
+              >
+                {link.label}
+                <span aria-hidden="true" className="ml-1.5 opacity-60">
+                  ↗
+                </span>
+              </a>
+            );
+          }
           return (
             <Link
               key={link.href}

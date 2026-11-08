@@ -72,7 +72,7 @@ function Value({ cell }: { cell: Cell }) {
 export function Compare() {
   return (
     <Panel title="compare" meta="as of 2026">
-      <div className="overflow-x-auto px-4 pt-6 pb-4">
+      <div className="overflow-x-auto p-4">
         <table className="w-full min-w-[34rem] border-collapse text-left text-xs">
           <thead>
             <tr className="align-bottom">
