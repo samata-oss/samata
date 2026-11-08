@@ -11,6 +11,17 @@ import {
   DEFAULT_ORGANIZATION_NAME,
   DEFAULT_ORGANIZATION_SLUG,
 } from "@/lib/workspace";
+import {
+  provisionWorkspace,
+  requireEmailVerification,
+  signUpsOpen,
+} from "@/server/cloud";
+import {
+  sendExistingAccountEmail,
+  sendInvitationEmail,
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+} from "@/server/email";
 import { pendingInvitationFor } from "@/server/invitations";
 
 const publicUrl = () =>
@@ -35,8 +46,13 @@ export const googleEnabled = google !== null;
  *   - the very first account bootstraps the install, and
  *   - after that, only someone holding a live invitation can sign up.
  *
- * Email accounts aren't verified (self-hosters rarely have SMTP), so an
- * invited email alone isn't proof of identity. The sign-up must also carry
+ * The managed cloud opens sign-up to everyone (`signUpsOpen`), except for an
+ * address that has a pending invitation: that still has to prove it holds the
+ * invitation, or anyone could register someone else's address and take their
+ * seat.
+ *
+ * Email accounts aren't verified on a self-hosted install (it may have no way
+ * to send email), so an invited email alone isn't proof of identity. The sign-up must also carry
  * the invitation id, which only the invitee has. Google vouches for the
  * address itself, so it needs no id.
  */
@@ -50,6 +66,7 @@ async function assertMaySignUp(
   const invite = await pendingInvitationFor(user.email);
   const proven = user.emailVerified || body?.invitationId === invite?.id;
   if (invite && proven) return;
+  if (!invite && signUpsOpen()) return;
 
   throw new APIError("FORBIDDEN", {
     message: invite
@@ -92,7 +109,33 @@ async function claimDefaultWorkspace(userId: string) {
 export const auth = betterAuth({
   baseURL: publicUrl() || undefined,
   database: drizzleAdapter(db, { provider: "pg", schema }),
-  emailAndPassword: { enabled: true, minPasswordLength: 8 },
+  emailAndPassword: {
+    enabled: true,
+    minPasswordLength: 8,
+    requireEmailVerification: requireEmailVerification(),
+    // A reset signs the account out everywhere: if someone else had the
+    // password, they lose their session too.
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url }) =>
+      sendPasswordResetEmail(user.email, user.name, url),
+    // Asked to register an address that already has an account: tell its
+    // owner, but answer the same as for a new address (no enumeration).
+    onExistingUserSignUp: async ({ user }) =>
+      sendExistingAccountEmail(user.email, user.name, `${publicUrl()}/sign-in`),
+  },
+  emailVerification: {
+    // Only sends when verification is required (the managed cloud); a
+    // self-hosted account that tries to sign in unconfirmed isn't blocked.
+    sendOnSignUp: requireEmailVerification(),
+    sendOnSignIn: requireEmailVerification(),
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) =>
+      sendVerificationEmail(user.email, user.name, url),
+    // The cloud makes a workspace once the address is confirmed.
+    afterEmailVerification: async (user) => {
+      await provisionWorkspace({ ...user, emailVerified: true });
+    },
+  },
   socialProviders: google ? { google } : {},
   databaseHooks: {
     user: {
@@ -104,6 +147,7 @@ export const auth = betterAuth({
           );
         },
         after: async (user) => {
+          if (await provisionWorkspace(user)) return;
           await claimDefaultWorkspace(user.id);
         },
       },
@@ -134,11 +178,16 @@ export const auth = betterAuth({
       // One workspace per install. Creating more is a multi-workspace
       // feature, so users can't create them through the API.
       allowUserToCreateOrganization: false,
-      // There's no SMTP in a default install: the admin shares the link,
-      // which the Team page shows and this logs.
-      sendInvitationEmail: async ({ id, email }) => {
-        console.log(
-          `[auth] invitation for ${email}: ${publicUrl()}/accept-invitation/${id}`,
+      // Emailed when Resend is set up (`server/email.ts`). Either way the admin
+      // can share the link, which the Team page shows and this logs.
+      sendInvitationEmail: async ({ id, email, inviter, organization }) => {
+        const link = `${publicUrl()}/accept-invitation/${id}`;
+        console.log(`[auth] invitation for ${email}: ${link}`);
+        await sendInvitationEmail(
+          email,
+          organization.name,
+          inviter.user.name,
+          link,
         );
       },
     }),

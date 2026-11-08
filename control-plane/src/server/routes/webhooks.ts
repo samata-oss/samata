@@ -12,6 +12,7 @@ import {
 } from "@/lib/webhook-payloads";
 import { resolveAgent, workerConfig } from "@/server/agents";
 import { analyzeCall } from "@/server/analysis";
+import { assertMayStartCall, CallBlockedError } from "@/server/cloud";
 import { forward } from "@/server/forward";
 import { MissingKeysError } from "@/server/provider-keys";
 import { runToolCalls } from "@/server/tools";
@@ -53,6 +54,25 @@ export const webhookRoutes = new Hono()
       type: message.call.type,
       customerNumber: message.customer?.number ?? null,
     };
+
+    try {
+      await assertMayStartCall(row.organizationId);
+    } catch (err) {
+      if (!(err instanceof CallBlockedError)) throw err;
+      // Managed cloud only: over the plan's concurrent-call limit. Refuse,
+      // and leave a failed entry in Logs.
+      console.warn("[assistant-request]", row.slug, err.reason);
+      const now = new Date();
+      await db.insert(callLog).values({
+        ...call,
+        status: "failed",
+        endedReason: err.reason,
+        summary: err.message,
+        endedAt: now,
+        durationSeconds: 0,
+      });
+      return c.json({ error: err.message }, 402);
+    }
 
     let assistant: Awaited<ReturnType<typeof workerConfig>>;
     try {

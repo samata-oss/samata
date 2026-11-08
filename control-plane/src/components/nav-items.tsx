@@ -3,6 +3,7 @@ import {
   BotIcon,
   BracesIcon,
   CpuIcon,
+  CreditCardIcon,
   KeyRoundIcon,
   PhoneIcon,
   ScrollTextIcon,
@@ -11,8 +12,11 @@ import {
 } from "lucide-react";
 import type { NavGroup } from "@/components/nav-main";
 
-/** Every top-level page. Drives both the sidebar and the command palette. */
-export const NAV_GROUPS: NavGroup[] = [
+/**
+ * Every top-level page. Drives both the sidebar and the command palette.
+ * `cloud` adds the pages only the managed cloud has.
+ */
+export const navGroups = ({ cloud }: { cloud: boolean }): NavGroup[] => [
   {
     label: "Build",
     items: [
@@ -42,6 +46,11 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "Workspace",
-    items: [{ title: "Team", url: "/team", icon: <UsersIcon /> }],
+    items: [
+      { title: "Team", url: "/team", icon: <UsersIcon /> },
+      ...(cloud
+        ? [{ title: "Billing", url: "/billing", icon: <CreditCardIcon /> }]
+        : []),
+    ],
   },
 ];

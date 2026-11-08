@@ -1,7 +1,7 @@
 import { AudioLinesIcon } from "lucide-react";
 import type * as React from "react";
 import { NavMain } from "@/components/nav-main";
-import { NAV_GROUPS } from "@/components/nav-items";
+import type { NavGroup } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
@@ -26,10 +26,16 @@ function livekitHost() {
 export function AppSidebar({
   user,
   workspaceName,
+  workspaceId,
+  workspaces,
+  groups,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   user: { name: string; email: string };
   workspaceName: string;
+  workspaceId: string;
+  workspaces: { id: string; name: string }[];
+  groups: NavGroup[];
 }) {
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -53,7 +59,7 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain groups={NAV_GROUPS} />
+        <NavMain groups={groups} />
       </SidebarContent>
       <SidebarFooter>
         <div className="flex items-center gap-2 rounded-md border border-sidebar-border px-2.5 py-1.5 group-data-[collapsible=icon]:hidden">
@@ -74,6 +80,8 @@ export function AppSidebar({
           name={user.name}
           email={user.email}
           workspaceName={workspaceName}
+          workspaceId={workspaceId}
+          workspaces={workspaces}
         />
       </SidebarFooter>
       <SidebarRail />

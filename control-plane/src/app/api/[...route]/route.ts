@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { handle } from "hono/vercel";
+import { billingRoutes } from "@/cloud/billing/routes";
 import { agentRoutes } from "@/server/routes/agents";
 import { benchRoutes } from "@/server/routes/bench";
 import { benchRunnerRoutes } from "@/server/routes/bench-runner";
@@ -30,6 +31,9 @@ app.route("/bench", benchRoutes);
 
 // Browser voice sessions (signed-in session or bearer API key).
 app.route("/session", sessionRoutes);
+
+// Managed cloud only: Stripe webhooks. A 404 unless SAMATA_CLOUD is set.
+app.route("/billing", billingRoutes);
 
 export const GET = handle(app);
 export const POST = handle(app);

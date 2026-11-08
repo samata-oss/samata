@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,24 +13,44 @@ type Mode = "sign-in" | "sign-up";
 export function SignInForm({
   next,
   firstRun,
+  openSignUp,
+  verifyEmail,
+  canResetPassword,
+  passwordWasReset,
   googleEnabled,
   invitation,
 }: {
   next: string;
   /** No account exists yet: the first one becomes the owner. */
   firstRun: boolean;
+  /** Anyone may create an account (the managed cloud). */
+  openSignUp: boolean;
+  /** New accounts must confirm their address before they can sign in. */
+  verifyEmail: boolean;
+  /** Email can be delivered, so "Forgot password?" works. */
+  canResetPassword: boolean;
+  /** Arrived from a completed password reset. */
+  passwordWasReset: boolean;
   googleEnabled: boolean;
   invitation: { id: string; email: string; workspaceName: string } | null;
 }) {
   const router = useRouter();
-  // Accounts can only be created on first run or with an invitation.
-  const canSignUp = firstRun || invitation !== null;
-  const [mode, setMode] = useState<Mode>(canSignUp ? "sign-up" : "sign-in");
+  // Accounts can only be created on first run, with an invitation, or when
+  // sign-up is open. Open sign-up still opens on "Sign in": most visitors of
+  // a public site already have an account.
+  const canSignUp = firstRun || invitation !== null || openSignUp;
+  const [mode, setMode] = useState<Mode>(
+    firstRun || invitation !== null ? "sign-up" : "sign-in",
+  );
   const [name, setName] = useState("");
   const [email, setEmail] = useState(invitation?.email ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  /** Set once a confirmation email has been sent to this address. */
+  const [confirmationSentTo, setConfirmationSentTo] = useState<string | null>(
+    null,
+  );
 
   const signingUp = mode === "sign-up";
 
@@ -43,12 +64,22 @@ export function SignInForm({
             name: name.trim() || email.split("@")[0],
             email,
             password,
+            // Where the confirmation link leads once the address is confirmed.
+            callbackURL: next,
             // Proves the invitee holds the link. See `assertMaySignUp`.
             ...(invitation && { invitationId: invitation.id }),
           } as Parameters<typeof authClient.signUp.email>[0])
-        : await authClient.signIn.email({ email, password });
+        : await authClient.signIn.email({ email, password, callbackURL: next });
       if (result.error) {
-        setError(result.error.message ?? "Something went wrong. Try again.");
+        setError(
+          result.error.code === "EMAIL_NOT_VERIFIED"
+            ? "Confirm your email first. We've sent you a new link."
+            : (result.error.message ?? "Something went wrong. Try again."),
+        );
+        return;
+      }
+      if (signingUp && verifyEmail) {
+        setConfirmationSentTo(email);
         return;
       }
       router.push(next);
@@ -68,6 +99,30 @@ export function SignInForm({
       setError(result.error.message ?? "Google sign-in failed.");
   }
 
+  if (confirmationSentTo) {
+    return (
+      <div className="space-y-4 rounded-lg border bg-card/80 p-6 shadow-2xl shadow-black/10 backdrop-blur">
+        <h1 className="text-lg font-semibold tracking-tight">
+          Check your email
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          We sent a confirmation link to {confirmationSentTo}. Open it to finish
+          creating your account. It expires in an hour.
+        </p>
+        <button
+          type="button"
+          className="text-sm underline underline-offset-4 hover:text-foreground"
+          onClick={() => {
+            setConfirmationSentTo(null);
+            setMode("sign-in");
+          }}
+        >
+          Back to sign in
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 rounded-lg border bg-card/80 p-6 shadow-2xl shadow-black/10 backdrop-blur">
       <div className="space-y-1">
@@ -77,12 +132,17 @@ export function SignInForm({
         <p className="text-sm text-muted-foreground">
           {invitation
             ? `You've been invited to ${invitation.workspaceName}.`
-            : firstRun
+            : firstRun && !openSignUp
               ? "This is a new install. The first account becomes the owner of the workspace."
               : signingUp
                 ? "Create an account to continue."
                 : "Welcome back."}
         </p>
+        {passwordWasReset && !signingUp && (
+          <p role="status" className="text-sm text-muted-foreground">
+            Your password was changed. Sign in with the new one.
+          </p>
+        )}
       </div>
 
       <form onSubmit={submit} className="grid gap-4">
@@ -131,6 +191,14 @@ export function SignInForm({
             <p className="text-xs text-muted-foreground">
               At least 8 characters.
             </p>
+          )}
+          {!signingUp && canResetPassword && (
+            <Link
+              href={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ""}`}
+              className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            >
+              Forgot password?
+            </Link>
           )}
         </div>
 

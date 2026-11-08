@@ -22,6 +22,7 @@ const LABELS: Record<string, string> = {
   "api-keys": "API Keys",
   "provider-keys": "Provider Keys",
   team: "Team",
+  billing: "Billing",
 };
 
 function label(segment: string) {

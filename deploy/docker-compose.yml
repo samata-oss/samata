@@ -54,6 +54,9 @@ services:
       BETTER_AUTH_URL: https://${SAMATA_DOMAIN}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      # Optional: email invitations and password-reset links through Resend.
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      SAMATA_EMAIL_FROM: ${SAMATA_EMAIL_FROM:-}
       SAMATA_DEFAULT_AGENT: ${SAMATA_DEFAULT_AGENT:-}
       # Handed to browsers in test tokens, so it's the public URL.
       LIVEKIT_URL: ${LIVEKIT_PUBLIC_URL:-wss://${LIVEKIT_DOMAIN}}

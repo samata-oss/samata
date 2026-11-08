@@ -12,6 +12,8 @@ export type WorkspaceSession = {
   organizationId: string;
   workspaceName: string;
   role: string;
+  /** Every workspace the user belongs to, for the switcher. */
+  workspaces: { id: string; name: string }[];
 };
 
 export type SessionLookup =
@@ -53,6 +55,10 @@ export async function lookupSession(h: Headers): Promise<SessionLookup> {
     session: {
       user: { id: user.id, name: user.name, email: user.email },
       ...picked,
+      workspaces: memberships.map((m) => ({
+        id: m.organizationId,
+        name: m.workspaceName,
+      })),
     },
   };
 }

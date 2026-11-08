@@ -195,14 +195,24 @@ built on [Better Auth](https://better-auth.com).
   because whoever gets there first owns the install.
 - **After that, sign-up is invitation-only.** Samata spends your workspace's
   provider keys on every call, so open registration would let anyone
-  on the internet run up your bill. Invite people from **Team**. Samata doesn't
-  send email, so creating an invitation gives you a link to share; the link is
-  what lets them create their account.
+  on the internet run up your bill. Invite people from **Team**. Creating an
+  invitation gives you a link to share; the link is what lets them create their
+  account. With [email](#email) set up, Samata also emails it.
 - **Everything belongs to a workspace.** Assistants and call logs carry an
   `organization_id`, and every dashboard and API query is scoped to it. A fresh
   install, or an upgrade, has a single `default` workspace holding all existing
   data. Creating more workspaces and managing teams across them is intentionally
   not in this repo yet.
+
+#### Email
+
+Email is optional and goes through [Resend](https://resend.com). Set
+`RESEND_API_KEY` and `SAMATA_EMAIL_FROM` (an address on a domain you've verified
+in Resend, e.g. `Samata <noreply@example.com>`) and Samata emails invitations
+and password-reset links, and the sign-in page gets a **Forgot password?** link.
+Without them nothing is sent: the message is written to the server log
+instead, invitation links still show on **Team**, and in production the
+**Forgot password?** link is hidden.
 
 Set `BETTER_AUTH_SECRET` (`openssl rand -hex 32`) and, in production,
 `BETTER_AUTH_URL` (the compose file derives it from `SAMATA_DOMAIN`). For Google
@@ -474,6 +484,44 @@ The worker reads `sip.trunkPhoneNumber` and `sip.phoneNumber` from the caller's
 participant attributes. To wire a trunk by hand instead, use the
 [`lk` CLI](https://docs.livekit.io/sip/).
 
+## Samata Cloud
+
+The hosted version is free up to a number of concurrent calls per workspace
+(`SAMATA_FREE_CONCURRENT_CALLS`, default 5) and a flat monthly plan removes the
+limit. There is no metering. Its code lives in `control-plane/src/cloud/` and
+does nothing unless `SAMATA_CLOUD=1`, so a self-hosted install has no Billing
+page, makes no Stripe calls and never limits calls.
+
+- A workspace upgrades once through Stripe Checkout to a flat recurring price.
+  Stripe webhooks keep its subscription status current; `active` and `trialing`
+  lift the limit. A lapsed payment drops it back to the free limit, not to zero.
+- A call that would take an unsubscribed workspace over the limit is refused:
+  the browser session endpoint answers `402`, and the worker rejects the phone
+  call and Logs shows it as `concurrency-limit`.
+- "Running" means in progress in Logs. A call still in progress after two hours
+  is assumed dead and stops counting. The limit is soft: calls that start in
+  the same instant can each see room.
+- Stripe setup: create a recurring price, point a webhook at
+  `/api/billing/webhook`, and set the variables in `control-plane/.env.example`.
+  Provider keys stay bring-your-own, so the plan only covers Samata.
+
+Accounts work differently too. Self-hosted, only the first account and invitees
+can sign up, and everyone shares one workspace. On the cloud, anyone can sign up
+and gets a workspace of their own, which they own, once they've confirmed their
+email address: sign-up sends a confirmation link, an unconfirmed account can't
+sign in and has no workspace, and someone who tries to register an address that
+already has an account just tells its owner by email. That needs Resend, so a
+production cloud without it keeps sign-up closed. Someone invited to a team
+joins it instead of getting an empty workspace first, and anyone in more than
+one workspace gets a **Switch workspace** menu in the sidebar. An address that
+has a pending invitation can still only sign up through the invitation link,
+so nobody can register someone else's address and take their seat. On the cloud,
+leave `SAMATA_API_KEY` and `SAMATA_DEFAULT_AGENT` unset: they act on the shared
+default workspace, which nobody owns there.
+
+The open-source app reaches this code through one file,
+`control-plane/src/server/cloud.ts`.
+
 ## Layout
 
 ```
@@ -483,6 +531,7 @@ deploy/                   Production compose (prebuilt images + Caddy) and .env.
 cli/                      The `@samata-oss/cli` npm package (`npx @samata-oss/cli init`), no dependencies
 infra/livekit/            Dev livekit.yaml, sip.yaml (dev keys: devkey / samata_dev_secret_…)
 control-plane/            Next.js 16, Hono under /api, Drizzle (agent, call_log), Dockerfile
+                          (src/cloud/: managed-cloud billing, off unless SAMATA_CLOUD=1)
 worker/                   livekit-agents 1.8 worker, Dockerfile
 website/                  Landing page and docs (Next.js + Fumadocs): `pnpm site:dev`
 .github/workflows/        Multi-arch image builds, published to GHCR

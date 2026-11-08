@@ -3,7 +3,7 @@
 import { BotIcon, CornerDownLeftIcon, SearchIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NAV_GROUPS } from "@/components/nav-items";
+import type { NavGroup } from "@/components/nav-main";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,8 +24,10 @@ type Entry = {
 /** Search-and-jump palette: pages and assistants, opened with ⌘K or Ctrl+K. */
 export function CommandPalette({
   assistants,
+  groups,
 }: {
   assistants: { slug: string; name: string }[];
+  groups: NavGroup[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -42,7 +44,7 @@ export function CommandPalette({
         href: `/assistants/${a.slug}`,
         icon: <BotIcon />,
       })),
-      ...NAV_GROUPS.flatMap((g) =>
+      ...groups.flatMap((g) =>
         g.items.map((i) => ({
           id: `page:${i.url}`,
           label: i.title,
@@ -52,7 +54,7 @@ export function CommandPalette({
         })),
       ),
     ],
-    [assistants],
+    [assistants, groups],
   );
 
   const q = query.trim().toLowerCase();

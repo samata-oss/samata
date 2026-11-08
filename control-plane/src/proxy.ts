@@ -1,8 +1,13 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
 
-/** Reachable without a session. Invitations handle the signed-out case. */
-const PUBLIC_PATHS = ["/sign-in", "/accept-invitation"];
+/** Reachable without a session. Invitations handle the signed-out case, and password reset is for people who can't sign in. */
+const PUBLIC_PATHS = [
+  "/sign-in",
+  "/accept-invitation",
+  "/forgot-password",
+  "/reset-password",
+];
 
 /**
  * Optimistic gate for the dashboard: no session cookie, no pages. This only
