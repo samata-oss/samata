@@ -1,6 +1,9 @@
+import { PaneSection } from "@/components/landing/shell";
+import { card, ghost, primary } from "@/components/landing/styles";
+import { cn } from "@/lib/cn";
+import { cloudUrl } from "@/lib/shared";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cloudUrl } from "@/lib/shared";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -59,26 +62,21 @@ const faqs = [
 
 export default function PricingPage() {
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-16 font-mono sm:py-24">
-      <p className="text-xs text-fd-primary">Pricing</p>
-      <h1 className="mt-4 text-3xl font-normal leading-[1.1] tracking-[-0.045em] sm:text-4xl">
-        Run it yourself, or let us run it.
-      </h1>
-      <p className="mt-6 max-w-xl text-[13px] leading-[1.8] text-zinc-400">
-        Same software either way. Managed Samata is free until you need more
-        than a handful of calls at once, then one flat plan. There is no
-        per-minute charge.
-      </p>
+    <>
+      <PaneSection
+        title="Run it yourself, or let us run it."
+        lede="Same software either way. Managed Samata is free until you need more than a handful of calls at once, then one flat plan. There is no per-minute charge."
+      />
 
-      <div className="mt-12 grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:gap-5">
         {plans.map((plan) => (
           <section
             key={plan.name}
-            className={
-              plan.highlight
-                ? "flex flex-col border border-fd-primary/60 bg-fd-card p-6"
-                : "flex flex-col border border-white/[0.1] bg-fd-card p-6"
-            }
+            className={cn(
+              card,
+              "flex flex-col p-6 sm:p-8",
+              plan.highlight && "border-fd-primary/60",
+            )}
           >
             <h2 className="text-xs text-zinc-400">{plan.name}</h2>
             <p className="mt-4 text-2xl font-normal tracking-[-0.04em]">
@@ -100,11 +98,10 @@ export default function PricingPage() {
             </ul>
             <Link
               href={plan.cta.href}
-              className={
-                plan.highlight
-                  ? "mt-8 inline-flex h-10 items-center justify-center bg-fd-primary px-5 text-xs font-medium text-fd-primary-foreground transition-colors hover:bg-fd-primary/85"
-                  : "mt-8 inline-flex h-10 items-center justify-center border border-white/[0.14] px-5 text-xs text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white"
-              }
+              className={cn(
+                "mt-8 justify-center",
+                plan.highlight ? primary : ghost,
+              )}
             >
               {plan.cta.label}
             </Link>
@@ -112,19 +109,27 @@ export default function PricingPage() {
         ))}
       </div>
 
-      <h2 className="mt-20 text-base font-medium tracking-tight">
-        Questions
-      </h2>
-      <dl className="mt-6 grid gap-x-10 gap-y-8 sm:grid-cols-2">
-        {faqs.map((faq) => (
-          <div key={faq.q}>
-            <dt className="text-[13px] text-zinc-200">{faq.q}</dt>
-            <dd className="mt-2 text-[13px] leading-[1.8] text-zinc-400">
-              {faq.a}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </main>
+      <PaneSection title="Questions.">
+        <div className="border-t border-dashed border-white/[0.1]">
+          {faqs.map((faq) => (
+            <details
+              key={faq.q}
+              className="group border-b border-dashed border-white/[0.1]"
+            >
+              <summary className="flex cursor-pointer list-none items-center gap-3 px-1 py-3 text-[13px] transition-colors hover:bg-white/[0.04] group-open:text-fd-primary [&::-webkit-details-marker]:hidden">
+                <span aria-hidden="true" className="w-3 shrink-0">
+                  <span className="group-open:hidden">▸</span>
+                  <span className="hidden group-open:inline">▾</span>
+                </span>
+                {faq.q}
+              </summary>
+              <p className="pr-2 pb-4 pl-7 text-[13px] leading-[1.8] text-zinc-400">
+                {faq.a}
+              </p>
+            </details>
+          ))}
+        </div>
+      </PaneSection>
+    </>
   );
 }

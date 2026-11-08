@@ -25,17 +25,21 @@ type NavLink = {
   end?: boolean;
 };
 
+/** Pages that sit in the landing page's two-pane frame. */
+const landingPaths = ["/", "/pricing"];
+
 const links: NavLink[] = [
   { href: "/", label: "Home", match: (path: string) => path === "/" },
   {
     href: "/docs",
     label: "Docs",
-    match: (path: string) => path.startsWith("/docs"),
+    match: (path: string) =>
+      path.startsWith("/docs") && !path.startsWith("/docs/contributing"),
   },
   {
-    href: "/contribute",
+    href: "/docs/contributing",
     label: "Contribute",
-    match: (path: string) => path.startsWith("/contribute"),
+    match: (path: string) => path.startsWith("/docs/contributing"),
   },
   {
     href: "/pricing",
@@ -43,7 +47,7 @@ const links: NavLink[] = [
     match: (path: string) => path.startsWith("/pricing"),
     menu: [
       {
-        href: "/docs",
+        href: "/docs/deploy",
         label: "Open source",
         description: "Self-host Samata on your own infrastructure.",
       },
@@ -71,7 +75,10 @@ const links: NavLink[] = [
  */
 export function SiteNav({ stars }: { stars: number | null }) {
   const pathname = usePathname();
-  const home = pathname === "/";
+  // Pages inside the landing frame use its pinned dark palette.
+  const home = landingPaths.some((path) =>
+    path === "/" ? pathname === "/" : pathname.startsWith(path),
+  );
 
   const navRef = useRef<HTMLElement>(null);
   const linkRefs = useRef<(HTMLElement | null)[]>([]);
