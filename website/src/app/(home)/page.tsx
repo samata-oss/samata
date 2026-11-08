@@ -1,5 +1,4 @@
 import { Compare } from "@/components/landing/compare";
-import { DitherField } from "@/components/landing/dither-field";
 import { DitherSky } from "@/components/landing/dither-sky";
 import { Reveal } from "@/components/landing/fx";
 import { InstallTabs } from "@/components/landing/install-tabs";
@@ -117,9 +116,8 @@ export default async function HomePage() {
 
   return (
     <div className="relative isolate flex min-h-screen flex-col font-mono">
-      {/* The glow sits behind, and the ridgeline's strands climb through it. They share one path, so left and right read as a single drawing. */}
-      <DitherField className="fixed inset-0 -z-10 opacity-60 lg:opacity-80 [mask-image:linear-gradient(to_right,transparent_28%,black_60%)]" />
-      <DitherSky className="fixed inset-0 -z-10 opacity-60 [mask-image:linear-gradient(to_right,black_45%,rgb(0_0_0/0.9)_100%)]" />
+      {/* One ridgeline runs the full width: the waves start in the hero pane and carry on behind the cards. */}
+      <DitherSky className="fixed inset-0 -z-10 opacity-60" />
       <div className="lg:grid lg:grid-cols-[minmax(22rem,42%)_minmax(0,1fr)] lg:items-start">
         <aside className="lg:sticky lg:top-14 lg:h-[calc(100svh-3.5rem)]">
           <div className="relative h-full border-b border-white/[0.11] lg:border-r lg:border-b-0">

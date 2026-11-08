@@ -2,8 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
-import { REF, streakS, streakY } from "./streak-path";
-
 /**
  * The hero pane's backdrop: a ridgeline spectrum, rendered as ordered dither.
  * Stacked lines carry a voice-shaped signal. Each line shows the same signal a
@@ -42,6 +40,21 @@ const REACH = 1;
 
 const clamp = (v: number, lo: number, hi: number) =>
   Math.min(hi, Math.max(lo, v));
+/** Where the stack of lines sits on the far left, as a fraction of the height. */
+const REF = 0.845;
+/** How far the waves climb by the right edge, and how much the stack tightens. */
+const RISE = 0.5;
+const SQUEEZE = 0.55;
+/** 0 over the hero pane, easing to 1 by the right edge. */
+const lift = (u: number) => {
+  const k = clamp((u - 0.26) / 0.74, 0, 1);
+  return k * k * (3 - 2 * k);
+};
+/** Eases the trailing swell in over the hero pane, so it carries on from the peak. */
+const trail = (u: number) => {
+  const k = clamp((u - 0.1) / 0.35, 0, 1);
+  return k * k * (3 - 2 * k);
+};
 /** Cheap per-cell hash in [0, 1), so the dots are not a perfect lattice. */
 function hash(x: number, y: number) {
   let h = Math.imul(x, 374761393) + Math.imul(y, 668265263);
@@ -114,12 +127,20 @@ export function DitherSky({ className }: { className?: string }) {
           0.55 + 0.45 * Math.sin(tau * 1.1) * Math.sin(tau * 0.37 + 1);
         for (let x = 0; x < reach; x++) {
           const u = (x + 0.5) / cols;
-          // Past the left pane the whole stack climbs the shared path and its
-          // lines draw together, so the ridgeline becomes the streak.
-          const s = streakS(u);
-          const amp = amp0 * (1 - 0.35 * s);
+          // The signal is strongest on the left, then carries on across the
+          // page as a lower swell that rises and falls slowly.
+          const swell = 0.3 + 0.35 * noise(u * 4 + 5, t * 0.08);
           const env =
-            0.05 + Math.exp(-(((u - CENTER) / SPREAD) ** 2)) + 0.45 * s;
+            0.05 + Math.exp(-(((u - CENTER) / SPREAD) ** 2)) + swell * trail(u);
+          // Past the hero pane the whole stack climbs, and its lines draw
+          // together a little, so the waves rise and coalesce.
+          const s = lift(u);
+          const path =
+            REF -
+            RISE * s +
+            s *
+              (0.03 * Math.sin(u * 5 + t * 0.35) +
+                0.018 * Math.sin(u * 12 - t * 0.6));
           const n =
             0.6 * noise(u * 38, tau * 0.9) +
             0.3 * noise(u * 90 + 7, tau * 1.6) +
@@ -129,12 +150,9 @@ export function DitherSky({ className }: { className?: string }) {
           // A faint tremor along the whole line, so the quiet ends are alive.
           const tremor = 0.003 * (noise(u * 60 + 31, tau * 0.5) - 0.5);
           const y =
-            streakY(u, t) +
-            (base - REF) * (1 - 0.82 * s) -
-            amp * level +
-            tremor;
+            path + (base - REF) * (1 - SQUEEZE * s) - amp0 * level + tremor;
           height[i * cols + x] = y * rows;
-          heat[i * cols + x] = clamp(level * 1.3 + 0.3 * s, 0, 1);
+          heat[i * cols + x] = clamp(level * 1.3 + 0.15 * s, 0, 1);
         }
       }
     };
