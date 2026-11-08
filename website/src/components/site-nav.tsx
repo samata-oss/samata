@@ -26,7 +26,7 @@ type NavLink = {
 };
 
 /** Pages that sit in the landing page's two-pane frame. */
-const landingPaths = ["/", "/pricing"];
+const landingPaths = ["/", "/pricing", "/docs"];
 
 const links: NavLink[] = [
   { href: "/", label: "Home", match: (path: string) => path === "/" },

@@ -68,6 +68,21 @@ html {
   padding-top: 0.75rem;
 }
 
+/*
+ * Docs on the landing backdrop: the sidebar, the article and the table of
+ * contents run edge to edge as one frosted surface, like the landing cards, so
+ * the waves glow through it and the text stays easy to read.
+ */
+.landing #nd-docs-layout {
+  background-color: oklch(0.125 0.005 270 / 0.55);
+  backdrop-filter: blur(5px);
+}
+.landing #nd-sidebar,
+.landing #nd-page,
+.landing #nd-toc {
+  background-color: transparent;
+}
+
 /* Stop the page shifting when a dialog locks scroll. Needs !important to beat the lock's inline style. */
 html > body[data-scroll-locked] {
   /* biome-ignore lint/complexity/noImportantStyles: overrides an inline style */
