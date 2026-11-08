@@ -23,7 +23,7 @@ const BAYER8 = [
 /** CSS pixels per dither cell. */
 const CELL = 4;
 /** Frames per second. The signal rolls slowly, so this can stay low. */
-const FPS = 20;
+const FPS = 30;
 
 /** How many lines are stacked, back to front. */
 const LINES = 28;
@@ -45,6 +45,11 @@ const REF = 0.845;
 /** How far the waves climb by the right edge, and how much the stack tightens. */
 const RISE = 0.5;
 const SQUEEZE = 0.7;
+/** How much shorter the peaks run over the hero pane, easing back to full height. */
+const LEFT_TRIM = 0.15;
+/** Hover: how far the pointer's pull reaches (in cells), and how hard it lifts. */
+const HOVER_CELLS = 34;
+const HOVER_BOOST = 0.18;
 /** 0 over the hero pane, easing to 1 by the right edge. */
 const lift = (u: number) => {
   const k = clamp((u - 0.26) / 0.74, 0, 1);
@@ -100,6 +105,10 @@ export function DitherSky({ className }: { className?: string }) {
     let visible = true;
     let frame = 0;
     let last = 0;
+    /** Where the pointer is (0..1 of the viewport), and how strongly it counts. */
+    const pointer = { x: 0.5, y: 0.5, on: 0 };
+    /** Where the pointer is right now; `pointer` eases toward it. */
+    const aim = { x: 0.5, y: 0.5, on: false };
 
     const resize = () => {
       const rect = wrap.getBoundingClientRect();
@@ -146,11 +155,26 @@ export function DitherSky({ className }: { className?: string }) {
             0.3 * noise(u * 90 + 7, tau * 1.6) +
             0.1 * noise(u * 190 + 19, tau * 2.4);
           const peak = clamp((n - 0.3) / 0.5, 0, 1) ** 1.6;
-          const level = peak * env * gate;
+          // The pointer excites the signal around it: the peaks there grow,
+          // wake from their lulls, and a ripple spreads out along the lines.
+          const dx = x - pointer.x * cols;
+          const near =
+            pointer.on *
+            Math.exp(-((dx / HOVER_CELLS) ** 2)) *
+            (0.4 + 0.6 * Math.exp(-(((pointer.y - path) / 0.3) ** 2)));
+          const level =
+            peak *
+            (env + HOVER_BOOST * near) *
+            (gate + (1 - gate) * near * 0.25);
+          const ripple = near * 0.0012 * Math.sin(dx * 0.4 - t * 9 + i * 0.35);
           // A faint tremor along the whole line, so the quiet ends are alive.
           const tremor = 0.003 * (noise(u * 60 + 31, tau * 0.5) - 0.5);
           const y =
-            path + (base - REF) * (1 - SQUEEZE * s) - amp0 * level + tremor;
+            path +
+            (base - REF) * (1 - SQUEEZE * s) -
+            amp0 * (1 - LEFT_TRIM * (1 - s)) * level +
+            tremor +
+            ripple;
           height[i * cols + x] = y * rows;
           heat[i * cols + x] = clamp(level * 1.3 + 0.15 * s, 0, 1);
         }
@@ -160,6 +184,11 @@ export function DitherSky({ className }: { className?: string }) {
     const draw = (time: number) => {
       if (!image) return;
       const t = time / 1000;
+      // Ease the pointer toward where it really is, so the lift swells in
+      // and fades out instead of snapping.
+      pointer.x += (aim.x - pointer.x) * 0.3;
+      pointer.y += (aim.y - pointer.y) * 0.3;
+      pointer.on += ((aim.on ? 1 : 0) - pointer.on) * 0.15;
       const data = image.data;
       const reach = Math.min(cols, Math.ceil(cols * REACH));
 
@@ -256,7 +285,25 @@ export function DitherSky({ className }: { className?: string }) {
 
     frame = requestAnimationFrame(loop);
 
+    // The backdrop sits behind the page, so listen on the window instead.
+    const move = (e: PointerEvent) => {
+      aim.x = e.clientX / window.innerWidth;
+      aim.y = e.clientY / window.innerHeight;
+      aim.on = true;
+    };
+    const leave = () => {
+      aim.on = false;
+    };
+    window.addEventListener("pointermove", move, { passive: true });
+    window.addEventListener("pointerup", leave);
+    window.addEventListener("pointercancel", leave);
+    document.documentElement.addEventListener("pointerleave", leave);
+
     return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", leave);
+      window.removeEventListener("pointercancel", leave);
+      document.documentElement.removeEventListener("pointerleave", leave);
       ro.disconnect();
       io.disconnect();
       cancelAnimationFrame(frame);
