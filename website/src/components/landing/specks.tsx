@@ -4,21 +4,31 @@ import { cn } from "@/lib/cn";
 import { useEffect, useRef } from "react";
 
 /**
- * Sparse white and grey specks scattered over the page's dark. They sit on
- * the same grid as the `DitherSky` dots, so they read as part of one screen.
- * The scatter clumps into loose patches rather than a uniform sprinkle, thins
- * out toward the bottom where the waves live, and a few specks twinkle slowly.
+ * Sparse white and grey sound marks over the page's dark: tiny waveforms, a
+ * few vertical bars each, like level meters. They echo the hero mark and sit
+ * on the same 4px grid as the `DitherSky` dots. The scatter clumps into
+ * patches rather than a uniform sprinkle and thins out toward the bottom
+ * where the waves live. Some marks are live: their bars rise and fall slowly,
+ * as if a quiet signal were passing through.
  */
 
 /** CSS pixels per grid cell. Matches the dither's dot pitch. */
 const CELL = 4;
-/** Edge of a speck, in CSS pixels. */
-const SIZE = 2;
-/** Chance a cell holds a speck, before the patch and fade-out are applied. */
-const DENSITY = 0.008;
-/** Share of specks that twinkle. */
-const TWINKLE = 0.18;
-/** Frames per second for the twinkle. It is slow, so this can stay low. */
+/** Bar width in CSS pixels, and the gap-inclusive step between bars. */
+const BAR = 2;
+const PITCH = 4;
+/** Heights snap to this step, so bars stay on the dither's grid. */
+const STEP = 2;
+/** Chance a cell starts a mark, before the patch and fade-out are applied. */
+const DENSITY = 0.0015;
+/**
+ * Soundwave drift: the live marks' bars rise and fall slowly. Set to `false`
+ * to freeze every mark at rest. The animation loop is skipped entirely then.
+ */
+const DRIFT = true;
+/** Share of marks that are live, when `DRIFT` is on. */
+const LIVE = 0.35;
+/** Frames per second for the live marks. They are slow, so this can stay low. */
 const FPS = 15;
 
 const clamp = (v: number, lo: number, hi: number) =>
@@ -48,13 +58,15 @@ function noise(x: number, y: number) {
   return top + (bottom - top) * sy;
 }
 
-type Speck = {
+type Mark = {
+  /** Left edge, and the baseline the bars are centred on. */
   x: number;
   y: number;
-  size: number;
+  /** Resting height of each bar, in CSS pixels. */
+  bars: number[];
   alpha: number;
   white: boolean;
-  /** Twinkle rate in rad/s, or 0 for a steady speck. */
+  /** Rate in rad/s for a live mark, or 0 for a steady one. */
   rate: number;
   phase: number;
 };
@@ -70,7 +82,7 @@ export function Specks({ className }: { className?: string }) {
     const reduce = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
-    let specks: Speck[] = [];
+    let marks: Mark[] = [];
     let width = 0;
     let height = 0;
     let frame = 0;
@@ -78,7 +90,7 @@ export function Specks({ className }: { className?: string }) {
     let visible = true;
 
     const scatter = () => {
-      specks = [];
+      marks = [];
       const cols = Math.ceil(width / CELL);
       const rows = Math.ceil(height / CELL);
       for (let cy = 0; cy < rows; cy++) {
@@ -92,16 +104,25 @@ export function Specks({ className }: { className?: string }) {
           const chance = DENSITY * (0.15 + 1.6 * weight) * fade;
           if (hash(cx, cy, 1) >= chance) continue;
 
-          const pick = hash(cx, cy, 2);
-          const bright = pick > 0.93;
-          specks.push({
-            // Centre the speck in its cell, like the dither's dots.
-            x: cx * CELL + (CELL - SIZE) / 2,
-            y: cy * CELL + (CELL - SIZE) / 2,
-            size: bright && hash(cx, cy, 3) > 0.6 ? SIZE + 1 : SIZE,
-            alpha: bright ? 0.55 : 0.12 + 0.3 * hash(cx, cy, 4),
+          const bright = hash(cx, cy, 2) > 0.93;
+          // A few bars, tallest near the middle, each nudged off the envelope.
+          const count = 2 + Math.floor(hash(cx, cy, 9) * 6);
+          const top = (bright ? 16 : 6) + 10 * hash(cx, cy, 10);
+          const bars: number[] = [];
+          for (let i = 0; i < count; i++) {
+            const shape =
+              count > 1 ? Math.sin(((i + 0.5) / count) * Math.PI) : 1;
+            const h =
+              top * (0.3 + 0.7 * shape) * (0.55 + 0.45 * hash(cx, cy, 20 + i));
+            bars.push(Math.max(STEP, Math.round(h / STEP) * STEP));
+          }
+          marks.push({
+            x: cx * CELL + (CELL - BAR) / 2,
+            y: cy * CELL + CELL / 2,
+            bars,
+            alpha: bright ? 0.5 : 0.12 + 0.3 * hash(cx, cy, 4),
             white: hash(cx, cy, 5) > 0.55,
-            rate: hash(cx, cy, 6) < TWINKLE ? 0.5 + 1.5 * hash(cx, cy, 7) : 0,
+            rate: DRIFT && hash(cx, cy, 6) < LIVE ? 1 + 2 * hash(cx, cy, 7) : 0,
             phase: hash(cx, cy, 8) * Math.PI * 2,
           });
         }
@@ -113,11 +134,20 @@ export function Specks({ className }: { className?: string }) {
       ctx.clearRect(0, 0, width, height);
       for (const tone of [false, true]) {
         ctx.fillStyle = tone ? "rgb(255 255 255)" : "rgb(161 161 170)";
-        for (const s of specks) {
-          if (s.white !== tone) continue;
-          const pulse = s.rate ? 0.5 + 0.5 * Math.sin(t * s.rate + s.phase) : 1;
-          ctx.globalAlpha = s.alpha * (s.rate ? 0.25 + 0.75 * pulse : 1);
-          ctx.fillRect(s.x, s.y, s.size, s.size);
+        for (const m of marks) {
+          if (m.white !== tone) continue;
+          ctx.globalAlpha = m.alpha;
+          for (let i = 0; i < m.bars.length; i++) {
+            // Live bars swell and ebb, each a beat behind its neighbour.
+            const level = m.rate
+              ? 0.55 + 0.45 * Math.sin(t * m.rate + m.phase - i * 0.7)
+              : 1;
+            const h = Math.max(
+              STEP,
+              Math.round((m.bars[i] * level) / STEP) * STEP,
+            );
+            ctx.fillRect(m.x + i * PITCH, m.y - h / 2, BAR, h);
+          }
         }
       }
       ctx.globalAlpha = 1;
@@ -147,7 +177,7 @@ export function Specks({ className }: { className?: string }) {
     const ro = new ResizeObserver(resize);
     ro.observe(el);
 
-    if (reduce) return () => ro.disconnect();
+    if (reduce || !DRIFT) return () => ro.disconnect();
 
     const onVisibility = () => {
       visible = !document.hidden;
