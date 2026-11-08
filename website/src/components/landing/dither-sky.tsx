@@ -55,6 +55,12 @@ const lift = (u: number) => {
   const k = clamp((u - 0.26) / 0.74, 0, 1);
   return k * k * (3 - 2 * k);
 };
+/** How much shorter the very tallest peaks run. Small peaks are left alone. */
+const TOP_TRIM = 0.4;
+const squash = (level: number) => {
+  const k = clamp((level - 0.3) / 0.8, 0, 1);
+  return level * (1 - TOP_TRIM * k * k * (3 - 2 * k));
+};
 /** Eases the trailing swell in over the hero pane, so it carries on from the peak. */
 const trail = (u: number) => {
   const k = clamp((u - 0.1) / 0.35, 0, 1);
@@ -172,7 +178,7 @@ export function DitherSky({ className }: { className?: string }) {
           const y =
             path +
             (base - REF) * (1 - SQUEEZE * s) -
-            amp0 * (1 - LEFT_TRIM * (1 - s)) * level +
+            amp0 * (1 - LEFT_TRIM * (1 - s)) * squash(level) +
             tremor +
             ripple;
           height[i * cols + x] = y * rows;
