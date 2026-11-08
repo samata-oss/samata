@@ -34,7 +34,9 @@ const links: NavLink[] = [
     href: "/docs",
     label: "Docs",
     match: (path: string) =>
-      path.startsWith("/docs") && !path.startsWith("/docs/contributing"),
+      path.startsWith("/docs") &&
+      !path.startsWith("/docs/contributing") &&
+      !path.startsWith("/docs/deploy"),
   },
   {
     href: "/docs/contributing",
@@ -44,7 +46,8 @@ const links: NavLink[] = [
   {
     href: "/pricing",
     label: "Deploy",
-    match: (path: string) => path.startsWith("/pricing"),
+    match: (path: string) =>
+      path.startsWith("/pricing") || path.startsWith("/docs/deploy"),
     menu: [
       {
         href: "/docs/deploy",
