@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
+import { useEffect, useRef } from "react";
 /**
  * The hero pane's backdrop: a ridgeline spectrum, rendered as ordered dither.
  * Stacked lines carry a voice-shaped signal. Each line shows the same signal a
@@ -26,12 +26,12 @@ const CELL = 4;
 const FPS = 20;
 
 /** How many lines are stacked, back to front. */
-const LINES = 20;
+const LINES = 28;
 /** Seconds between neighbouring lines: how long a signal takes to roll by. */
-const STEP = 0.28;
+const STEP = 0.22;
 /** Vertical band the lines sit in (0..1 of the viewport height). */
 const BACK = 0.72;
-const FRONT = 0.97;
+const FRONT = 0.985;
 /** Where the signal is strongest across the width, and how wide it spreads. */
 const CENTER = 0.21;
 const SPREAD = 0.15;
@@ -44,7 +44,7 @@ const clamp = (v: number, lo: number, hi: number) =>
 const REF = 0.845;
 /** How far the waves climb by the right edge, and how much the stack tightens. */
 const RISE = 0.5;
-const SQUEEZE = 0.55;
+const SQUEEZE = 0.7;
 /** 0 over the hero pane, easing to 1 by the right edge. */
 const lift = (u: number) => {
   const k = clamp((u - 0.26) / 0.74, 0, 1);
@@ -120,7 +120,7 @@ export function DitherSky({ className }: { className?: string }) {
         const depth = i / (LINES - 1);
         const base = BACK + (FRONT - BACK) * depth ** 1.15;
         // Peaks stay low enough to clear the text above the band.
-        const amp0 = 0.025 + 0.075 * depth;
+        const amp0 = 0.025 + 0.085 * depth;
         // Lines nearer the viewer show an earlier moment of the signal.
         const tau = t - i * STEP;
         const gate =
@@ -131,7 +131,7 @@ export function DitherSky({ className }: { className?: string }) {
           // page as a lower swell that rises and falls slowly.
           const swell = 0.3 + 0.35 * noise(u * 4 + 5, t * 0.08);
           const env =
-            0.05 + Math.exp(-(((u - CENTER) / SPREAD) ** 2)) + swell * trail(u);
+            0.1 + Math.exp(-(((u - CENTER) / SPREAD) ** 2)) + swell * trail(u);
           // Past the hero pane the whole stack climbs, and its lines draw
           // together a little, so the waves rise and coalesce.
           const s = lift(u);
@@ -145,7 +145,7 @@ export function DitherSky({ className }: { className?: string }) {
             0.6 * noise(u * 38, tau * 0.9) +
             0.3 * noise(u * 90 + 7, tau * 1.6) +
             0.1 * noise(u * 190 + 19, tau * 2.4);
-          const peak = clamp((n - 0.35) / 0.5, 0, 1) ** 1.6;
+          const peak = clamp((n - 0.3) / 0.5, 0, 1) ** 1.6;
           const level = peak * env * gate;
           // A faint tremor along the whole line, so the quiet ends are alive.
           const tremor = 0.003 * (noise(u * 60 + 31, tau * 0.5) - 0.5);
