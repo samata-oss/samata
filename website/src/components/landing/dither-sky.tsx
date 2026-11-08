@@ -66,6 +66,45 @@ const trail = (u: number) => {
   const k = clamp((u - 0.1) / 0.35, 0, 1);
   return k * k * (3 - 2 * k);
 };
+/** A tall peak's level, past what the signal usually reaches. Used for `waveTop`. */
+const TALL = 1.3;
+/**
+ * The highest the waves reach at horizontal position `u` (0..1), as a fraction
+ * of the viewport height from the top. Peaks, wobble and the stack's lean are
+ * all allowed for, so anything drawn above this line stays clear of the waves.
+ * Other layers use it to keep out of the purple.
+ */
+export function waveTop(u: number) {
+  const s = lift(u);
+  // The path's slow wobble swings up by at most the sum of its two terms.
+  const path = REF - RISE * s - s * (0.03 + 0.018);
+  let top = Infinity;
+  for (let i = 0; i < LINES; i++) {
+    const depth = i / (LINES - 1);
+    const base = BACK + (FRONT - BACK) * depth ** 1.15;
+    const amp0 = 0.025 + 0.085 * depth;
+    const y =
+      path +
+      (base - REF) * (1 - SQUEEZE * s) -
+      amp0 * (1 - LEFT_TRIM * (1 - s)) * squash(TALL);
+    top = Math.min(top, y);
+  }
+  return top;
+}
+
+/**
+ * The lowest the waves reach at horizontal position `u` (0..1), as a fraction
+ * of the viewport height from the top: the front line at its lowest swing.
+ * Below it the screen is dark, so other layers may use that space.
+ */
+export function waveBottom(u: number) {
+  const s = lift(u);
+  const path = REF - RISE * s + s * (0.03 + 0.018);
+  // The front line sits at `FRONT`, drawn together by the squeeze. A little
+  // extra covers its tremor and the pointer's ripple.
+  return path + (FRONT - REF) * (1 - SQUEEZE * s) + 0.01;
+}
+
 /** Cheap per-cell hash in [0, 1), so the dots are not a perfect lattice. */
 function hash(x: number, y: number) {
   let h = Math.imul(x, 374761393) + Math.imul(y, 668265263);

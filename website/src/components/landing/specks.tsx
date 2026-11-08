@@ -1,14 +1,16 @@
 "use client";
 
 import { cn } from "@/lib/cn";
+import { waveBottom, waveTop } from "./dither-sky";
 import { useEffect, useRef } from "react";
 
 /**
  * Sparse white and grey sound marks over the page's dark: tiny waveforms, a
  * few vertical bars each, like level meters. They echo the hero mark and sit
  * on the same 4px grid as the `DitherSky` dots. The scatter clumps into
- * patches rather than a uniform sprinkle and thins out toward the bottom
- * where the waves live. Some marks are live: their bars rise and fall slowly,
+ * patches rather than a uniform sprinkle and keeps clear of the purple
+ * waves, on both sides: above their peaks and below their lowest line (see
+ * `waveTop` and `waveBottom`). Some marks are live: their bars rise and fall slowly,
  * as if a quiet signal were passing through.
  */
 
@@ -28,6 +30,8 @@ const DENSITY = 0.0015;
 const DRIFT = true;
 /** Share of marks that are live, when `DRIFT` is on. */
 const LIVE = 0.35;
+/** Breathing room kept between a mark and the purple waves, in CSS pixels. */
+const CLEAR = 24;
 /** Frames per second for the live marks. They are slow, so this can stay low. */
 const FPS = 15;
 
@@ -93,11 +97,21 @@ export function Specks({ className }: { className?: string }) {
       marks = [];
       const cols = Math.ceil(width / CELL);
       const rows = Math.ceil(height / CELL);
+      // How high and how low the waves reach at each column, as fractions of
+      // the height. Marks live above the first and below the second.
+      const reach = Array.from({ length: cols }, (_, cx) =>
+        waveTop((cx + 0.5) / cols),
+      );
+      const floor = Array.from({ length: cols }, (_, cx) =>
+        waveBottom((cx + 0.5) / cols),
+      );
       for (let cy = 0; cy < rows; cy++) {
         const v = (cy + 0.5) / rows;
-        // Full strength up top, easing out toward the wave band at the bottom.
-        const fade = 1 - 0.85 * clamp((v - 0.5) / 0.45, 0, 1);
+        // Above the waves, full strength up top, easing out as the band nears.
+        const above = 1 - 0.85 * clamp((v - 0.5) / 0.45, 0, 1);
         for (let cx = 0; cx < cols; cx++) {
+          // Below the waves the dark is open, so no easing there.
+          const fade = v > floor[cx] ? 1 : above;
           // Loose patches: dense where the noise peaks, near empty between.
           const patch = noise(cx * 0.045 + 3, cy * 0.045 + 11);
           const weight = clamp((patch - 0.25) / 0.5, 0, 1) ** 1.5;
@@ -116,6 +130,19 @@ export function Specks({ className }: { className?: string }) {
               top * (0.3 + 0.7 * shape) * (0.55 + 0.45 * hash(cx, cy, 20 + i));
             bars.push(Math.max(STEP, Math.round(h / STEP) * STEP));
           }
+          // Keep clear of the purple waves: the whole mark, at its tallest,
+          // sits either above the highest the waves reach under its span, or
+          // below the lowest they dip to.
+          const right = Math.min(
+            cols - 1,
+            cx + Math.ceil((count * PITCH) / CELL),
+          );
+          const half = Math.max(...bars) / 2;
+          const mid = cy * CELL + CELL / 2;
+          const ceiling = Math.min(reach[cx], reach[right]) * height - CLEAR;
+          const ground = Math.max(floor[cx], floor[right]) * height + CLEAR;
+          if (mid + half > ceiling && mid - half < ground) continue;
+
           marks.push({
             x: cx * CELL + (CELL - BAR) / 2,
             y: cy * CELL + CELL / 2,
