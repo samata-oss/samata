@@ -5,6 +5,7 @@ import { InstallTabs } from "@/components/landing/install-tabs";
 import { HeroMark } from "@/components/landing/hero-mark";
 import { Panel } from "@/components/landing/panel";
 import { PixelIcon, type Sprite } from "@/components/landing/pixel-icon";
+import { Specks } from "@/components/landing/specks";
 import { TerminalHero } from "@/components/landing/terminal-hero";
 import { cn } from "@/lib/cn";
 import { getStars } from "@/lib/github";
@@ -118,6 +119,8 @@ export default async function HomePage() {
     <div className="relative isolate flex min-h-screen flex-col font-mono">
       {/* One ridgeline runs the full width: the waves start in the hero pane and carry on behind the cards. */}
       <DitherSky className="fixed inset-0 -z-10 opacity-60" />
+      {/* White and grey specks over the dark, thinning out where the waves rise. */}
+      <Specks className="fixed inset-0 -z-10 size-full" />
       <div className="lg:grid lg:grid-cols-[minmax(22rem,42%)_minmax(0,1fr)] lg:items-start">
         <aside className="lg:sticky lg:top-14 lg:h-[calc(100svh-3.5rem)]">
           <div className="relative h-full border-b border-white/[0.11] lg:border-r lg:border-b-0">
