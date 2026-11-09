@@ -1,6 +1,6 @@
 import { boxSurface } from "./panel";
 
-type Cell = { text: string; good?: boolean };
+type Cell = { text: string; good?: boolean; soon?: boolean };
 
 const columns = [
   { name: "Samata", note: "Open source", highlight: true },
@@ -11,8 +11,12 @@ const columns = [
 
 const yes = (text: string): Cell => ({ text, good: true });
 const no = (text: string): Cell => ({ text });
+const soon = (text: string): Cell => ({ text, soon: true });
 
-const rows: { label: string; cells: [Cell, Cell, Cell, Cell] }[] = [
+const rows: {
+  label: string;
+  cells: [Cell, Cell, Cell, Cell];
+}[] = [
   {
     label: "Source",
     cells: [yes("MIT"), no("Closed"), yes("Apache 2.0"), yes("BSD 2-Clause")],
@@ -72,6 +76,15 @@ const rows: { label: string; cells: [Cell, Cell, Cell, Cell] }[] = [
     ],
   },
   {
+    label: "Smart algos",
+    cells: [
+      soon("Coming soon"),
+      yes("Included"),
+      no("You build it"),
+      no("Varies"),
+    ],
+  },
+  {
     label: "Bring your own models",
     cells: [
       yes("Per agent"),
@@ -83,6 +96,9 @@ const rows: { label: string; cells: [Cell, Cell, Cell, Cell] }[] = [
 ];
 
 function Value({ cell }: { cell: Cell }) {
+  // Not there yet, but planned: no tick or dash, and the same grey as the row
+  // label beside it.
+  if (cell.soon) return <span className="text-zinc-500">{cell.text}</span>;
   return (
     <span className={cell.good ? "text-zinc-300" : "text-zinc-500"}>
       <span
@@ -157,8 +173,8 @@ export function Compare() {
         </div>
       </div>
       <p className="mt-4 text-[11px] leading-[1.8] text-zinc-500">
-        As of November 2026 - if any information is outdated or inaccurate, please
-        let us know at oss@samata.dev and we will correct it promptly.
+        As of November 2026 - if any information is outdated or inaccurate,
+        please let us know at oss@samata.dev and we will correct it promptly.
       </p>
     </>
   );

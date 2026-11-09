@@ -5,29 +5,36 @@ import { Features } from "@/components/landing/features";
 import { Reveal } from "@/components/landing/fx";
 import { InstallCommand } from "@/components/landing/install-command";
 import { Panel } from "@/components/landing/panel";
-import { PixelIcon, type Sprite } from "@/components/landing/pixel-icon";
 import { LandingShell } from "@/components/landing/shell";
 import { card, ghost, primary } from "@/components/landing/styles";
 import { cn } from "@/lib/cn";
 import { getStars } from "@/lib/github";
 import { githubUrl } from "@/lib/shared";
+import {
+  ArrowUpRight,
+  Database,
+  Layers,
+  Scale,
+  type LucideIcon,
+} from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 const installCommand = "npx @samata-oss/cli init";
 
-const openSource: { icon: Sprite; title: string; body: string }[] = [
+const openSource: { icon: LucideIcon; title: string; body: string }[] = [
   {
-    icon: "heart",
+    icon: Scale,
     title: "MIT licensed",
     body: "Use it commercially, fork it, change it. The licence is in the repo.",
   },
   {
-    icon: "lock",
+    icon: Database,
     title: "Your data stays put",
     body: "API keys are encrypted at rest. Transcripts, usage and call logs sit in your Postgres.",
   },
   {
-    icon: "mic",
+    icon: Layers,
     title: "Bring your own models",
     body: "A transcriber, a model and a voice per agent: OpenAI, Groq, Deepgram, Cartesia, ElevenLabs, AssemblyAI, OpenRouter, or a custom endpoint.",
   },
@@ -95,21 +102,40 @@ export default async function HomePage() {
                     {item.body}
                   </p>
                   <div className="mt-auto pt-4">
-                    <PixelIcon name={item.icon} className="size-9" />
+                    <item.icon
+                      aria-hidden="true"
+                      strokeWidth={1.5}
+                      className="size-5 text-fd-primary"
+                    />
                   </div>
                 </div>
               ))}
             </div>
             <div className="flex flex-wrap items-center gap-3 border-t border-white/[0.09] p-4">
-              <a href={githubUrl} className={primary}>
+              <a
+                href={githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(primary, "gap-2")}
+              >
                 Star on GitHub
                 {stars !== null && stars >= 10 ? (
-                  <span className="ml-2 opacity-70">★ {stars}</span>
+                  <span className="opacity-70">★ {stars}</span>
                 ) : null}
+                <ArrowUpRight aria-hidden="true" className="size-3.5" />
               </a>
-              <a href={`${githubUrl}/issues`} className={ghost}>
+              <a
+                href={`${githubUrl}/issues`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(ghost, "gap-2")}
+              >
                 Open an issue
+                <ArrowUpRight aria-hidden="true" className="size-3.5" />
               </a>
+              <Link href="/docs/contributing" className={ghost}>
+                Contribute
+              </Link>
             </div>
           </Panel>
         </div>
