@@ -1,3 +1,4 @@
+import { FaqLink } from "./faq-link";
 import { boxSurface } from "./panel";
 
 type Cell = { text: string; good?: boolean; soon?: boolean };
@@ -15,6 +16,8 @@ const soon = (text: string): Cell => ({ text, soon: true });
 
 const rows: {
   label: string;
+  /** Makes the label a link that opens this FAQ (an `id` in faq.tsx). */
+  faq?: string;
   cells: [Cell, Cell, Cell, Cell];
 }[] = [
   {
@@ -77,6 +80,7 @@ const rows: {
   },
   {
     label: "Smart algos",
+    faq: "shortcomings",
     cells: [
       soon("Coming soon"),
       yes("Included"),
@@ -156,7 +160,11 @@ export function Compare() {
                     scope="row"
                     className="py-3 pr-3 font-normal leading-[1.6] text-zinc-500"
                   >
-                    {row.label}
+                    {row.faq ? (
+                      <FaqLink to={row.faq}>{row.label}</FaqLink>
+                    ) : (
+                      row.label
+                    )}
                   </th>
                   {row.cells.map((cell, index) => (
                     <td

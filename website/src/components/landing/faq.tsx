@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { FaqItem } from "./faq-item";
 
-const faqs: { question: string; answer: ReactNode }[] = [
+const faqs: { id?: string; question: string; answer: ReactNode }[] = [
   {
     question: "Is Samata free?",
     answer:
@@ -13,10 +13,14 @@ const faqs: { question: string; answer: ReactNode }[] = [
       "In your own Postgres. Transcripts, usage and call logs are stored there, and provider API keys are encrypted at rest and shown only as their last four characters.",
   },
   {
-    question: "What are the current shortcomings?",
+    id: "shortcomings",
+    question: "Are there any shortcomings?",
     answer: (
       <>
-        <p>While Samata is free and open source, closed source platforms have proprietary tech we lack today:</p>
+        <p>
+          While Samata is free and open source, closed source platforms have
+          proprietary tech we lack today:
+        </p>
         <ul className="mt-3 list-disc space-y-1.5 pl-5">
           <li>Answering machine detection (AMD)</li>
           <li>Smart endpointing, or end-of-turn detection</li>
@@ -28,7 +32,43 @@ const faqs: { question: string; answer: ReactNode }[] = [
           </li>
         </ul>
         <p className="mt-3">
-          Samata aims for parity, and still saves the developers who would have normally rolled their own LiveKit infrastructure time and money.  If you or anyone you know is great at machine learning, please feel free to <a href="/docs/contributing" className="text-fd-primary">contribute</a> to the project. We are always looking for help!
+          Samata aims for parity, and still saves the developers who would have
+          normally rolled their own LiveKit infrastructure time and money. If
+          you or anyone you know is great at machine learning, please feel free
+          to{" "}
+          <a href="/docs/contributing" className="text-fd-primary">
+            contribute
+          </a>{" "}
+          to the project. We are always looking for help!
+        </p>
+      </>
+    ),
+  },
+  {
+    question:
+      "How does Samata compare to Dograh, the other open source voice AI platform?",
+    answer: (
+      <>
+        <p>
+          Both are open source, self-hostable alternatives to platforms like
+          Vapi and Retell.{" "}
+          <a
+            href="https://github.com/dograh-hq/dograh"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-fd-primary"
+          >
+            Dograh
+          </a>{" "}
+          (BSD 2-Clause) is built around a visual workflow builder for designing
+          agents, with MCP support for AI coding assistants.
+        </p>
+        <p className="mt-3">
+          Samata is API first. You describe an agent in JSON and push it over
+          HTTP, it runs on LiveKit, and a visual dashboard stays in sync with
+          the code. If you want to design conversations by dragging a workflow,
+          Dograh is a good fit. If you want agents as code you can version,
+          Samata is.
         </p>
       </>
     ),
@@ -63,7 +103,7 @@ export function Faq() {
   return (
     <div className="border-t border-dashed border-white/[0.1]">
       {faqs.map((faq) => (
-        <FaqItem key={faq.question} question={faq.question}>
+        <FaqItem key={faq.question} id={faq.id} question={faq.question}>
           {faq.answer}
         </FaqItem>
       ))}

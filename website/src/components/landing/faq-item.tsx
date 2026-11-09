@@ -3,20 +3,46 @@
 import type { ReactNode } from "react";
 
 let cancelScroll: (() => void) | null = null;
+// Set while a link opens a question itself, so that open scrolls to the
+// question instead of gliding to the bottom of the page.
+let skipGlide = false;
 
 /**
- * Glide the page down to its bottom edge. The target is read every frame, so
- * the glide keeps going as an answer eases open and the page grows under it.
- * It stops early if the visitor scrolls, and is skipped for reduced motion.
+ * Open the question with this `id` and glide its row up under the nav bar. Used
+ * by links elsewhere on the page. The glide re-reads the row's position every
+ * frame, so it keeps going as the answer opens and the page grows. When the
+ * page is not tall enough to bring the row to the top, it ends at the bottom.
  */
-function glideToBottom() {
+export function scrollToFaq(id: string) {
+  const item = document.getElementById(id);
+  if (!(item instanceof HTMLDetailsElement)) return;
+  if (!item.open) {
+    skipGlide = true;
+    item.open = true;
+  }
+  // Leaves room for the sticky bar, like the row's `scroll-mt-20`.
+  glideTo(() =>
+    Math.min(
+      maxScroll(),
+      item.getBoundingClientRect().top + window.scrollY - 80,
+    ),
+  );
+}
+
+const maxScroll = () =>
+  document.documentElement.scrollHeight - window.innerHeight;
+
+/**
+ * Glide the page to a scroll position. The target is read every frame, so the
+ * glide keeps going as an answer eases open and the page grows under it. It
+ * stops early if the visitor scrolls, and is skipped for reduced motion.
+ */
+function glideTo(target: () => number) {
   cancelScroll?.();
 
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const bottom = () =>
-    document.documentElement.scrollHeight - window.innerHeight;
   if (reduced) {
-    window.scrollTo({ top: bottom(), behavior: "instant" });
+    window.scrollTo({ top: target(), behavior: "instant" });
     return;
   }
 
@@ -42,13 +68,13 @@ function glideToBottom() {
     // so the speed is the same on 60Hz and 120Hz screens.
     const dt = now - last;
     last = now;
-    const target = bottom();
-    y += (target - y) * (1 - Math.exp(-dt / 90));
+    const to = target();
+    y += (to - y) * (1 - Math.exp(-dt / 90));
     window.scrollTo({ top: y, behavior: "instant" });
 
-    const settled = Math.abs(target - y) < 1 && now - start > 300;
+    const settled = Math.abs(to - y) < 1 && now - start > 300;
     if (settled || now - start > 1200) {
-      window.scrollTo({ top: target, behavior: "instant" });
+      window.scrollTo({ top: to, behavior: "instant" });
       stop();
       return;
     }
@@ -63,17 +89,25 @@ function glideToBottom() {
  * bottom, where the questions are, as the answer eases open.
  */
 export function FaqItem({
+  id,
   question,
   children,
 }: {
+  /** Lets a link elsewhere open this question with `scrollToFaq`. */
+  id?: string;
   question: string;
   children: ReactNode;
 }) {
   return (
     <details
-      className="faq group border-b border-dashed border-white/[0.1]"
+      id={id}
+      className="faq group scroll-mt-20 border-b border-dashed border-white/[0.1]"
       onToggle={(event) => {
-        if (event.currentTarget.open) glideToBottom();
+        if (skipGlide) {
+          skipGlide = false;
+          return;
+        }
+        if (event.currentTarget.open) glideTo(maxScroll);
       }}
     >
       <summary className="flex cursor-pointer list-none items-center gap-3 px-1 py-3 text-[13px] transition-colors hover:bg-white/[0.04] group-open:text-fd-primary [&::-webkit-details-marker]:hidden">
