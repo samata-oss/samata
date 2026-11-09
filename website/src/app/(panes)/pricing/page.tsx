@@ -8,7 +8,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Run Samata yourself for free, or let us run it. Managed Samata is free up to five concurrent calls, then a flat monthly plan. No metering.",
+    "Run Samata yourself for free, or let us run it. Managed Samata is free up to five concurrent calls, then $20 a month. No metering.",
 };
 
 const plans = [
@@ -23,21 +23,33 @@ const plans = [
       "Your keys and call data stay on your servers",
       "Community support on GitHub",
     ],
-    cta: { href: "/docs/quickstart", label: "Read the quickstart" },
+    cta: { href: "/docs/self-host", label: "Read the self-hosting guide" },
   },
   {
-    name: "Managed",
-    price: "Free to start",
-    note: "Then one flat monthly plan",
+    name: "Managed Free",
+    price: "Free",
+    note: "Up to 5 concurrent calls",
     description: "We host and update Samata. You bring your own provider keys.",
     features: [
       "Free up to 5 concurrent calls per workspace",
-      "A flat monthly plan removes the limit",
-      "No per-minute fee on top of your providers",
+      "No per-minute platform fee",
       "Teams, invitations and workspace API keys",
+      "Upgrade when you need more than 5 concurrent calls",
     ],
     cta: { href: `${cloudUrl}/sign-in`, label: "Sign in to get started" },
     highlight: true,
+  },
+  {
+    name: "Managed Plus",
+    price: "$20",
+    note: "Per month, per workspace",
+    description:
+      "The same managed Samata, without the 5 concurrent call limit.",
+    features: [
+      "No limit on concurrent calls per workspace",
+      "No per-minute platform fee",
+    ],
+    cta: { href: `${cloudUrl}/sign-in`, label: "Sign in to upgrade" },
   },
 ];
 
@@ -65,16 +77,16 @@ export default function PricingPage() {
     <>
       <PaneSection
         title="Run it yourself, or let us run it."
-        lede="Same software either way. Managed Samata is free until you need more than a handful of calls at once, then one flat plan. There is no per-minute charge."
+        lede="Same software either way. Managed Samata is free up to 5 concurrent calls, then $20 a month for more. There is no per-minute charge."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:gap-5">
+      <div className="grid gap-4 md:grid-cols-3 lg:gap-5">
         {plans.map((plan) => (
           <section
             key={plan.name}
             className={cn(
               card,
-              "flex flex-col p-6 sm:p-8",
+              "flex flex-col p-6",
               plan.highlight && "border-fd-primary/60",
             )}
           >

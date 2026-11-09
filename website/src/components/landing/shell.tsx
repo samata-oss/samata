@@ -30,7 +30,7 @@ export function LandingShell({
       {pane ? (
         <PaneLayout>{children}</PaneLayout>
       ) : (
-        <main className="relative mx-auto w-full max-w-4xl flex-1 space-y-4 p-4 sm:p-5 lg:space-y-5 lg:px-6 lg:py-16">
+        <main className="relative mx-auto w-full max-w-5xl flex-1 space-y-4 p-4 sm:p-5 lg:space-y-5 lg:px-6 lg:py-16">
           {children}
         </main>
       )}
