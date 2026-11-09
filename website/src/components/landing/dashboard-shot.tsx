@@ -29,20 +29,26 @@ export function DashboardShot() {
 
   return (
     <>
-      <Panel title="Control plane" meta="Dashboard" className="max-w-xl">
+      <Panel title="Control plane" meta="Dashboard">
+        {/* Full width to line up with the install box, cropped from the bottom
+            so it stays short. The full image opens on click. */}
         <button
           type="button"
           onClick={open}
           aria-label="Enlarge screenshot"
-          className="group relative block w-full cursor-zoom-in"
+          className="group relative block aspect-[2/1] w-full cursor-zoom-in overflow-hidden"
         >
           <Image
             src={src}
             alt={alt}
             width={2880}
             height={1800}
-            sizes="(min-width: 640px) 576px, 100vw"
-            className="block h-auto w-full"
+            sizes="(min-width: 1024px) 55vw, 100vw"
+            className="block size-full object-cover object-top"
+          />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-[oklch(0.105_0.004_270)] to-transparent"
           />
           <span
             aria-hidden="true"
