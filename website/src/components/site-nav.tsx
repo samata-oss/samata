@@ -2,7 +2,7 @@
 
 import { LogoMark } from "@/components/logo";
 import { cn } from "@/lib/cn";
-import { cloudUrl, githubUrl } from "@/lib/shared";
+import { cloudUrl, githubUrl, sponsorUrl } from "@/lib/shared";
 import { ArrowUpRight, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -62,6 +62,12 @@ const links: NavLink[] = [
     ],
   },
   { href: "#github", label: "GitHub", match: () => false, github: true },
+  {
+    href: sponsorUrl,
+    label: "Sponsor",
+    match: () => false,
+    external: true,
+  },
   {
     href: `${cloudUrl}/sign-in`,
     label: "Sign in",

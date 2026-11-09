@@ -47,7 +47,7 @@ const features: {
   visual: ReactNode;
 }[] = [
   {
-    title: "Agents as JSON.",
+    title: "AI voice agents as JSON.",
     body: "Model, voice, prompt and tools in one file. Push it over HTTP.",
     visual: (
       <Line>

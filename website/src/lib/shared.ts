@@ -17,6 +17,11 @@ export const gitConfig = {
 
 export const githubUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}`;
 
+/** Where to sponsor the project. Override with `NEXT_PUBLIC_SPONSOR_URL`. */
+export const sponsorUrl =
+  process.env.NEXT_PUBLIC_SPONSOR_URL ??
+  `https://github.com/sponsors/${gitConfig.user}`;
+
 /** The hosted Samata Cloud. Override with `NEXT_PUBLIC_CLOUD_URL`. */
 export const cloudUrl =
   process.env.NEXT_PUBLIC_CLOUD_URL ?? "https://cloud.samata.dev";
