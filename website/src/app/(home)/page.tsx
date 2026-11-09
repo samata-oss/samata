@@ -1,4 +1,5 @@
 import { Compare } from "@/components/landing/compare";
+import { DashboardShot } from "@/components/landing/dashboard-shot";
 import { Features } from "@/components/landing/features";
 import { Reveal } from "@/components/landing/fx";
 import { InstallCommand } from "@/components/landing/install-command";
@@ -55,6 +56,9 @@ export default async function HomePage() {
         </p>
         <div className="mt-8">
           <InstallCommand command={installCommand} />
+        </div>
+        <div className="mt-4">
+          <DashboardShot />
         </div>
         <div className="mt-8">
           <Features />
