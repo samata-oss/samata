@@ -1,10 +1,9 @@
+import { FaqItem } from "@/components/landing/faq-item";
 import { card, ghost, primary } from "@/components/landing/styles";
 import { cn } from "@/lib/cn";
 import { cloudUrl } from "@/lib/shared";
 import type { Metadata } from "next";
 import Link from "next/link";
-
-import { FaqItem } from "./faq-item";
 
 export const metadata: Metadata = {
   title: "Pricing",

@@ -1,5 +1,6 @@
 import { Compare } from "@/components/landing/compare";
 import { Reveal } from "@/components/landing/fx";
+import { FaqItem } from "@/components/landing/faq-item";
 import { InstallTabs } from "@/components/landing/install-tabs";
 import { Panel } from "@/components/landing/panel";
 import { PixelIcon, type Sprite } from "@/components/landing/pixel-icon";
@@ -206,21 +207,9 @@ export default async function HomePage() {
       <Block id="faq" title="Questions.">
         <div className="border-t border-dashed border-white/[0.1]">
           {questions.map((item) => (
-            <details
-              key={item.q}
-              className="group border-b border-dashed border-white/[0.1]"
-            >
-              <summary className="flex cursor-pointer list-none items-center gap-3 px-1 py-3 text-[13px] transition-colors hover:bg-white/[0.04] group-open:text-fd-primary [&::-webkit-details-marker]:hidden">
-                <span aria-hidden="true" className="w-3 shrink-0">
-                  <span className="group-open:hidden">▸</span>
-                  <span className="hidden group-open:inline">▾</span>
-                </span>
-                {item.q}
-              </summary>
-              <p className="pr-2 pb-4 pl-7 text-[13px] leading-[1.8] text-zinc-400">
-                {item.a}
-              </p>
-            </details>
+            <FaqItem key={item.q} question={item.q}>
+              {item.a}
+            </FaqItem>
           ))}
         </div>
       </Block>

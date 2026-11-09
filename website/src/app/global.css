@@ -113,7 +113,7 @@ html {
 }
 
 /*
- * Questions on the pricing page ease open and shut. Browsers without
+ * Questions on the home and pricing pages ease open and shut. Browsers without
  * ::details-content or interpolate-size just open them instantly.
  */
 :root {
