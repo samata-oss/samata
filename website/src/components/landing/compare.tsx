@@ -158,10 +158,10 @@ export function Compare() {
       </div>
       <p className="mt-4 text-[11px] leading-[1.8] text-zinc-500">
         As of November 2026 - if any information is outdated or inaccurate, please
-        let us know at oss@samata.dev and we will correct it immediately. Our goal
+        let us know at oss@samata.dev and we will correct it promptly. Our goal
         is not to take away in any way from the important work and contributions of other platforms, but rather to give builders a
         better sense of the niche that Samata fills. We are agnostic on how
-        you choose to build your AI voice agents, whether that be with Samata or another platform. We hope to provide a substantive contribution to the open source community, and we welcome contributions.
+        you choose to build your AI voice agents, whether it is with Samata or another platform. We hope to provide a substantive contribution to the open source community, and we welcome contributions.
       </p>
     </>
   );
