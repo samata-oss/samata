@@ -19,6 +19,8 @@ type NavLink = {
   menu?: { href: string; label: string; description: string }[];
   /** A page on another site, so a plain link that leaves this one. */
   external?: boolean;
+  /** Open an external link in a new tab instead of replacing this page. */
+  newTab?: boolean;
   /** The GitHub repo link, shown as "GitHub" and the star count. */
   github?: boolean;
   /** Pushed to the right edge of the bar. */
@@ -67,6 +69,7 @@ const links: NavLink[] = [
     label: "Sponsor",
     match: () => false,
     external: true,
+    newTab: true,
   },
   {
     href: `${cloudUrl}/sign-in`,
@@ -280,6 +283,9 @@ export function SiteNav({ stars }: { stars: number | null }) {
                     linkRefs.current[i] = el;
                   }}
                   href={link.href}
+                  {...(link.newTab
+                    ? { target: "_blank", rel: "noopener noreferrer" }
+                    : {})}
                   className={item}
                 >
                   {link.label}

@@ -1,5 +1,6 @@
 import { Compare } from "@/components/landing/compare";
 import { DashboardShot } from "@/components/landing/dashboard-shot";
+import { Faq } from "@/components/landing/faq";
 import { Features } from "@/components/landing/features";
 import { Reveal } from "@/components/landing/fx";
 import { InstallCommand } from "@/components/landing/install-command";
@@ -9,9 +10,7 @@ import { LandingShell } from "@/components/landing/shell";
 import { card, ghost, primary } from "@/components/landing/styles";
 import { cn } from "@/lib/cn";
 import { getStars } from "@/lib/github";
-import { cloudUrl, githubUrl } from "@/lib/shared";
-import { ArrowUpRight } from "lucide-react";
-import Link from "next/link";
+import { githubUrl } from "@/lib/shared";
 import type { ReactNode } from "react";
 
 const installCommand = "npx @samata-oss/cli init";
@@ -78,41 +77,46 @@ export default async function HomePage() {
         title="Open source."
         lede="There is no hosted tier between you and your calls. The control plane, the worker and the LiveKit setup are all in the repo, yours to host, read and change."
       >
-        <div className="grid gap-5 sm:grid-cols-3">
-          {openSource.map((item) => (
-            <Panel key={item.body} title={item.title}>
-              <div className="p-4">
-                <PixelIcon name={item.icon} className="size-9" />
-                <p className="mt-4 text-[13px] leading-relaxed text-zinc-400">
-                  {item.body}
-                </p>
-              </div>
-            </Panel>
-          ))}
-        </div>
-        <div className="mt-6 flex flex-wrap items-center gap-3">
-          <a href={githubUrl} className={primary}>
-            Star on GitHub
-            {stars !== null && stars >= 10 ? (
-              <span className="ml-2 opacity-70">★ {stars}</span>
-            ) : null}
-          </a>
-          <a href={`${githubUrl}/issues`} className={ghost}>
-            Open an issue
-          </a>
+        <div className="@container">
+          <Panel title="Open source" meta="MIT">
+            <div className="grid grid-cols-1 gap-px bg-white/[0.11] @xl:grid-cols-3">
+              {openSource.map((item, index) => (
+                <div
+                  key={item.title}
+                  className="flex min-w-0 flex-col bg-[oklch(0.105_0.004_270)] p-4"
+                >
+                  <span className="text-[10px] text-zinc-600">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <h3 className="mt-3 text-[13px] font-medium text-zinc-200">
+                    {item.title}
+                  </h3>
+                  <p className="mt-1.5 text-xs leading-[1.7] text-zinc-500">
+                    {item.body}
+                  </p>
+                  <div className="mt-auto pt-4">
+                    <PixelIcon name={item.icon} className="size-9" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-3 border-t border-white/[0.09] p-4">
+              <a href={githubUrl} className={primary}>
+                Star on GitHub
+                {stars !== null && stars >= 10 ? (
+                  <span className="ml-2 opacity-70">★ {stars}</span>
+                ) : null}
+              </a>
+              <a href={`${githubUrl}/issues`} className={ghost}>
+                Open an issue
+              </a>
+            </div>
+          </Panel>
         </div>
       </Block>
 
-      <Block id="get-started" title="Get started.">
-        <div className="flex flex-wrap items-center gap-3">
-          <Link href="/docs/quickstart" className={primary}>
-            Quickstart
-          </Link>
-          <a href={`${cloudUrl}/sign-in`} className={cn(ghost, "gap-2")}>
-            Sign up
-            <ArrowUpRight aria-hidden="true" className="size-3.5" />
-          </a>
-        </div>
+      <Block id="faqs" title="FAQs.">
+        <Faq />
       </Block>
     </LandingShell>
   );

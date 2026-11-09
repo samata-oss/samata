@@ -83,9 +83,9 @@ export function FaqItem({
         </span>
         {question}
       </summary>
-      <p className="pr-2 pb-4 pl-7 text-[13px] leading-[1.8] text-zinc-400">
+      <div className="pr-2 pb-4 pl-7 text-[13px] leading-[1.8] text-zinc-400">
         {children}
-      </p>
+      </div>
     </details>
   );
 }
