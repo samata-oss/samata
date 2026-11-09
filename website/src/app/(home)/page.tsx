@@ -1,61 +1,19 @@
 import { Compare } from "@/components/landing/compare";
 import { Features } from "@/components/landing/features";
 import { Reveal } from "@/components/landing/fx";
-import { FaqItem } from "@/components/landing/faq-item";
 import { InstallCommand } from "@/components/landing/install-command";
 import { Panel } from "@/components/landing/panel";
 import { PixelIcon, type Sprite } from "@/components/landing/pixel-icon";
 import { LandingShell } from "@/components/landing/shell";
 import { card, ghost, primary } from "@/components/landing/styles";
-import { TerminalHero } from "@/components/landing/terminal-hero";
 import { cn } from "@/lib/cn";
 import { getStars } from "@/lib/github";
-import { githubUrl } from "@/lib/shared";
-import { ServerCodeBlock } from "fumadocs-ui/components/codeblock.rsc";
+import { cloudUrl, githubUrl } from "@/lib/shared";
+import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
 const installCommand = "npx @samata-oss/cli init";
-
-const pushCommand = `# In CI, on every deploy
-curl -X PUT $SAMATA_URL/api/tools \\
-  -H "authorization: Bearer $SAMATA_API_KEY" \\
-  -H "content-type: application/json" \\
-  -d @tools.json
-
-curl -X PUT $SAMATA_URL/api/agents \\
-  -H "authorization: Bearer $SAMATA_API_KEY" \\
-  -H "content-type: application/json" \\
-  -d @agents/support.json`;
-
-const deployScript = `mkdir samata && cd samata
-curl -O https://raw.githubusercontent.com/Samata-OSS/samata/main/deploy/docker-compose.yml
-curl -o .env https://raw.githubusercontent.com/Samata-OSS/samata/main/deploy/.env.example
-$EDITOR .env            # domains and secrets
-docker compose up -d`;
-
-const questions = [
-  {
-    q: "Where does call data live?",
-    a: "On infrastructure you host. API keys are encrypted at rest and shown only as their last four characters. Transcripts, usage and call logs sit in your Postgres.",
-  },
-  {
-    q: "Do I install an SDK?",
-    a: "No. Agents, tools and calls are HTTP. Push config with curl from CI, and start a browser call from your own backend.",
-  },
-  {
-    q: "Can I bring my own models?",
-    a: "Yes. Pick a transcriber, a model and a voice per agent. OpenAI, Groq, Deepgram, Cartesia, ElevenLabs, AssemblyAI, OpenRouter, or a custom endpoint.",
-  },
-  {
-    q: "How do tools work?",
-    a: "When the model calls a tool, Samata POSTs to your server. The message envelope matches Vapi, so an existing handler ports over with small changes.",
-  },
-  {
-    q: "How do I deploy it?",
-    a: "One compose file with prebuilt images: the control plane, a stateless worker, LiveKit, SIP, Redis, Postgres, and Caddy for TLS.",
-  },
-];
 
 const openSource: { icon: Sprite; title: string; body: string }[] = [
   {
@@ -65,12 +23,12 @@ const openSource: { icon: Sprite; title: string; body: string }[] = [
   },
   {
     icon: "lock",
-    title: "your data stays put",
+    title: "Your data stays put",
     body: "API keys are encrypted at rest. Transcripts, usage and call logs sit in your Postgres.",
   },
   {
     icon: "mic",
-    title: "bring your own models",
+    title: "Bring your own models",
     body: "A transcriber, a model and a voice per agent: OpenAI, Groq, Deepgram, Cartesia, ElevenLabs, AssemblyAI, OpenRouter, or a custom endpoint.",
   },
 ];
@@ -88,11 +46,12 @@ export default async function HomePage() {
           What is Samata?
         </h2>
         <p className="mt-3 text-[13px] leading-[1.8] text-zinc-400">
-          Samata is an open source voice orchestration platform for building AI voice agents. You describe an agent in
-          JSON and push it over HTTP, then take the call over the phone or the
-          browser. Samata runs speech-to-text, the model and text-to-speech on
-          LiveKit, calls tools on an HTTP server you run, and keeps every
-          transcript, along with your keys, in your own Postgres.
+          Samata is an open source voice orchestration platform for building AI
+          voice agents. You describe an agent in JSON and push it over HTTP,
+          then take the call over the phone or the browser. Samata runs
+          speech-to-text, the model and text-to-speech on LiveKit, calls tools
+          on an HTTP server you run, and keeps every transcript, along with your
+          keys, in your own Postgres.
         </p>
         <div className="mt-8">
           <InstallCommand command={installCommand} />
@@ -111,46 +70,9 @@ export default async function HomePage() {
       </Block>
 
       <Block
-        id="get-started"
-        title="From clone to first call."
-        lede="No SDK to install. Agents, tools and calls are plain HTTP, so everything below is a shell command."
-      >
-        <div className="space-y-8">
-          <Step n="01" title="Run Samata">
-            <ServerCodeBlock
-              lang="bash"
-              code={deployScript}
-              codeblock={{
-                title: "deploy",
-                className:
-                  "my-0 rounded-none border-white/[0.11] bg-[oklch(0.105_0.004_270)] [&_button]:rounded-none [&>div:first-child]:h-10 [&>div:first-child]:border-white/[0.09] [&>div:first-child]:text-[11px]",
-              }}
-            />
-            <More href="/docs/self-host">self-hosting guide</More>
-          </Step>
-          <Step n="02" title="Define an agent and take a call">
-            <TerminalHero />
-            <More href="/docs/quickstart">quickstart</More>
-          </Step>
-          <Step n="03" title="Keep it in CI">
-            <ServerCodeBlock
-              lang="bash"
-              code={pushCommand}
-              codeblock={{
-                title: "deploy.sh",
-                className:
-                  "my-0 rounded-none border-white/[0.11] bg-[oklch(0.105_0.004_270)] [&_button]:rounded-none [&>div:first-child]:h-10 [&>div:first-child]:border-white/[0.09] [&>div:first-child]:text-[11px]",
-              }}
-            />
-            <More href="/docs/api">api reference</More>
-          </Step>
-        </div>
-      </Block>
-
-      <Block
         id="open-source"
-        title="Yours to host, read and change."
-        lede="There is no hosted tier between you and your calls. The control plane, the worker and the LiveKit setup are all in the repo."
+        title="Open source."
+        lede="There is no hosted tier between you and your calls. The control plane, the worker and the LiveKit setup are all in the repo, yours to host, read and change."
       >
         <div className="grid gap-5 sm:grid-cols-3">
           {openSource.map((item) => (
@@ -166,24 +88,26 @@ export default async function HomePage() {
         </div>
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <a href={githubUrl} className={primary}>
-            star on github
+            Star on GitHub
             {stars !== null && stars >= 10 ? (
               <span className="ml-2 opacity-70">★ {stars}</span>
             ) : null}
           </a>
           <a href={`${githubUrl}/issues`} className={ghost}>
-            open an issue
+            Open an issue
           </a>
         </div>
       </Block>
 
-      <Block id="faq" title="Questions.">
-        <div className="border-t border-dashed border-white/[0.1]">
-          {questions.map((item) => (
-            <FaqItem key={item.q} question={item.q}>
-              {item.a}
-            </FaqItem>
-          ))}
+      <Block id="get-started" title="Get started.">
+        <div className="flex flex-wrap items-center gap-3">
+          <Link href="/docs/quickstart" className={primary}>
+            Quickstart
+          </Link>
+          <a href={`${cloudUrl}/sign-in`} className={cn(ghost, "gap-2")}>
+            Sign up
+            <ArrowUpRight aria-hidden="true" className="size-3.5" />
+          </a>
         </div>
       </Block>
     </LandingShell>
@@ -216,37 +140,5 @@ function Block({
         {children ? <div className="mt-8">{children}</div> : null}
       </Reveal>
     </section>
-  );
-}
-
-function More({ href, children }: { href: string; children: string }) {
-  return (
-    <Link
-      href={href}
-      className="mt-4 -ml-1 inline-flex items-center gap-2 px-1 text-xs text-fd-primary transition-colors hover:bg-fd-primary/15"
-    >
-      <span aria-hidden="true">→</span>
-      {children}
-    </Link>
-  );
-}
-
-function Step({
-  n,
-  title,
-  children,
-}: {
-  n: string;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <div>
-      <div className="mb-3 flex items-baseline gap-3 text-xs">
-        <span className="text-fd-primary">{n}</span>
-        <span className="text-zinc-300">{title}</span>
-      </div>
-      {children}
-    </div>
   );
 }
