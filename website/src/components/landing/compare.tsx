@@ -3,10 +3,10 @@ import { boxSurface } from "./panel";
 type Cell = { text: string; good?: boolean };
 
 const columns = [
-  { name: "Samata", note: "this repo", highlight: true },
-  { name: "Hosted platforms", note: "Vapi, Retell" },
-  { name: "DIY on LiveKit", note: "agents framework" },
-  { name: "Dograh", note: "open source" },
+  { name: "Samata", note: "Open source", highlight: true },
+  { name: "Hosted platforms", note: "Vapi, Retell, etc." },
+  { name: "DIY with LiveKit", note: "Open source voice infra" },
+  { name: "Dograh", note: "Open source" },
 ];
 
 const yes = (text: string): Cell => ({ text, good: true });

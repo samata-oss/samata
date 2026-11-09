@@ -81,7 +81,7 @@ function PaneLayout({ children }: { children: ReactNode }) {
                 )}
               >
                 The open source <br className="lg:hidden" />
-                voice platform
+                voice AI platform
               </h1>
               <p
                 className={cn(

@@ -100,7 +100,7 @@ export default async function HomePage() {
 
       <Block
         id="compare"
-        title="Why not a hosted platform?"
+        title="Samata - own your AI voice infrastructure without reinventing the wheel"
         lede="Hosted voice platforms are the fastest way to a demo. Samata is for when the calls, the keys and the margin should stay with you, without writing the plumbing yourself."
       >
         <Compare />
@@ -203,7 +203,7 @@ function Block({
       className={cn(card, "scroll-mt-20 px-6 py-10 sm:px-8 lg:px-10 lg:py-12")}
     >
       <Reveal>
-        <h2 className="max-w-xl text-lg font-medium tracking-tight sm:text-xl">
+        <h2 className="text-balance text-lg font-medium tracking-tight sm:text-xl">
           {title}
         </h2>
         {lede ? (
