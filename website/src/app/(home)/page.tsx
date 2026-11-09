@@ -97,7 +97,7 @@ export default async function HomePage() {
         <div className="mt-8">
           <InstallCommand command={installCommand} />
         </div>
-        <div className="mt-10">
+        <div className="mt-8">
           <Features />
         </div>
       </section>

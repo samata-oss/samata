@@ -70,10 +70,7 @@ const features: {
     title: "Bring your own models.",
     body: "A transcriber, a model and a voice per agent, on your own keys.",
     visual: (
-      <Chips
-        items={["openai", "groq", "deepgram", "cartesia"]}
-        more="+4"
-      />
+      <Chips items={["openai", "groq", "deepgram", "cartesia"]} more="+4" />
     ),
   },
   {
@@ -82,18 +79,15 @@ const features: {
     visual: <Chips items={["sip", "webrtc", "telnyx"]} />,
   },
   {
-    title: "Every call on record.",
-    body: "Transcript, summary, structured data and latency for each call.",
-    visual: <Chips items={["transcript", "summary", "latency", "usage"]} />,
-  },
-  {
-    title: "Workspaces and teams.",
-    body: "Invite people, assign roles. Everything is scoped to a workspace.",
+    title: "Panel or code, in sync.",
+    body: "Build voice AI agents in the control panel (visual) or in code, and sync between the two.",
     visual: (
       <div className="flex flex-wrap items-center gap-1.5">
-        <Chip tone="accent">owner</Chip>
-        <Chip>admin</Chip>
-        <Chip>member</Chip>
+        <Chip>Control panel</Chip>
+        <span aria-hidden="true" className="text-[10px] text-fd-primary">
+          ⇄
+        </span>
+        <Chip>Code</Chip>
       </div>
     ),
   },
@@ -131,21 +125,25 @@ const features: {
       </Line>
     ),
   },
+  {
+    title: "More coming soon.",
+    body: "Multi-workspace teams and more. Watch the repo or open an issue.",
+    visual: <Chip tone="accent">Soon</Chip>,
+  },
 ];
 
 /**
  * A ruled grid of what Samata does, each cell a number, a line of copy and a
- * small visual. Modelled on the features grid on Better Auth's site. The grid
- * responds to its own width, since the right pane is narrower than the viewport.
+ * small visual. The grid responds to its own width, since the right pane is
+ * narrower than the viewport.
  */
 export function Features() {
   return (
     <div className="@container">
-      <div className="mb-3 flex items-center gap-4 text-xs text-zinc-300">
-        <span>Features</span>
-        <span className="h-px flex-1 bg-white/[0.11]" />
+      <div className="inline-flex items-center gap-2 border border-white/[0.14] bg-white/[0.04] px-3 py-1.5 text-xs text-zinc-300">
+        Out of the box
       </div>
-      <div className="grid grid-cols-1 gap-px border border-white/[0.11] bg-white/[0.11] @xl:grid-cols-3">
+      <div className="mt-3 grid grid-cols-1 gap-px border border-white/[0.11] bg-white/[0.11] @xl:grid-cols-3">
         {features.map((feature, index) => (
           <div
             key={feature.title}
