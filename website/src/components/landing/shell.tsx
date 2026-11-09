@@ -36,7 +36,7 @@ export function LandingShell({
       {pane ? (
         <PaneLayout>{children}</PaneLayout>
       ) : (
-        <main className="relative mx-auto w-full max-w-7xl flex-1 p-4 sm:p-5 md:h-[calc(100svh-3.5rem)] md:flex-none md:py-0 lg:py-0">
+        <main className="relative mx-auto flex w-full max-w-7xl flex-1 flex-col p-4 sm:p-5 md:py-0 lg:py-0">
           {children}
         </main>
       )}

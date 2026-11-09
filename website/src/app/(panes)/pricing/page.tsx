@@ -4,6 +4,8 @@ import { cloudUrl } from "@/lib/shared";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { FaqItem } from "./faq-item";
+
 export const metadata: Metadata = {
   title: "Pricing",
   description:
@@ -101,11 +103,11 @@ export default function PricingPage() {
     <section
       className={cn(
         card,
-        // One panel from the bar to the bottom edge of the screen. The page itself
-        // never scrolls; when the content is taller than the window, the panel
-        // scrolls instead. The groups sit at fixed, equal gaps from the top, so
+        // One panel from the bar down, at least as tall as the screen. It grows
+        // with its content and the page scrolls (the scrollbar stays at the
+        // window's edge). The groups sit at fixed, equal gaps from the top, so
         // opening a question never moves anything above it.
-        "flex flex-col gap-10 px-6 py-10 [&>*]:shrink-0 sm:px-8 md:h-full md:border-y-0 md:overflow-y-auto md:[scrollbar-color:oklch(1_0_0/0.18)_transparent] md:[scrollbar-width:thin] lg:px-10",
+        "flex flex-1 flex-col gap-10 px-6 py-10 sm:px-8 md:border-y-0 lg:px-10",
       )}
     >
       <div>
@@ -226,21 +228,9 @@ export default function PricingPage() {
         </h2>
         <div className="mt-4 grid items-start gap-x-8 border-t border-dashed border-white/[0.1] md:grid-cols-2">
           {faqs.map((faq) => (
-            <details
-              key={faq.q}
-              className="group border-b border-dashed border-white/[0.1]"
-            >
-              <summary className="flex cursor-pointer list-none items-center gap-3 px-1 py-3 text-[13px] transition-colors hover:bg-white/[0.04] group-open:text-fd-primary [&::-webkit-details-marker]:hidden">
-                <span aria-hidden="true" className="w-3 shrink-0">
-                  <span className="group-open:hidden">▸</span>
-                  <span className="hidden group-open:inline">▾</span>
-                </span>
-                {faq.q}
-              </summary>
-              <p className="pr-2 pb-4 pl-7 text-[13px] leading-[1.8] text-zinc-400">
-                {faq.a}
-              </p>
-            </details>
+            <FaqItem key={faq.q} question={faq.q}>
+              {faq.a}
+            </FaqItem>
           ))}
         </div>
       </div>
