@@ -91,8 +91,8 @@ export function SiteNav({ stars }: { stars: number | null }) {
   } | null>(null);
   // Skip the transition on the first placement so the line doesn't slide in.
   const [ready, setReady] = useState(false);
-  // The menu opens when its button is clicked and closes on a second click, a
-  // click elsewhere, Escape, or picking an entry.
+  // The menu opens on hover or a click, and closes when the pointer leaves, on
+  // a second click, a click elsewhere, Escape, or picking an entry.
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -186,6 +186,14 @@ export function SiteNav({ stars }: { stars: number | null }) {
                   menuRef.current = el;
                 }}
                 className="relative flex"
+                // Hover opens it for a mouse and leaving closes it. Touch has no
+                // hover, so it stays on the click toggle.
+                onPointerEnter={(event) => {
+                  if (event.pointerType === "mouse") setMenuOpen(true);
+                }}
+                onPointerLeave={(event) => {
+                  if (event.pointerType === "mouse") setMenuOpen(false);
+                }}
               >
                 <button
                   type="button"
