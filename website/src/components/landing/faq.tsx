@@ -3,18 +3,18 @@ import { FaqItem } from "./faq-item";
 
 const faqs: { id?: string; question: string; answer: ReactNode }[] = [
   {
-    question: "Is Samata free?",
+    question: "Why open source?",
     answer:
-      "Yes. Samata is MIT licensed with no platform fee. You pay your model providers directly, plus whatever it costs you to host it.",
+      "Samata is MIT licensed with no platform fee. You pay your model providers directly, plus whatever it costs you to host it.",
   },
   {
-    question: "Where does my data live?",
+    question: "Will I get full control of my data?",
     answer:
-      "In your own Postgres. Transcripts, usage and call logs are stored there, and provider API keys are encrypted at rest and shown only as their last four characters.",
+      "Everything is stored in your own Postgres. Transcripts, usage and call logs are stored there, and provider API keys are encrypted at rest and shown only as their last four characters.",
   },
   {
     id: "shortcomings",
-    question: "Are there any shortcomings?",
+    question: "What are the limitations?",
     answer: (
       <>
         <p>
@@ -32,7 +32,7 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
           </li>
         </ul>
         <p className="mt-3">
-          Samata aims for parity, and still saves the developers who would have
+          However, this is changing quickly - Samata aims for parity.  It still saves the developers who would have
           normally rolled their own LiveKit infrastructure time and money. If
           you or anyone you know is great at machine learning, please feel free
           to{" "}
