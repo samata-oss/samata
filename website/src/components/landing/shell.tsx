@@ -18,11 +18,17 @@ export function LandingShell({
   pane = true,
 }: {
   children: ReactNode;
-  /** Show the left pane. Turn off to centre the content on the backdrop. */
+  /** Show the left pane. Turn off for one panel that fills the page, top to bottom. */
   pane?: boolean;
 }) {
   return (
-    <div className="relative isolate flex min-h-screen flex-col font-mono">
+    <div
+      className={cn(
+        "relative isolate flex flex-col font-mono",
+        // Without the pane the page is one panel that fills the screen below the bar.
+        pane ? "min-h-screen" : "flex-1",
+      )}
+    >
       {/* One ridgeline runs the full width: the waves start in the hero pane and carry on behind the cards. */}
       <DitherSky className="fixed inset-0 -z-10 opacity-60" />
       {/* White and grey specks over the dark, thinning out where the waves rise. */}
@@ -30,7 +36,7 @@ export function LandingShell({
       {pane ? (
         <PaneLayout>{children}</PaneLayout>
       ) : (
-        <main className="relative mx-auto w-full max-w-5xl flex-1 space-y-4 p-4 sm:p-5 lg:space-y-5 lg:px-6 lg:py-16">
+        <main className="relative mx-auto w-full max-w-5xl flex-1 p-4 sm:p-5 md:h-[calc(100svh-3.5rem)] md:flex-none md:py-0 lg:py-0">
           {children}
         </main>
       )}

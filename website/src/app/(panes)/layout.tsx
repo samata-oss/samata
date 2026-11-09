@@ -7,7 +7,7 @@ import { LandingShell } from "@/components/landing/shell";
 export default function Layout({ children }: LayoutProps<"/">) {
   // Same pinned dark palette as the home page.
   return (
-    <div className="dark landing flex min-h-screen flex-col bg-fd-background text-fd-foreground">
+    <div className="dark landing flex flex-1 flex-col bg-fd-background text-fd-foreground">
       <LandingShell pane={false}>{children}</LandingShell>
     </div>
   );

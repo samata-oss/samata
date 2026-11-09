@@ -1,4 +1,3 @@
-import { PaneSection } from "@/components/landing/shell";
 import { card, ghost, primary } from "@/components/landing/styles";
 import { cn } from "@/lib/cn";
 import { cloudUrl } from "@/lib/shared";
@@ -14,7 +13,7 @@ export const metadata: Metadata = {
 const plans = [
   {
     name: "Open source",
-    price: "Free",
+    price: "$0",
     note: "MIT licensed, forever",
     description: "Run the whole stack on your own infrastructure.",
     features: [
@@ -27,7 +26,7 @@ const plans = [
   },
   {
     name: "Managed Free",
-    price: "Free",
+    price: "$0",
     note: "Up to 5 concurrent calls",
     description: "We host and update Samata. You bring your own provider keys.",
     features: [
@@ -72,25 +71,63 @@ const faqs = [
   },
 ];
 
+/** The comparison under the plans. `true` is a check, `false` a dash, a string is shown as is. */
+const comparison: { feature: string; values: [Cell, Cell, Cell] }[] = [
+  { feature: "Runs on your own servers", values: [true, false, false] },
+  { feature: "Hosted and updated by us", values: [false, true, true] },
+  {
+    feature: "Concurrent calls",
+    values: ["Unlimited", "Up to 5", "Unlimited"],
+  },
+  {
+    feature: "Call data stays on your servers",
+    values: [true, false, false],
+  },
+  {
+    feature: "Bring your own model and provider keys",
+    values: [true, true, true],
+  },
+  { feature: "No per-minute platform fee", values: [true, true, true] },
+  {
+    feature: "Teams, invitations and workspace API keys",
+    values: [true, true, true],
+  },
+];
+
+type Cell = boolean | string;
+
 export default function PricingPage() {
   return (
-    <>
-      <PaneSection
-        title="Run it yourself, or let us run it."
-        lede="Same software either way. Managed Samata is free up to 5 concurrent calls, then $20 a month for more. There is no per-minute charge."
-      />
+    <section
+      className={cn(
+        card,
+        // One panel from the bar to the bottom edge of the screen. The page itself
+        // never scrolls; when the content is taller than the window, the panel
+        // scrolls instead. The groups sit at fixed, equal gaps from the top, so
+        // opening a question never moves anything above it.
+        "flex flex-col gap-10 px-6 py-10 [&>*]:shrink-0 sm:px-8 md:h-full md:border-y-0 md:overflow-y-auto md:[scrollbar-color:oklch(1_0_0/0.18)_transparent] md:[scrollbar-width:thin] lg:px-10",
+      )}
+    >
+      <div>
+        <h2 className="max-w-xl text-lg font-medium tracking-tight sm:text-xl">
+          Run it yourself, or let us run it.
+        </h2>
+        <p className="mt-3 text-[13px] leading-[1.8] text-zinc-400">
+          Same software either way. Managed Samata is free up to 5 concurrent
+          calls, then $20 a month for more. There is no per-minute charge.
+        </p>
+      </div>
 
-      <div className="grid gap-4 md:grid-cols-3 lg:gap-5">
+      <div className="grid gap-4 md:grid-cols-3">
         {plans.map((plan) => (
-          <section
+          <div
             key={plan.name}
             className={cn(
-              card,
-              "flex flex-col p-6",
-              plan.highlight && "border-fd-primary/60",
+              "flex flex-col border bg-white/[0.02] p-5",
+              plan.highlight ? "border-fd-primary/60" : "border-white/[0.11]",
             )}
           >
-            <h2 className="text-xs text-zinc-400">{plan.name}</h2>
+            <h3 className="text-xs text-zinc-400">{plan.name}</h3>
             <p className="mt-4 text-2xl font-normal tracking-[-0.04em]">
               {plan.price}
             </p>
@@ -111,18 +148,83 @@ export default function PricingPage() {
             <Link
               href={plan.cta.href}
               className={cn(
-                "mt-8 justify-center",
+                "mt-6 justify-center",
                 plan.highlight ? primary : ghost,
               )}
             >
               {plan.cta.label}
             </Link>
-          </section>
+          </div>
         ))}
       </div>
 
-      <PaneSection title="Questions.">
-        <div className="border-t border-dashed border-white/[0.1]">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[34rem] border-collapse text-left text-[13px]">
+          <caption className="sr-only">Compare the three plans</caption>
+          <thead>
+            <tr className="border-b border-white/[0.11] text-xs text-zinc-400">
+              <th scope="col" className="py-3 pr-4 font-normal">
+                <span className="sr-only">Feature</span>
+              </th>
+              {plans.map((plan) => (
+                <th
+                  key={plan.name}
+                  scope="col"
+                  className="w-[7.5rem] px-2 py-3 text-center font-normal"
+                >
+                  {plan.name}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {comparison.map((row) => (
+              <tr
+                key={row.feature}
+                className="border-b border-dashed border-white/[0.1]"
+              >
+                <th
+                  scope="row"
+                  className="py-2.5 pr-4 font-normal text-zinc-300"
+                >
+                  {row.feature}
+                </th>
+                {row.values.map((value, i) => (
+                  <td
+                    // biome-ignore lint/suspicious/noArrayIndexKey: the columns are fixed
+                    key={i}
+                    className="px-2 py-2.5 text-center"
+                  >
+                    {value === true ? (
+                      <>
+                        <span aria-hidden="true" className="text-fd-primary">
+                          ✓
+                        </span>
+                        <span className="sr-only">Included</span>
+                      </>
+                    ) : value === false ? (
+                      <>
+                        <span aria-hidden="true" className="text-zinc-600">
+                          –
+                        </span>
+                        <span className="sr-only">Not included</span>
+                      </>
+                    ) : (
+                      <span className="text-zinc-300">{value}</span>
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <h2 className="max-w-xl text-lg font-medium tracking-tight sm:text-xl">
+          Questions.
+        </h2>
+        <div className="mt-4 grid items-start gap-x-8 border-t border-dashed border-white/[0.1] md:grid-cols-2">
           {faqs.map((faq) => (
             <details
               key={faq.q}
@@ -141,7 +243,7 @@ export default function PricingPage() {
             </details>
           ))}
         </div>
-      </PaneSection>
-    </>
+      </div>
+    </section>
   );
 }
