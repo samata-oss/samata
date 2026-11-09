@@ -152,7 +152,7 @@ export default async function HomePage() {
                   "my-0 rounded-none border-white/[0.11] bg-[oklch(0.105_0.004_270)] [&_button]:rounded-none [&>div:first-child]:h-10 [&>div:first-child]:border-white/[0.09] [&>div:first-child]:text-[11px]",
               }}
             />
-            <More href="/docs/deploy">deployment guide</More>
+            <More href="/docs/self-host">self-hosting guide</More>
           </Step>
           <Step n="02" title="Define an agent and take a call">
             <TerminalHero />

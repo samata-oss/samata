@@ -6,7 +6,7 @@ import { cloudUrl, githubUrl } from "@/lib/shared";
 import { ArrowUpRight, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Fragment, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 /** Height of the bar. The docs layout reserves the same space below it. */
 export const NAV_HEIGHT = "3.5rem";
@@ -36,7 +36,7 @@ const links: NavLink[] = [
     match: (path: string) =>
       path.startsWith("/docs") &&
       !path.startsWith("/docs/contributing") &&
-      !path.startsWith("/docs/deploy"),
+      !path.startsWith("/docs/self-host"),
   },
   {
     href: "/docs/contributing",
@@ -47,12 +47,12 @@ const links: NavLink[] = [
     href: "/pricing",
     label: "Deploy",
     match: (path: string) =>
-      path.startsWith("/pricing") || path.startsWith("/docs/deploy"),
+      path.startsWith("/pricing") || path.startsWith("/docs/self-host"),
     menu: [
       {
-        href: "/docs/deploy",
-        label: "Open source",
-        description: "Self-host Samata on your own infrastructure.",
+        href: "/docs/self-host",
+        label: "Self-host",
+        description: "Run Samata on your own infrastructure. Read the guide.",
       },
       {
         href: "/pricing",
@@ -91,9 +91,10 @@ export function SiteNav({ stars }: { stars: number | null }) {
   } | null>(null);
   // Skip the transition on the first placement so the line doesn't slide in.
   const [ready, setReady] = useState(false);
-  // The menu opens on hover or focus. After picking an entry the pointer is
-  // still over it, so hold it shut until the pointer leaves.
-  const [menuDismissed, setMenuDismissed] = useState(false);
+  // The menu opens when its button is clicked and closes on a second click, a
+  // click elsewhere, Escape, or picking an entry.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const activeIndex = links.findIndex((link) => link.match(pathname));
 
@@ -110,6 +111,26 @@ export function SiteNav({ stars }: { stars: number | null }) {
       window.removeEventListener("resize", measure);
     };
   }, [activeIndex]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
+
+  // Moving to another page closes the menu too.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: closes on navigation
+  useEffect(() => setMenuOpen(false), [pathname]);
 
   /** Full height, so the current-page line sits right on the header border. */
   const item =
@@ -162,32 +183,35 @@ export function SiteNav({ stars }: { stars: number | null }) {
                 key={link.label}
                 ref={(el) => {
                   linkRefs.current[i] = el;
+                  menuRef.current = el;
                 }}
-                className="group relative flex"
-                onMouseLeave={() => setMenuDismissed(false)}
+                className="relative flex"
               >
                 <button
                   type="button"
                   aria-haspopup="menu"
-                  className={cn(item, current && "text-fd-foreground")}
+                  aria-expanded={menuOpen}
+                  onClick={() => setMenuOpen((open) => !open)}
+                  className={cn(
+                    item,
+                    "cursor-pointer",
+                    (current || menuOpen) && "text-fd-foreground",
+                  )}
                 >
                   {link.label}
                   <ChevronDown
                     aria-hidden="true"
                     className={cn(
                       "ml-1.5 size-3.5 opacity-60 transition-transform",
-                      !menuDismissed &&
-                        "group-focus-within:rotate-180 group-hover:rotate-180",
+                      menuOpen && "rotate-180",
                     )}
                   />
                 </button>
-                {/* The panel touches the button, so the pointer never leaves the group on its way in. */}
                 <div
                   role="menu"
                   className={cn(
                     "invisible absolute left-0 top-full z-50 w-72 border border-fd-border bg-fd-popover p-1 opacity-0 shadow-lg transition-[opacity,visibility] duration-150",
-                    !menuDismissed &&
-                      "group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100",
+                    menuOpen && "visible opacity-100",
                   )}
                 >
                   {link.menu.map((entry) => (
@@ -195,13 +219,7 @@ export function SiteNav({ stars }: { stars: number | null }) {
                       key={entry.label}
                       href={entry.href}
                       role="menuitem"
-                      onClick={() => {
-                        setMenuDismissed(true);
-                        // Drop focus too, or focus-within keeps it open.
-                        if (document.activeElement instanceof HTMLElement) {
-                          document.activeElement.blur();
-                        }
-                      }}
+                      onClick={() => setMenuOpen(false)}
                       className="block px-3 py-2.5 transition-colors hover:bg-fd-foreground/[0.06]"
                     >
                       <span className="block text-fd-foreground">
