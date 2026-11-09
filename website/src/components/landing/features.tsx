@@ -1,4 +1,6 @@
+import { Panel } from "@/components/landing/panel";
 import type { ReactNode } from "react";
+
 /** A small outlined tag, the building block of every card's mini visual. */
 function Chip({
   children,
@@ -140,28 +142,27 @@ const features: {
 export function Features() {
   return (
     <div className="@container">
-      <div className="inline-flex items-center gap-2 border border-white/[0.14] bg-white/[0.04] px-3 py-1.5 text-xs text-zinc-300">
-        Out of the box
-      </div>
-      <div className="mt-3 grid grid-cols-1 gap-px border border-white/[0.11] bg-white/[0.11] @xl:grid-cols-3">
-        {features.map((feature, index) => (
-          <div
-            key={feature.title}
-            className="flex min-w-0 flex-col bg-[oklch(0.105_0.004_270)] p-4"
-          >
-            <span className="text-[10px] text-zinc-600">
-              {String(index + 1).padStart(2, "0")}
-            </span>
-            <h3 className="mt-3 text-[13px] font-medium text-zinc-200">
-              {feature.title}
-            </h3>
-            <p className="mt-1.5 text-xs leading-[1.7] text-zinc-500">
-              {feature.body}
-            </p>
-            <div className="mt-auto pt-4">{feature.visual}</div>
-          </div>
-        ))}
-      </div>
+      <Panel title="Features">
+        <div className="grid grid-cols-1 gap-px bg-white/[0.11] @xl:grid-cols-3">
+          {features.map((feature, index) => (
+            <div
+              key={feature.title}
+              className="flex min-w-0 flex-col bg-[oklch(0.105_0.004_270)] p-4"
+            >
+              <span className="text-[10px] text-zinc-600">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <h3 className="mt-3 text-[13px] font-medium text-zinc-200">
+                {feature.title}
+              </h3>
+              <p className="mt-1.5 text-xs leading-[1.7] text-zinc-500">
+                {feature.body}
+              </p>
+              <div className="mt-auto pt-4">{feature.visual}</div>
+            </div>
+          ))}
+        </div>
+      </Panel>
     </div>
   );
 }

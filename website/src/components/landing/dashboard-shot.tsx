@@ -29,7 +29,7 @@ export function DashboardShot() {
 
   return (
     <>
-      <Panel title="Control plane" meta="Dashboard">
+      <Panel title="Dashboard">
         {/* Full width to line up with the install box, cropped from the bottom
             so it stays short. The full image opens on click. */}
         <button
