@@ -76,7 +76,7 @@ function PaneLayout({ children }: { children: ReactNode }) {
               </a>
               <h1
                 className={cn(
-                  "mt-5 text-[1.9rem] font-normal leading-[1.1] tracking-[-0.045em] sm:text-4xl lg:whitespace-nowrap lg:text-[clamp(1.1rem,5.6cqw,3.4rem)]",
+                  "mt-5 text-[1.9rem] font-normal leading-[1.1] tracking-[-0.045em] sm:text-4xl lg:whitespace-nowrap lg:text-[clamp(1.1rem,5cqw,3.3rem)]",
                   legible,
                 )}
               >
