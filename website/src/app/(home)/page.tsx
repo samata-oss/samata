@@ -1,7 +1,7 @@
 import { Compare } from "@/components/landing/compare";
 import { Reveal } from "@/components/landing/fx";
 import { FaqItem } from "@/components/landing/faq-item";
-import { InstallTabs } from "@/components/landing/install-tabs";
+import { InstallCommand } from "@/components/landing/install-command";
 import { Panel } from "@/components/landing/panel";
 import { PixelIcon, type Sprite } from "@/components/landing/pixel-icon";
 import { LandingShell } from "@/components/landing/shell";
@@ -14,29 +14,7 @@ import { ServerCodeBlock } from "fumadocs-ui/components/codeblock.rsc";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-const installTabs = [
-  {
-    id: "clone",
-    label: "Clone",
-    command: "git clone https://github.com/samata-oss/samata.git",
-  },
-  {
-    id: "run",
-    label: "Run",
-    command: "docker compose up -d livekit postgres",
-  },
-  {
-    id: "agent",
-    label: "Agent",
-    command: "curl -X PUT $SAMATA_URL/api/agents -d @agents/support.json",
-  },
-  {
-    id: "call",
-    label: "Call",
-    command:
-      'curl -X POST $SAMATA_URL/api/session/start -d \'{"assistantId":"support"}\'',
-  },
-];
+const installCommand = "npx @samata-oss/cli init";
 
 const pushCommand = `# In CI, on every deploy
 curl -X PUT $SAMATA_URL/api/tools \\
@@ -106,25 +84,19 @@ export default async function HomePage() {
         className={cn(card, "scroll-mt-20 px-6 py-8 sm:px-8 lg:px-10 lg:py-10")}
       >
         <h2 className="max-w-xl text-lg font-medium tracking-tight sm:text-xl">
-          Voice agents you run yourself.
+          What is Samata?
         </h2>
         <p className="mt-3 text-[13px] leading-[1.8] text-zinc-400">
-          Samata is an open-source voice orchestration platform. Clone it, push
-          an agent as JSON, and take the call over the phone or the browser. A
-          worker turns speech into text, asks a model, calls tools on a server
-          you run, and speaks the reply. Your keys and your call logs stay in
-          your Postgres.
+          An open-source voice orchestration platform. You describe an agent in
+          JSON and push it over HTTP, then take the call over the phone or the
+          browser. Samata runs speech-to-text, the model and text-to-speech on
+          LiveKit, calls tools on an HTTP server you run, and keeps every
+          transcript, along with your keys, in your own Postgres.
         </p>
         <div className="mt-8">
-          <InstallTabs tabs={installTabs} />
+          <InstallCommand command={installCommand} />
         </div>
       </section>
-
-      <Block
-        id="what"
-        title="What is Samata?"
-        lede="An open-source voice orchestration platform. You describe an agent in JSON. Samata runs speech-to-text, the model and text-to-speech on LiveKit, calls tools on an HTTP server you run, and keeps every transcript in your own Postgres."
-      />
 
       <Block
         id="compare"
@@ -132,9 +104,6 @@ export default async function HomePage() {
         lede="Hosted voice platforms are the fastest way to a demo. Samata is for when the calls, the keys and the margin should stay with you, without writing the plumbing yourself."
       >
         <Compare />
-        <div className="mt-4">
-          <More href="/docs/api/webhooks">porting a Vapi webhook handler</More>
-        </div>
       </Block>
 
       <Block
