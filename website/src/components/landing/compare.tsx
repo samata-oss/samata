@@ -1,3 +1,9 @@
+"use client";
+
+import { cn } from "@/lib/cn";
+import { ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { scrollToAnchor } from "./faq-item";
 import { FaqLink } from "./faq-link";
 import { Hint } from "./hint";
 import { boxSurface } from "./panel";
@@ -28,16 +34,18 @@ const yes = (text: string): Cell => ({ text, good: true });
 const no = (text: string): Cell => ({ text });
 const soon = (text: string): Cell => ({ text, soon: true });
 
-const rows: {
+type Row = {
   label: string;
   /** Makes the label a link that opens this FAQ (an `id` in faq.tsx). */
   faq?: string;
-  /** Puts a "?" after the label that explains it in a hover/focus tooltip. */
-  tooltip?: string;
-  /** Ends the tooltip with a link that opens this FAQ (an `id` in faq.tsx). */
+  /** Makes the row open on click, showing this text beneath it. */
+  description?: string;
+  /** Ends the description with a link to a FAQ or any element (an `id`). */
   more?: { to: string; label: string };
   cells: [Cell, Cell, Cell, Cell];
-}[] = [
+};
+
+const rows: Row[] = [
   {
     label: "Open source",
     cells: [yes(""), yes(""), yes(""), no("")],
@@ -47,25 +55,22 @@ const rows: {
     cells: [yes(""), yes(""), yes(""), no("")],
   },
   {
-    label: "$0 /min fee",
-    cells: [yes(""), yes(""), yes(""), no("")],
-  },
-  {
     label: "Management UI",
-    tooltip:
+    description:
       "Build agents, port phone numbers, view metrics, and more in the management UI.",
     more: { to: "dashboard", label: "View screenshot" },
     cells: [yes(""), no(""), yes(""), yes("")],
   },
   {
     label: "Agent REST API",
-    tooltip:
+    description:
       "An API for creating and updating agents programmatically, so agent definitions can be versioned in git.",
     cells: [yes(""), no(""), yes(""), yes("")],
   },
   {
     label: "Webhook tools",
-    tooltip: "Webhook tools let an agent call tools on a separate webserver.",
+    description:
+      "Webhook tools let an agent call tools on a separate webserver.",
     more: { to: "webhook-tools", label: "Read more" },
     cells: [yes(""), no(""), yes(""), yes("")],
   },
@@ -76,6 +81,10 @@ const rows: {
   {
     label: "WebRTC native",
     cells: [yes(""), yes(""), no(""), yes("")],
+  },
+  {
+    label: "$0 /min cloud fee",
+    cells: [yes(""), no("1 cent/min"), no("1 cent/min"), no("2-6 cents /min")],
   },
 ];
 
@@ -104,12 +113,117 @@ function Value({ cell }: { cell: Cell }) {
   );
 }
 
+/**
+ * One row of the table. A row with a `description` opens on click (or Enter on
+ * its label) and eases a line of text open beneath it.
+ */
+function ComparisonRow({ row }: { row: Row }) {
+  const [open, setOpen] = useState(false);
+  const detailId = `row-${row.label}`.replace(/\s+/g, "-");
+  const expandable = Boolean(row.description);
+  const { more } = row;
+
+  return (
+    <>
+      <tr
+        // A click anywhere on the row toggles it. The label's button is the
+        // keyboard and screen reader route, and its click bubbles up to here.
+        onClick={expandable ? () => setOpen((value) => !value) : undefined}
+        className={cn(
+          "border-t border-dashed border-white/[0.1] align-top",
+          expandable &&
+            "cursor-pointer transition-colors hover:bg-white/[0.03]",
+        )}
+      >
+        <th
+          scope="row"
+          className="py-3 pr-3 font-normal leading-[1.6] text-zinc-500"
+        >
+          {row.faq ? (
+            <span className="pl-5">
+              <FaqLink to={row.faq}>{row.label}</FaqLink>
+            </span>
+          ) : expandable ? (
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-controls={detailId}
+              className={cn(
+                "inline-flex cursor-pointer items-center gap-1.5 text-left transition-colors hover:text-zinc-300",
+                open && "text-zinc-300",
+              )}
+            >
+              <ChevronRight
+                aria-hidden="true"
+                className={cn(
+                  "size-3.5 shrink-0 text-zinc-600 transition-transform duration-200",
+                  open && "rotate-90",
+                )}
+              />
+              {row.label}
+            </button>
+          ) : (
+            // Lines up with the labels that have a caret before them.
+            <span className="pl-5">{row.label}</span>
+          )}
+        </th>
+        {row.cells.map((cell, index) => (
+          <td
+            key={columns[index].name}
+            className="px-3 py-3 text-center leading-[1.6]"
+          >
+            <Value cell={cell} />
+          </td>
+        ))}
+      </tr>
+      {expandable ? (
+        <tr>
+          <td colSpan={columns.length + 1} className="p-0">
+            {/* Grid rows ease between 0fr and 1fr, so the text opens smoothly. */}
+            <div
+              id={detailId}
+              inert={!open}
+              className={cn(
+                "grid transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none",
+                open
+                  ? "grid-rows-[1fr] opacity-100"
+                  : "grid-rows-[0fr] opacity-0",
+              )}
+            >
+              <div className="overflow-hidden">
+                <div className="border-t border-dashed border-white/[0.1]">
+                  {/* A dashed rule under the row, like the ones between rows, with the text lined up under the label. */}
+                  <p className="py-3 pl-5 text-[12px] leading-[1.8] text-zinc-400">
+                    {row.description}
+                    {more ? (
+                      <>
+                        {" "}
+                        <button
+                          type="button"
+                          onClick={() => scrollToAnchor(more.to)}
+                          className="cursor-pointer text-fd-primary transition-colors hover:text-zinc-100"
+                        >
+                          {more.label}
+                        </button>
+                      </>
+                    ) : null}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      ) : null}
+    </>
+  );
+}
+
 /** Samata next to hosted voice platforms, a hand-built LiveKit setup and Dograh. */
 export function Compare() {
   return (
     <>
       <div className={boxSurface}>
-        {/* Scrolls sideways on narrow screens only: scrolling clips the tooltip above a label. */}
+        {/* Scrolls sideways on narrow screens only: scrolling clips the column tooltip above a heading. */}
         <div className="overflow-x-auto p-4 min-[42rem]:overflow-visible">
           <table className="w-full min-w-[40rem] border-collapse text-left text-xs">
             <thead>
@@ -155,38 +269,7 @@ export function Compare() {
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr
-                  key={row.label}
-                  className="border-t border-dashed border-white/[0.1] align-top"
-                >
-                  <th
-                    scope="row"
-                    className="py-3 pr-3 font-normal leading-[1.6] text-zinc-500"
-                  >
-                    {row.faq ? (
-                      <FaqLink to={row.faq}>{row.label}</FaqLink>
-                    ) : row.tooltip ? (
-                      <Hint
-                        id={`hint-${row.label}`.replace(/\s+/g, "-")}
-                        text={row.tooltip}
-                        link={row.more}
-                        icon
-                      >
-                        {row.label}
-                      </Hint>
-                    ) : (
-                      row.label
-                    )}
-                  </th>
-                  {row.cells.map((cell, index) => (
-                    <td
-                      key={columns[index].name}
-                      className="px-3 py-3 text-center leading-[1.6]"
-                    >
-                      <Value cell={cell} />
-                    </td>
-                  ))}
-                </tr>
+                <ComparisonRow key={row.label} row={row} />
               ))}
             </tbody>
           </table>
