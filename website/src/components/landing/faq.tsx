@@ -43,9 +43,9 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
       <>
         <p>
           Building AI voice agents DIY with LiveKit is when a team builds their
-          voice AI agents ontop of LiveKit&apos;s open source media servers
-          (SFU + SIP) alongside an agents SDK of their choice (e.g. LiveKit
-          Agents or Pipecat).
+          voice AI agents ontop of LiveKit&apos;s open source media servers (SFU
+          + SIP) alongside an agents SDK of their choice (e.g. LiveKit Agents or
+          Pipecat).
         </p>
         <p className="mt-3">
           While LiveKit provides open source voice infrastructure (SFU + SIP)
@@ -54,26 +54,6 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
           GUI for non-technical users, a REST API for GitOps driven agent
           development, metrics etc. The LiveKit Agent Console, which does offer
           these features, is not open source.
-        </p>
-      </>
-    ),
-  },
-  {
-    id: "webhook-tools",
-    question: "What are webhook tools what are some benefits?",
-    answer: (
-      <>
-        <p>
-          Webhook tools let an agent call tools on a separate webserver. A
-          dedicated tool server separates AI agent logic from business logic and
-          provides a few benefits: tool logic is not restricted to any language
-          and can conveniently reuse functions and other logic from your
-          existing backend.
-        </p>
-        <p className="mt-3">
-          Most voice orchestration platforms use a webhook tool architecture.
-          With DIY LiveKit, tools are functions in your agent worker&apos;s
-          code, so teams have to write the HTTP glue themselves.
         </p>
       </>
     ),

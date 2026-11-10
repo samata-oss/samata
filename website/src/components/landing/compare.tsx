@@ -24,7 +24,7 @@ const columns: {
     name: "DIY with LiveKit",
     note: "Open source",
     tooltip:
-      "Building voice AI agents on LiveKit's open source media servers (SFU + SIP) with an agents SDK of your choice, such as LiveKit Agents or Pipecat. You still build the agent management layer yourself: an agent-building GUI, a REST API for GitOps driven development, metrics and so on. The LiveKit Agent Console offers these, but is not open source.",
+      "DIY with LiveKit refers to building AI voice agents using LiveKit's SFU and SIP media servers to handle media traffic - the actual AI agent logic uses either LiveKit Agents or Pipecat SDKs.",
   },
   { name: "Dograh", note: "Open source", faq: "dograh" },
   { name: "Hosted platforms", note: "VAPI, Retell, etc." },
@@ -38,8 +38,8 @@ type Row = {
   label: string;
   /** Makes the label a link that opens this FAQ (an `id` in faq.tsx). */
   faq?: string;
-  /** Makes the row open on click, showing this text beneath it. */
-  description?: string;
+  /** Makes the row open on click, showing this text beneath it. A list is one paragraph per item. */
+  description?: string | string[];
   /** Ends the description with a link to a FAQ or any element (an `id`). */
   more?: { to: string; label: string };
   cells: [Cell, Cell, Cell, Cell];
@@ -57,7 +57,7 @@ const rows: Row[] = [
   {
     label: "Management UI",
     description:
-      "Build agents, port phone numbers, view metrics, and more in the management UI.",
+      "Build agents, port phone numbers, view metrics, and more in the management UI. With DIY LiveKt You still build the agent management layer yourself: an agent-building GUI, a REST API for GitOps driven development, metrics and so on. The LiveKit Agent Console offers these, but is not open source.",
     more: { to: "dashboard", label: "View screenshot" },
     cells: [yes(""), no(""), yes(""), yes("")],
   },
@@ -69,9 +69,10 @@ const rows: Row[] = [
   },
   {
     label: "Webhook tools",
-    description:
-      "Webhook tools let an agent call tools on a separate webserver.",
-    more: { to: "webhook-tools", label: "Read more" },
+    description: [
+      "Webhook tools let an agent call tools on a separate webserver. A dedicated tool server separates AI agent logic from business logic and provides a few benefits: tool logic is not restricted to any language and can conveniently reuse functions and other logic from your existing backend.",
+      "Most voice orchestration platforms use a webhook tool architecture. With DIY LiveKit, tools are functions in your agent worker's code, so teams have to write the HTTP glue themselves.",
+    ],
     cells: [yes(""), no(""), yes(""), yes("")],
   },
   {
@@ -84,6 +85,10 @@ const rows: Row[] = [
   },
   {
     label: "$0 /min cloud fee",
+    cells: [yes(""), no("1 cent/min"), no("1 cent/min"), no("2-6 cents /min")],
+  },
+  {
+    label: "???",
     cells: [yes(""), no("1 cent/min"), no("1 cent/min"), no("2-6 cents /min")],
   },
 ];
@@ -122,6 +127,7 @@ function ComparisonRow({ row }: { row: Row }) {
   const detailId = `row-${row.label}`.replace(/\s+/g, "-");
   const expandable = Boolean(row.description);
   const { more } = row;
+  const paragraphs = [row.description ?? []].flat();
 
   return (
     <>
@@ -193,21 +199,26 @@ function ComparisonRow({ row }: { row: Row }) {
               <div className="overflow-hidden">
                 <div className="border-t border-dashed border-white/[0.1]">
                   {/* A dashed rule under the row, like the ones between rows, with the text lined up under the label. */}
-                  <p className="py-3 pl-5 text-[12px] leading-[1.8] text-zinc-400">
-                    {row.description}
-                    {more ? (
-                      <>
-                        {" "}
-                        <button
-                          type="button"
-                          onClick={() => scrollToAnchor(more.to)}
-                          className="cursor-pointer text-fd-primary transition-colors hover:text-zinc-100"
-                        >
-                          {more.label}
-                        </button>
-                      </>
-                    ) : null}
-                  </p>
+                  <div className="space-y-3 py-3 pl-5 text-[12px] leading-[1.8] text-zinc-400">
+                    {paragraphs.map((text, index) => (
+                      <p key={text}>
+                        {text}
+                        {/* The link closes the last paragraph. */}
+                        {more && index === paragraphs.length - 1 ? (
+                          <>
+                            {" "}
+                            <button
+                              type="button"
+                              onClick={() => scrollToAnchor(more.to)}
+                              className="cursor-pointer text-fd-primary transition-colors hover:text-zinc-100"
+                            >
+                              {more.label}
+                            </button>
+                          </>
+                        ) : null}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
