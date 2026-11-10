@@ -46,15 +46,13 @@ const rows: {
     cells: [yes(""), yes(""), yes(""), no("")],
   },
   {
-    label: "Agent builder UI",
-    tooltip:
-      "A visual dashboard where anyone, including non-technical teammates, can create, edit and test voice agents without writing code.  With DIY LiveKit, teams have to build this themselves.",
+    label: "Agent Builder UI",
     cells: [yes(""), no(""), yes(""), yes("")],
   },
   {
     label: "Agent REST API",
     tooltip:
-      "An HTTP API for creating and updating agents programmatically, so agent definitions can be versioned in git and deployed through CI like any other config (GitOps). With DIY LiveKit, agents are Python code in your worker and any management API is yours to build.",
+      "An API for creating and updating agents programmatically, so agent definitions can be versioned in git.",
     cells: [yes(""), no(""), yes(""), yes("")],
   },
   {
