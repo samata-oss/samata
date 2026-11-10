@@ -223,7 +223,7 @@ export default function PricingPage() {
 
       <div>
         <h2 className="max-w-xl text-lg font-medium tracking-tight sm:text-xl">
-          Questions.
+          FAQs.
         </h2>
         <div className="mt-4 grid items-start gap-x-8 border-t border-dashed border-white/[0.1] md:grid-cols-2">
           {faqs.map((faq) => (
