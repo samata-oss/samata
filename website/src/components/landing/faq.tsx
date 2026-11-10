@@ -17,36 +17,20 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
     question: "What are the limitations?",
     answer: (
       <>
-        <p>
-          While Samata is free and open source, closed source platforms have
-          proprietary tech we lack today:
-        </p>
-        <ul className="mt-3 list-disc space-y-1.5 pl-5">
-          <li>Answering machine detection (AMD)</li>
-          <li>Smart endpointing, or end-of-turn detection</li>
-          <li>Tuning for interruption and noise handling</li>
-          <li>Latency tuning at scale</li>
-          <li>
-            Early access to frontier models, if the platform is also a model
-            company
-          </li>
-        </ul>
-        <p className="mt-3">
-          However, this is changing quickly - Samata aims for parity.  It still saves the developers who would have
-          normally rolled their own LiveKit infrastructure time and money. If
-          you or anyone you know is great at machine learning, please feel free
-          to{" "}
-          <a href="/docs/contributing" className="text-fd-primary">
-            contribute
-          </a>{" "}
-          to the project. We are always looking for help!
-        </p>
+        While Samata is free and open source, many closed source platforms have
+        proprietary tech we lack today, including but not limited to: answering machine detection (AMD), smart
+        endpointing, or end-of-turn detection, tuning for interruption and noise
+        handling, latency tuning at scale, early access to frontier models - if
+        the platform is also a model company. However, Samata aims for parity and hopes to offer 
+        open source versions of these features as the project develops.  Despite these limitations,
+        we hope Samata will still be a great open source alternative for teams that want to avoid expensive 
+        closed source platform fees without having to roll their own primitives and infrastructure from scratch.
       </>
     ),
   },
   {
-    question:
-      "How does Samata compare to Dograh, the other open source voice AI platform?",
+    id: "dograh",
+    question: "How does Samata compare to Dograh?",
     answer: (
       <>
         <p>
