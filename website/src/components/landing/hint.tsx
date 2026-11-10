@@ -1,20 +1,25 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { scrollToFaq } from "./faq-item";
 
 /**
  * Dotted-underlined text that explains itself in a popup: on hover or keyboard
  * focus with a mouse, and on tap with touch (tap again, or tap elsewhere, to
- * close). A mouse click doesn't pin it open.
+ * close). A mouse click doesn't pin it open. The popup can be hovered over, so
+ * its text can be copied. With a `link`, it ends in a link to a FAQ.
  */
 export function Hint({
   id,
   text,
+  link,
   icon = false,
   children,
 }: {
   id: string;
   text: string;
+  /** Adds a link after the text that opens this FAQ (an `id` in faq.tsx). */
+  link?: { to: string; label: string };
   /** Leaves `children` as plain text and puts a small "?" after it that opens the popup. */
   icon?: boolean;
   children: ReactNode;
@@ -61,11 +66,29 @@ export function Hint({
         role="tooltip"
         // Above the label on wide screens. On narrow ones the table scrolls
         // sideways and would clip it, so it pins to the bottom of the screen.
-        className={`pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-80 -translate-x-1/2 whitespace-normal rounded-md border border-white/[0.1] bg-zinc-950 px-3 py-2 text-left text-[11px] font-normal leading-[1.6] text-zinc-400 shadow-lg group-hover:visible group-has-[:focus-visible]:visible max-[42rem]:fixed max-[42rem]:inset-x-4 max-[42rem]:bottom-4 max-[42rem]:left-4 max-[42rem]:mb-0 max-[42rem]:w-auto max-[42rem]:translate-x-0 ${
+        // The popup takes the pointer, so its text can be selected and copied
+        // and its link clicked. An invisible strip across the gap above the
+        // label keeps it open on the way up to it.
+        className={`before:absolute before:inset-x-0 before:top-full before:h-2 before:content-[''] cursor-text select-text absolute bottom-full left-1/2 z-10 mb-2 w-80 -translate-x-1/2 whitespace-normal rounded-md border border-white/[0.1] bg-zinc-950 px-3 py-2 text-left text-[11px] font-normal leading-[1.6] text-zinc-400 shadow-lg group-hover:visible group-has-[:focus-visible]:visible max-[42rem]:fixed max-[42rem]:inset-x-4 max-[42rem]:bottom-4 max-[42rem]:left-4 max-[42rem]:mb-0 max-[42rem]:w-auto max-[42rem]:translate-x-0 ${
           open ? "visible" : "invisible"
         }`}
       >
         {text}
+        {link ? (
+          <>
+            {" "}
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                scrollToFaq(link.to);
+              }}
+              className="cursor-pointer text-fd-primary outline-none transition-colors hover:text-zinc-100 focus-visible:text-zinc-100"
+            >
+              {link.label}
+            </button>
+          </>
+        ) : null}
       </span>
     </span>
   );

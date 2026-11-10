@@ -34,6 +34,8 @@ const rows: {
   faq?: string;
   /** Puts a "?" after the label that explains it in a hover/focus tooltip. */
   tooltip?: string;
+  /** Ends the tooltip with a link that opens this FAQ (an `id` in faq.tsx). */
+  more?: { to: string; label: string };
   cells: [Cell, Cell, Cell, Cell];
 }[] = [
   {
@@ -49,7 +51,7 @@ const rows: {
     cells: [yes(""), yes(""), yes(""), no("")],
   },
   {
-    label: "Agent Builder UI",
+    label: "Management UI",
     cells: [yes(""), no(""), yes(""), yes("")],
   },
   {
@@ -61,14 +63,9 @@ const rows: {
   {
     label: "Webhook tools",
     tooltip:
-      "Webhook tools let an agent call tools on a seperate webserver.  A dedicated tool server seperates AI agent logic from business logic and provides a few benefits:  tool logic is not restricted to any language and can conveniently reuse functions and other logic from your existing backend.  Most voice orchestration platforms use webhook tool architecture while with DIY LiveKit, tools are functions in your agent worker's code - so teams have to write the HTTP glue themselves.",
+      "Webhook tools let an agent call tools on a separate webserver.",
+    more: { to: "webhook-tools", label: "Learn the benefits" },
     cells: [yes(""), no(""), yes(""), yes("")],
-  },
-  {
-    label: "Conversation tuning",
-    tooltip:
-      "Proprietary voice tech that makes calls feel natural: turn-taking with an audio model underneath, answering machine detection (AMD), tuning for interruptions and background noise, and latency tuning at scale. Many platforms have these, and Samata aims to offer open source versions as the project develops. With DIY LiveKit, teams assemble and tune these themselves.",
-    cells: [soon("Coming soon"), no(""), yes(""), yes("")],
   },
   {
     label: "SIP native",
@@ -170,6 +167,7 @@ export function Compare() {
                       <Hint
                         id={`hint-${row.label}`.replace(/\s+/g, "-")}
                         text={row.tooltip}
+                        link={row.more}
                         icon
                       >
                         {row.label}

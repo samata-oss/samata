@@ -64,6 +64,26 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
     ),
   },
   {
+    id: "webhook-tools",
+    question: "What are webhook tools?",
+    answer: (
+      <>
+        <p>
+          Webhook tools let an agent call tools on a separate webserver. A
+          dedicated tool server separates AI agent logic from business logic and
+          provides a few benefits: tool logic is not restricted to any language
+          and can conveniently reuse functions and other logic from your
+          existing backend.
+        </p>
+        <p className="mt-3">
+          Most voice orchestration platforms use a webhook tool architecture.
+          With DIY LiveKit, tools are functions in your agent worker&apos;s
+          code, so teams have to write the HTTP glue themselves.
+        </p>
+      </>
+    ),
+  },
+  {
     question: "Do I need LiveKit?",
     answer:
       "Samata runs speech-to-text, the model and text-to-speech on LiveKit, so yes. You can use LiveKit Cloud or host LiveKit yourself. The compose file in the repo sets up the self-hosted option.",

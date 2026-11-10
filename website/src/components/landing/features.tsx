@@ -59,7 +59,7 @@ const features: {
   },
   {
     title: "Tools over HTTP.",
-    body: "The model calls a tool, Samata POSTs to your server. Vapi-style envelope.",
+    body: "The model calls a tool, Samata POSTs to your server.",
     visual: (
       <Line>
         <span className="text-fd-primary">POST</span> /tool-calls
@@ -82,7 +82,7 @@ const features: {
   },
   {
     title: "Panel or code, in sync.",
-    body: "Build voice AI agents in the control panel (visual) or in code, and sync between the two.",
+    body: "Build voice AI agents in the management UI (screenshot above) or in code, and sync between the two.",
     visual: (
       <div className="flex flex-wrap items-center gap-1.5">
         <Chip>Control panel</Chip>
@@ -129,7 +129,7 @@ const features: {
   },
   {
     title: "More coming soon.",
-    body: "Multi-workspace teams and more. Watch the repo or open an issue.",
+    body: "Watch the repo or open an issue.",
     visual: <Chip tone="accent">Soon</Chip>,
   },
 ];
