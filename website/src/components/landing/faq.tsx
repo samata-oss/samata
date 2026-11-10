@@ -17,14 +17,16 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
     question: "What are the limitations?",
     answer: (
       <>
-        While Samata is free and open source, many closed source platforms have
-        proprietary tech we lack today, including but not limited to: answering machine detection (AMD), smart
-        endpointing, or end-of-turn detection, tuning for interruption and noise
-        handling, latency tuning at scale, early access to frontier models - if
-        the platform is also a model company. However, Samata aims for parity and hopes to offer 
-        open source versions of these features as the project develops.  Despite these limitations,
-        we hope Samata will still be a great open source alternative for teams that want to avoid expensive 
-        closed source platform fees without having to roll their own primitives and infrastructure from scratch.
+        While Samata is free and open source, many other voice orchestration
+        platforms have proprietary tech we lack today, including but not limited
+        to: answering machine detection (AMD), smart endpointing, or end-of-turn
+        detection, tuning for interruption and noise handling, latency tuning at
+        scale, early access to frontier models - if the platform is also a model
+        company. However, Samata aims for parity and hopes to offer open source
+        versions of these features as the project develops. Despite these
+        limitations, we hope Samata will still be a great open source
+        alternative for teams that want to avoid platform fees and also not
+        have to roll their own primitives and infrastructure from scratch.
       </>
     ),
   },

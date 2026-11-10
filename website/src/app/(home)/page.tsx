@@ -53,12 +53,10 @@ export default async function HomePage() {
           What is Samata?
         </h2>
         <p className="mt-3 text-[13px] leading-[1.8] text-zinc-400">
-          Samata is an open source voice orchestration platform for building AI
-          voice agents. You describe an agent in JSON and push it over HTTP,
-          then take the call over the phone or the browser. Samata runs
-          speech-to-text, the model and text-to-speech on LiveKit, calls tools
-          on an HTTP server you run, and keeps every transcript, along with your
-          keys, in your own Postgres.
+          Samata is an open source AI voice orchestration platform built on top of LiveKit for building
+          AI voice agents. You describe an agent in JSON and push it over HTTP,
+          then take the call over the phone or the browser. Skip the platform fees without having 
+          to roll your own voice orchestration infrastructure from scratch.
         </p>
         <div className="mt-8">
           <InstallCommand command={installCommand} />

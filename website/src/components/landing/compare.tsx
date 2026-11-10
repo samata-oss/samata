@@ -12,7 +12,7 @@ const columns: {
 }[] = [
   { name: "Samata", note: "Open source", highlight: true },
   { name: "Hosted platforms", note: "Vapi, Retell, etc." },
-  { name: "DIY with LiveKit", note: "Open source voice infra" },
+  { name: "DIY with LiveKit", note: "Roll yourself" },
   { name: "Dograh", note: "Open source", faq: "dograh" },
 ];
 
@@ -191,7 +191,7 @@ export function Compare() {
         </div>
       </div>
       <p className="mt-4 text-[11px] leading-[1.8] text-zinc-500">
-        As of November 2026 - note:  this list of comparisons is not exhaustive and does not cover all features, just the high level differences.  If any information is outdated or inaccurate, or you think there is a comparison we should add, please let us know at oss@samata.dev and we will update / fix it promptly.
+        As of November 2026 - note:  this list is not exhaustive, and if you think any information is outdated, inaccurate, or omissive, please let us know at oss@samata.dev and we will update / fix it promptly.
       </p>
     </>
   );
