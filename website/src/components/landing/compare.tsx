@@ -10,12 +10,15 @@ const columns: {
   highlight?: boolean;
   /** Makes the name a link that opens this FAQ (an `id` in faq.tsx). */
   faq?: string;
+  /** Puts a "?" after the name that explains it in a hover/focus tooltip. */
+  tooltip?: string;
 }[] = [
   { name: "Samata", note: "Open source", highlight: true },
   {
     name: "DIY with LiveKit",
     note: "Open source",
-    faq: "diy-livekit",
+    tooltip:
+      "Building voice AI agents on LiveKit's open source media servers (SFU + SIP) with an agents SDK of your choice, such as LiveKit Agents or Pipecat. You still build the agent management layer yourself: an agent-building GUI, a REST API for GitOps driven development, metrics and so on. The LiveKit Agent Console offers these, but is not open source.",
   },
   { name: "Dograh", note: "Open source", faq: "dograh" },
   { name: "Hosted platforms", note: "VAPI, Retell, etc." },
@@ -129,7 +132,17 @@ export function Compare() {
                       }
                     >
                       {column.faq ? (
-                        <FaqLink to={column.faq}>{column.name}</FaqLink>
+                        <FaqLink to={column.faq} underline={false}>
+                          {column.name}
+                        </FaqLink>
+                      ) : column.tooltip ? (
+                        <Hint
+                          id={`hint-${column.name}`.replace(/\s+/g, "-")}
+                          text={column.tooltip}
+                          icon
+                        >
+                          {column.name}
+                        </Hint>
                       ) : (
                         column.name
                       )}
