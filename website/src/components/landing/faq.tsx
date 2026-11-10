@@ -5,12 +5,7 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
   {
     question: "Why open source?",
     answer:
-      "Samata is MIT licensed with no platform fee. You pay your model providers directly, plus whatever it costs you to host it.",
-  },
-  {
-    question: "Will I get full control of my data?",
-    answer:
-      "Everything is stored in your own Postgres. Transcripts, usage and call logs are stored there, and provider API keys are encrypted at rest and shown only as their last four characters.",
+      "Samata is MIT licensed with no platform fee. You pay your model providers directly, plus whatever it costs you to host it. Everything is stored in your own Postgres. Transcripts, usage and call logs are stored there, and provider API keys are encrypted at rest and shown only as their last four characters.",
   },
   {
     id: "dograh",
@@ -65,7 +60,7 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
   },
   {
     id: "webhook-tools",
-    question: "What are the benefits of a webhook server architecture?",
+    question: "What are webhook tools what are some benefits?",
     answer: (
       <>
         <p>
@@ -84,19 +79,9 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
     ),
   },
   {
-    question: "Do I need LiveKit?",
-    answer:
-      "Samata runs speech-to-text, the model and text-to-speech on LiveKit, so yes. You can use LiveKit Cloud or host LiveKit yourself. The compose file in the repo sets up the self-hosted option.",
-  },
-  {
     question: "Which models and voices can I use?",
     answer:
       "Each agent picks its own transcriber, model and voice. Supported providers include OpenAI, Groq, Deepgram, Cartesia, ElevenLabs, AssemblyAI and OpenRouter, or you can point to a custom endpoint.",
-  },
-  {
-    question: "Can agents take phone calls?",
-    answer:
-      "Yes. Calls come in over SIP, with Telnyx as the supported carrier, or you can start one from the browser.",
   },
   {
     question: "Is there a managed version?",
