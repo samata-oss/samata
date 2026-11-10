@@ -1,5 +1,6 @@
 "use client";
 
+import { DOCS_ACTIONS_ID } from "@/components/docs-header";
 import { LogoMark } from "@/components/logo";
 import { cn } from "@/lib/cn";
 import { cloudUrl, githubUrl, sponsorUrl } from "@/lib/shared";
@@ -345,6 +346,11 @@ export function SiteNav({ stars }: { stars: number | null }) {
       </nav>
 
       <div className="flex-1 md:hidden" />
+      {/* The docs drop their search and sidebar buttons in here on small screens. */}
+      <div
+        id={DOCS_ACTIONS_ID}
+        className="flex items-center gap-0.5 md:hidden"
+      />
       <button
         type="button"
         aria-label={mobileOpen ? "Close menu" : "Open menu"}

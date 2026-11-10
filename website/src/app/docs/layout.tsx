@@ -1,5 +1,6 @@
 import { DitherSky } from "@/components/landing/dither-sky";
 import { Specks } from "@/components/landing/specks";
+import { DocsHeader } from "@/components/docs-header";
 import { NAV_HEIGHT } from "@/components/site-nav";
 import { baseOptions } from "@/lib/layout.shared";
 import { source } from "@/lib/source";
@@ -23,6 +24,7 @@ export default function Layout({ children }: LayoutProps<"/docs">) {
           tree={source.getPageTree()}
           {...baseOptions()}
           themeSwitch={{ enabled: false }}
+          slots={{ header: DocsHeader }}
           containerProps={{
             // Fumadocs centres the sidebar with the content inside a max-width
             // column. Pin the sidebar to the left edge of the viewport instead
