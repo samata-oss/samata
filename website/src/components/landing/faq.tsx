@@ -25,8 +25,8 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
         company. However, Samata aims for parity and hopes to offer open source
         versions of these features as the project develops. Despite these
         limitations, we hope Samata will still be a great open source
-        alternative for teams that want to avoid platform fees and also not
-        have to roll their own primitives and infrastructure from scratch.
+        alternative for teams that want to both avoid platform fees and rolling 
+        their own primitives and infrastructure from scratch.
       </>
     ),
   },
