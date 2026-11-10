@@ -65,7 +65,7 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
   },
   {
     id: "webhook-tools",
-    question: "What are webhook tools?",
+    question: "What are the benefits of a webhook server architecture?",
     answer: (
       <>
         <p>

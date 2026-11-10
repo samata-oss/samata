@@ -61,7 +61,8 @@ export default async function HomePage() {
         <div className="mt-8">
           <InstallCommand command={installCommand} />
         </div>
-        <div className="mt-4">
+        {/* The "Management UI" tooltip in the comparison links here. */}
+        <div id="dashboard" className="mt-4 scroll-mt-20">
           <DashboardShot />
         </div>
         <div className="mt-8">

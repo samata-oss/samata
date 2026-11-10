@@ -29,6 +29,22 @@ export function scrollToFaq(id: string) {
   );
 }
 
+/**
+ * Glide to any element by `id`. A FAQ question is opened first, as with
+ * `scrollToFaq`; anything else is scrolled to just under the nav bar.
+ */
+export function scrollToAnchor(id: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el instanceof HTMLDetailsElement) {
+    scrollToFaq(id);
+    return;
+  }
+  glideTo(() =>
+    Math.min(maxScroll(), el.getBoundingClientRect().top + window.scrollY - 80),
+  );
+}
+
 const maxScroll = () =>
   document.documentElement.scrollHeight - window.innerHeight;
 

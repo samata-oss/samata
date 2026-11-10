@@ -52,6 +52,9 @@ const rows: {
   },
   {
     label: "Management UI",
+    tooltip:
+      "Build agents, port phone numbers, view metrics, and more in the management UI.",
+    more: { to: "dashboard", label: "View screenshot" },
     cells: [yes(""), no(""), yes(""), yes("")],
   },
   {
@@ -62,9 +65,8 @@ const rows: {
   },
   {
     label: "Webhook tools",
-    tooltip:
-      "Webhook tools let an agent call tools on a separate webserver.",
-    more: { to: "webhook-tools", label: "Learn the benefits" },
+    tooltip: "Webhook tools let an agent call tools on a separate webserver.",
+    more: { to: "webhook-tools", label: "Read more" },
     cells: [yes(""), no(""), yes(""), yes("")],
   },
   {
