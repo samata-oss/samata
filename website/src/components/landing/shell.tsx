@@ -30,7 +30,7 @@ export function LandingShell({
       )}
     >
       {/* One ridgeline runs the full width: the waves start in the hero pane and carry on behind the cards. */}
-      {/* Both layers share one fixed wrapper that is pinned to its own GPU layer. Without that, the browser can drop and re-create the layers under the frosted cards as the canvases repaint, which flickers. */}
+      {/* Both layers share one fixed wrapper that is pinned to its own GPU layer. Without that, the browser can drop and re-create the layers under the cards as the canvases repaint, which flickers. */}
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 -z-10 transform-gpu [backface-visibility:hidden] [contain:strict] [will-change:transform]"
@@ -68,7 +68,7 @@ function PaneLayout({ children }: { children: ReactNode }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(
-                  "inline-flex items-center gap-2 border border-white/[0.14] bg-white/[0.04] px-3 py-1.5 text-xs text-zinc-300 backdrop-blur-sm transition-colors hover:border-white/25 hover:text-white",
+                  "inline-flex items-center gap-2 border border-white/[0.14] bg-[oklch(0.125_0.005_270/0.7)] px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-white/25 hover:text-white",
                   legible,
                 )}
               >

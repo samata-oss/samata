@@ -99,12 +99,12 @@ html {
 
 /*
  * Docs on the landing backdrop: the sidebar, the article and the table of
- * contents run edge to edge as one frosted surface, like the landing cards, so
- * the waves glow through it and the text stays easy to read.
+ * contents run edge to edge as one dark surface, like the landing cards, so
+ * the waves glow faintly through it and the text stays easy to read. No
+ * backdrop-filter: it flickers over the animated canvas behind.
  */
 .landing #nd-docs-layout {
-  background-color: oklch(0.125 0.005 270 / 0.55);
-  backdrop-filter: blur(5px);
+  background-color: oklch(0.125 0.005 270 / 0.86);
 }
 .landing #nd-sidebar,
 .landing #nd-page,
