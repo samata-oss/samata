@@ -322,11 +322,24 @@ export function DitherSky({ className }: { className?: string }) {
       return () => ro.disconnect();
     }
 
-    const io = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting;
+    let inView = true;
+    const sync = () => {
+      visible = inView && !document.hidden;
       if (visible && !frame) frame = requestAnimationFrame(loop);
+    };
+    const io = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      sync();
     });
     io.observe(wrap);
+    // Stop drawing while the tab is hidden, and repaint on return.
+    document.addEventListener("visibilitychange", sync);
+    // If the GPU drops the canvas, its pixels are gone: redraw once it is back.
+    const restore = () => {
+      image = ctx.createImageData(cols, rows);
+      draw(performance.now());
+    };
+    el.addEventListener("contextrestored", restore);
 
     frame = requestAnimationFrame(loop);
 
@@ -349,6 +362,8 @@ export function DitherSky({ className }: { className?: string }) {
       window.removeEventListener("pointerup", leave);
       window.removeEventListener("pointercancel", leave);
       document.documentElement.removeEventListener("pointerleave", leave);
+      document.removeEventListener("visibilitychange", sync);
+      el.removeEventListener("contextrestored", restore);
       ro.disconnect();
       io.disconnect();
       cancelAnimationFrame(frame);

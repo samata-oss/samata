@@ -211,9 +211,23 @@ export function Specks({ className }: { className?: string }) {
       if (visible && !frame) frame = requestAnimationFrame(loop);
     };
     document.addEventListener("visibilitychange", onVisibility);
+    // If the GPU drops the canvas, its pixels are gone: redraw once it is back.
+    const restore = () => {
+      ctx.setTransform(
+        window.devicePixelRatio || 1,
+        0,
+        0,
+        window.devicePixelRatio || 1,
+        0,
+        0,
+      );
+      draw(performance.now());
+    };
+    el.addEventListener("contextrestored", restore);
     frame = requestAnimationFrame(loop);
 
     return () => {
+      el.removeEventListener("contextrestored", restore);
       document.removeEventListener("visibilitychange", onVisibility);
       ro.disconnect();
       cancelAnimationFrame(frame);

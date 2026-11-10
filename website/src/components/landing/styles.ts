@@ -4,7 +4,7 @@ export const legible =
 
 /** A frosted card: the dither shows through the gaps and, blurred, through the card. */
 export const card =
-  "border border-white/[0.11] bg-[oklch(0.125_0.005_270/0.4)] backdrop-blur-[5px]";
+  "transform-gpu border border-white/[0.11] bg-[oklch(0.125_0.005_270/0.4)] backdrop-blur-[5px]";
 
 export const primary =
   "inline-flex h-9 items-center bg-fd-primary px-4 text-xs font-medium text-fd-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.18)] transition-colors hover:bg-fd-primary/85";

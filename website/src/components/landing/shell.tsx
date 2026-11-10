@@ -30,9 +30,15 @@ export function LandingShell({
       )}
     >
       {/* One ridgeline runs the full width: the waves start in the hero pane and carry on behind the cards. */}
-      <DitherSky className="fixed inset-0 -z-10 opacity-60" />
-      {/* White and grey specks over the dark, thinning out where the waves rise. */}
-      <Specks className="fixed inset-0 -z-10 size-full" />
+      {/* Both layers share one fixed wrapper that is pinned to its own GPU layer. Without that, the browser can drop and re-create the layers under the frosted cards as the canvases repaint, which flickers. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 -z-10 transform-gpu [backface-visibility:hidden] [contain:strict] [will-change:transform]"
+      >
+        <DitherSky className="absolute inset-0 opacity-60" />
+        {/* White and grey specks over the dark, thinning out where the waves rise. */}
+        <Specks className="absolute inset-0 size-full" />
+      </div>
       {pane ? (
         <PaneLayout>{children}</PaneLayout>
       ) : (
