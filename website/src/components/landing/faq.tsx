@@ -13,24 +13,6 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
       "Everything is stored in your own Postgres. Transcripts, usage and call logs are stored there, and provider API keys are encrypted at rest and shown only as their last four characters.",
   },
   {
-    id: "shortcomings",
-    question: "What are the limitations?",
-    answer: (
-      <>
-        While Samata is free and open source, many other voice orchestration
-        platforms have proprietary tech we lack today, including but not limited
-        to: answering machine detection (AMD), smart endpointing, or end-of-turn
-        detection, tuning for interruption and noise handling, latency tuning at
-        scale, early access to frontier models - if the platform is also a model
-        company. However, Samata aims for parity and hopes to offer open source
-        versions of these features as the project develops. Despite these
-        limitations, we hope Samata will still be a great open source
-        alternative for teams that want to both avoid platform fees and rolling 
-        their own primitives and infrastructure from scratch.
-      </>
-    ),
-  },
-  {
     id: "dograh",
     question: "How does Samata compare to Dograh?",
     answer: (
@@ -55,6 +37,28 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
           the code. If you want to design conversations by dragging a workflow,
           Dograh is a good fit. If you want agents as code you can version,
           Samata is.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "diy-livekit",
+    question: "How does Samata compare to building with LiveKit directly?",
+    answer: (
+      <>
+        <p>
+          Building AI voice agents DIY with LiveKit is when a team builds their
+          voice AI agents ontop of LiveKit&apos;s open source media servers
+          (SFU + SIP) alongside an agents SDK of their choice (e.g. LiveKit
+          Agents or Pipecat).
+        </p>
+        <p className="mt-3">
+          While LiveKit provides open source voice infrastructure (SFU + SIP)
+          and an agent SDK to build AI voice agents, teams must still build from
+          scratch key agent management layer components like an agent-building
+          GUI for non-technical users, a REST API for GitOps driven agent
+          development, metrics etc. The LiveKit Agent Console, which does offer
+          these features, is not open source.
         </p>
       </>
     ),

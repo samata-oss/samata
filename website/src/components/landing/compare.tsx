@@ -2,13 +2,7 @@ import { FaqLink } from "./faq-link";
 import { Hint } from "./hint";
 import { boxSurface } from "./panel";
 
-type Cell = {
-  text: string;
-  good?: boolean;
-  soon?: boolean;
-  /** Dotted-underlines the text and explains it in a hover/focus tooltip. */
-  hint?: string;
-};
+type Cell = { text: string; good?: boolean; soon?: boolean };
 
 const columns: {
   name: string;
@@ -16,28 +10,27 @@ const columns: {
   highlight?: boolean;
   /** Makes the name a link that opens this FAQ (an `id` in faq.tsx). */
   faq?: string;
-  /** Dotted-underlines the name and explains it in a hover/focus tooltip. */
-  tooltip?: string;
 }[] = [
   { name: "Samata", note: "Open source", highlight: true },
   {
     name: "DIY with LiveKit",
     note: "Open source",
-    tooltip:
-      "Building AI voice agents DIY with LiveKit is when a team builds their voice AI agents ontop of LiveKit's open source media servers (SFU + SIP) alongside an agents SDK of their choice (e.g. LiveKit Agents or Pipecat).",
+    faq: "diy-livekit",
   },
   { name: "Dograh", note: "Open source", faq: "dograh" },
   { name: "Hosted platforms", note: "VAPI, Retell, etc." },
 ];
 
 const yes = (text: string): Cell => ({ text, good: true });
-const no = (text: string, hint?: string): Cell => ({ text, hint });
+const no = (text: string): Cell => ({ text });
 const soon = (text: string): Cell => ({ text, soon: true });
 
 const rows: {
   label: string;
   /** Makes the label a link that opens this FAQ (an `id` in faq.tsx). */
   faq?: string;
+  /** Puts a "?" after the label that explains it in a hover/focus tooltip. */
+  tooltip?: string;
   cells: [Cell, Cell, Cell, Cell];
 }[] = [
   {
@@ -53,40 +46,40 @@ const rows: {
     cells: [yes(""), yes(""), yes(""), no("")],
   },
   {
-    label:
-      "Management layer",
-    cells: [
-      yes(""),
-      no(
-        "Build from scratch",
-        "While LiveKit provides open source voice infrastructure (SFU + SIP) and an agent SDK to build AI voice agents, teams must still build from scratch key agent management layer components like an agent-building GUI for non-technical users, a REST API for GitOps driven agent development, metrics etc.  The LiveKit Agent Console, which does offer these features, is not open source.",
-      ),
-      yes(""),
-      yes(""),
-    ],
+    label: "Agent builder UI",
+    tooltip:
+      "A visual dashboard where anyone, including non-technical teammates, can create, edit and test voice agents without writing code.  With DIY LiveKit, teams have to build this themselves.",
+    cells: [yes(""), no(""), yes(""), yes("")],
+  },
+  {
+    label: "Agent REST API",
+    tooltip:
+      "An HTTP API for creating and updating agents programmatically, so agent definitions can be versioned in git and deployed through CI like any other config (GitOps). With DIY LiveKit, agents are Python code in your worker and any management API is yours to build.",
+    cells: [yes(""), no(""), yes(""), yes("")],
+  },
+  {
+    label: "Webhook tools",
+    tooltip:
+      "Webhook tools let an agent call tools on a seperate webserver.  A dedicated tool server seperates AI agent logic from business logic and provides a few benefits:  tool logic is not restricted to any language and can conveniently reuse functions and other logic from your existing backend.  Most voice orchestration platforms use webhook tool architecture while with DIY LiveKit, tools are functions in your agent worker's code - so teams have to write the HTTP glue themselves.",
+    cells: [yes(""), no(""), yes(""), yes("")],
+  },
+  {
+    label: "Conversation tuning",
+    tooltip:
+      "Proprietary voice tech that makes calls feel natural: turn-taking with an audio model underneath, answering machine detection (AMD), tuning for interruptions and background noise, and latency tuning at scale. Many platforms have these, and Samata aims to offer open source versions as the project develops. With DIY LiveKit, teams assemble and tune these themselves.",
+    cells: [soon("Coming soon"), no(""), yes(""), yes("")],
   },
   {
     label: "SIP native",
-    cells: [
-      yes(""),
-      yes(""),
-      no(""),
-      yes(""),
-    ],
+    cells: [yes(""), yes(""), no(""), yes("")],
   },
   {
-    label: "Smart algos",
-    faq: "shortcomings",
-    cells: [
-      soon("Coming soon"),
-      no(""),
-      no("Varies"),
-      yes(""),
-    ],
+    label: "WebRTC native",
+    cells: [yes(""), yes(""), no(""), yes("")],
   },
 ];
 
-function Value({ cell, id }: { cell: Cell; id: string }) {
+function Value({ cell }: { cell: Cell }) {
   // Not there yet, but planned: no tick or dash, and the same grey as the row
   // label beside it.
   if (cell.soon) return <span className="text-zinc-500">{cell.text}</span>;
@@ -106,13 +99,7 @@ function Value({ cell, id }: { cell: Cell; id: string }) {
       >
         {cell.good ? "✓" : "–"}
       </span>
-      {cell.hint ? (
-        <Hint id={id} text={cell.hint}>
-          {cell.text}
-        </Hint>
-      ) : (
-        cell.text
-      )}
+      {cell.text}
     </span>
   );
 }
@@ -122,7 +109,7 @@ export function Compare() {
   return (
     <>
       <div className={boxSurface}>
-        {/* Scrolls sideways on narrow screens only: scrolling clips the tooltip above the header. */}
+        {/* Scrolls sideways on narrow screens only: scrolling clips the tooltip above a label. */}
         <div className="overflow-x-auto p-4 min-[42rem]:overflow-visible">
           <table className="w-full min-w-[40rem] border-collapse text-left text-xs">
             <thead>
@@ -145,13 +132,6 @@ export function Compare() {
                     >
                       {column.faq ? (
                         <FaqLink to={column.faq}>{column.name}</FaqLink>
-                      ) : column.tooltip ? (
-                        <Hint
-                          id={`hint-${column.name}`.replace(/\s+/g, "-")}
-                          text={column.tooltip}
-                        >
-                          {column.name}
-                        </Hint>
                       ) : (
                         column.name
                       )}
@@ -175,6 +155,14 @@ export function Compare() {
                   >
                     {row.faq ? (
                       <FaqLink to={row.faq}>{row.label}</FaqLink>
+                    ) : row.tooltip ? (
+                      <Hint
+                        id={`hint-${row.label}`.replace(/\s+/g, "-")}
+                        text={row.tooltip}
+                        icon
+                      >
+                        {row.label}
+                      </Hint>
                     ) : (
                       row.label
                     )}
@@ -184,13 +172,7 @@ export function Compare() {
                       key={columns[index].name}
                       className="px-3 py-3 text-center leading-[1.6]"
                     >
-                      <Value
-                        cell={cell}
-                        id={`hint-${row.label}-${columns[index].name}`.replace(
-                          /\s+/g,
-                          "-",
-                        )}
-                      />
+                      <Value cell={cell} />
                     </td>
                   ))}
                 </tr>
