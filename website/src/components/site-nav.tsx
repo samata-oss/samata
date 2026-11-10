@@ -3,7 +3,7 @@
 import { LogoMark } from "@/components/logo";
 import { cn } from "@/lib/cn";
 import { cloudUrl, githubUrl, sponsorUrl } from "@/lib/shared";
-import { ArrowUpRight, ChevronDown } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -104,6 +104,8 @@ export function SiteNav({ stars }: { stars: number | null }) {
   // a second click, a click elsewhere, Escape, or picking an entry.
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  // Below `md` the links don't fit in the bar, so they collapse into this panel.
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const activeIndex = links.findIndex((link) => link.match(pathname));
 
@@ -139,7 +141,30 @@ export function SiteNav({ stars }: { stars: number | null }) {
 
   // Moving to another page closes the menu too.
   // biome-ignore lint/correctness/useExhaustiveDependencies: closes on navigation
-  useEffect(() => setMenuOpen(false), [pathname]);
+  useEffect(() => {
+    setMenuOpen(false);
+    setMobileOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileOpen(false);
+    };
+    // Widening past the breakpoint swaps back to the bar, so drop the panel.
+    const query = window.matchMedia("(min-width: 768px)");
+    const onChange = () => query.matches && setMobileOpen(false);
+    document.addEventListener("keydown", onKeyDown);
+    query.addEventListener("change", onChange);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      query.removeEventListener("change", onChange);
+    };
+  }, [mobileOpen]);
+
+  /** A row in the small-screen panel. */
+  const row =
+    "flex items-center px-4 py-3 text-fd-muted-foreground transition-colors hover:bg-fd-foreground/[0.06] hover:text-fd-foreground";
 
   /** Full height, so the current-page line sits right on the header border. */
   const item =
@@ -168,7 +193,7 @@ export function SiteNav({ stars }: { stars: number | null }) {
       </span>
       <nav
         ref={navRef}
-        className="relative flex min-w-0 flex-1 items-stretch gap-1"
+        className="relative hidden min-w-0 flex-1 items-stretch gap-1 md:flex"
       >
         {/* The current-page line. It slides between links instead of jumping. */}
         <span
@@ -312,6 +337,87 @@ export function SiteNav({ stars }: { stars: number | null }) {
           );
         })}
       </nav>
+
+      <div className="flex-1 md:hidden" />
+      <button
+        type="button"
+        aria-label={mobileOpen ? "Close menu" : "Open menu"}
+        aria-expanded={mobileOpen}
+        aria-controls="mobile-nav"
+        onClick={() => setMobileOpen((open) => !open)}
+        className="flex cursor-pointer items-center px-3 text-fd-muted-foreground transition-colors hover:bg-fd-foreground/[0.06] hover:text-fd-foreground md:hidden"
+      >
+        {mobileOpen ? (
+          <X aria-hidden="true" className="size-5" />
+        ) : (
+          <Menu aria-hidden="true" className="size-5" />
+        )}
+      </button>
+
+      {mobileOpen ? (
+        <nav
+          id="mobile-nav"
+          aria-label="Main"
+          className="absolute inset-x-0 top-full max-h-[calc(100svh-3.5rem)] overflow-y-auto border-b border-fd-border bg-fd-background py-1 shadow-lg md:hidden"
+        >
+          {links.flatMap((link) => {
+            if (link.menu) {
+              return link.menu.map((entry) => (
+                <Link
+                  key={entry.href}
+                  href={entry.href}
+                  className={cn(
+                    row,
+                    "flex-col items-start",
+                    link.match(pathname) &&
+                      pathname.startsWith(entry.href) &&
+                      "text-fd-foreground",
+                  )}
+                >
+                  <span>{entry.label}</span>
+                  <span className="mt-0.5 text-xs text-fd-muted-foreground">
+                    {entry.description}
+                  </span>
+                </Link>
+              ));
+            }
+            if (link.github || link.external) {
+              return (
+                <a
+                  key={link.label}
+                  href={link.github ? githubUrl : link.href}
+                  {...(link.github || link.newTab
+                    ? { target: "_blank", rel: "noopener noreferrer" }
+                    : {})}
+                  className={row}
+                >
+                  {link.label}
+                  {link.github && stars !== null && stars >= 10 ? (
+                    <span className="ml-2 opacity-60">{stars}</span>
+                  ) : null}
+                  <ArrowUpRight
+                    aria-hidden="true"
+                    className="ml-1 size-3.5 opacity-60"
+                  />
+                </a>
+              );
+            }
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={link.match(pathname) ? "page" : undefined}
+                className={cn(
+                  row,
+                  link.match(pathname) && "text-fd-foreground",
+                )}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </nav>
+      ) : null}
     </header>
   );
 }
