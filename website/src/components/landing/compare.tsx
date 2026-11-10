@@ -27,26 +27,16 @@ const rows: {
   cells: [Cell, Cell, Cell, Cell];
 }[] = [
   {
-    label: "Source",
-    cells: [yes("MIT"), no("Closed"), yes("Apache 2.0"), yes("BSD 2-Clause")],
+    label: "Open source",
+    cells: [yes(""), no(""), yes(""), yes("")],
   },
   {
-    label: "Where calls run",
-    cells: [
-      yes("Your servers"),
-      no("Their cloud"),
-      yes("Your servers"),
-      yes("Your servers"),
-    ],
+    label: "Self-host",
+    cells: [yes(""), no(""), yes(""), yes("")],
   },
   {
-    label: "Platform fee",
-    cells: [
-      yes("None"),
-      no("Per minute, on top of providers"),
-      yes("None"),
-      yes("None, self-hosted"),
-    ],
+    label: "$0 /min fee",
+    cells: [yes(""), no(""), yes(""), yes("")],
   },
   {
     label: "Transcripts and logs",
@@ -110,10 +100,18 @@ function Value({ cell }: { cell: Cell }) {
   // label beside it.
   if (cell.soon) return <span className="text-zinc-500">{cell.text}</span>;
   return (
-    <span className={cell.good ? "text-zinc-300" : "text-zinc-500"}>
+    <span
+      className={`inline-flex items-center justify-center ${
+        cell.good ? "text-zinc-300" : "text-zinc-500"
+      }`}
+    >
       <span
         aria-hidden="true"
-        className={cell.good ? "mr-2 text-fd-primary" : "mr-2 text-zinc-700"}
+        className={
+          cell.good
+            ? `text-base leading-none text-fd-primary ${cell.text ? "mr-2" : ""}`
+            : `text-base leading-none text-zinc-700 ${cell.text ? "mr-2" : ""}`
+        }
       >
         {cell.good ? "✓" : "–"}
       </span>
@@ -138,7 +136,7 @@ export function Compare() {
                   <th
                     key={column.name}
                     scope="col"
-                    className="pr-3 pb-3 font-normal"
+                    className="px-3 pb-3 text-center font-normal"
                   >
                     <span
                       className={
@@ -179,7 +177,7 @@ export function Compare() {
                   {row.cells.map((cell, index) => (
                     <td
                       key={columns[index].name}
-                      className="py-3 pr-3 leading-[1.6]"
+                      className="px-3 py-3 text-center leading-[1.6]"
                     >
                       <Value cell={cell} />
                     </td>
