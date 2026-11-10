@@ -366,122 +366,132 @@ export function SiteNav({ stars }: { stars: number | null }) {
         )}
       </button>
 
-      {mobileOpen ? (
+      {/* Always mounted so it can expand and fold. The grid row eases between 0fr and 1fr, so the height animates without being measured. Folded, it is also out of the tab order, and the visibility flips after the fold finishes. */}
+      <div
+        className={cn(
+          "absolute inset-x-0 top-full grid transition-[grid-template-rows,visibility,box-shadow] duration-200 ease-out motion-reduce:transition-none md:hidden",
+          mobileOpen
+            ? "visible grid-rows-[1fr] shadow-2xl shadow-black/60"
+            : "invisible grid-rows-[0fr] shadow-none",
+        )}
+      >
         <nav
           id="mobile-nav"
           aria-label="Main"
-          className="absolute inset-x-0 top-full max-h-[calc(100svh-3.5rem)] overflow-y-auto border-b border-fd-border bg-fd-background shadow-2xl shadow-black/60"
+          className="min-h-0 overflow-hidden"
         >
-          {links.map((link) => {
-            const current = link.match(pathname);
-            if (link.menu) {
-              return (
-                <div key={link.label} className="border-b border-fd-border">
-                  <button
-                    type="button"
-                    aria-expanded={mobileMenuOpen}
-                    aria-controls="mobile-nav-deploy"
-                    onClick={() => setMobileMenuOpen((open) => !open)}
-                    className={cn(
-                      row,
-                      "w-full cursor-pointer justify-between",
-                      (current || mobileMenuOpen) && "text-fd-foreground",
-                    )}
-                  >
-                    {link.label}
-                    <ChevronDown
-                      aria-hidden="true"
+          <div className="max-h-[calc(100svh-3.5rem)] overflow-y-auto border-b border-fd-border bg-fd-background">
+            {links.map((link) => {
+              const current = link.match(pathname);
+              if (link.menu) {
+                return (
+                  <div key={link.label} className="border-b border-fd-border">
+                    <button
+                      type="button"
+                      aria-expanded={mobileMenuOpen}
+                      aria-controls="mobile-nav-deploy"
+                      onClick={() => setMobileMenuOpen((open) => !open)}
                       className={cn(
-                        "size-4 opacity-60 transition-transform",
-                        mobileMenuOpen && "rotate-180",
-                      )}
-                    />
-                  </button>
-                  {/* A grid row that eases between 0fr and 1fr, so the height animates without being measured. */}
-                  <div
-                    id="mobile-nav-deploy"
-                    className={cn(
-                      "grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
-                      mobileMenuOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "overflow-hidden bg-fd-foreground/[0.02] transition-[visibility] duration-200 motion-reduce:transition-none",
-                        // Hidden links must not take focus. Visibility flips after the close finishes.
-                        !mobileMenuOpen && "invisible",
+                        row,
+                        "w-full cursor-pointer justify-between",
+                        (current || mobileMenuOpen) && "text-fd-foreground",
                       )}
                     >
-                      <div className="border-t border-fd-border">
-                        {link.menu.map((entry) => {
-                          const here =
-                            current && pathname.startsWith(entry.href);
-                          return (
-                            <Link
-                              key={entry.href}
-                              href={entry.href}
-                              aria-current={here ? "page" : undefined}
-                              className={cn(
-                                row,
-                                "flex-col items-start gap-1",
-                                here && rowCurrent,
-                              )}
-                            >
-                              <span>{entry.label}</span>
-                              <span className="text-xs leading-relaxed text-fd-muted-foreground/70">
-                                {entry.description}
-                              </span>
-                            </Link>
-                          );
-                        })}
+                      {link.label}
+                      <ChevronDown
+                        aria-hidden="true"
+                        className={cn(
+                          "size-4 opacity-60 transition-transform",
+                          mobileMenuOpen && "rotate-180",
+                        )}
+                      />
+                    </button>
+                    {/* A grid row that eases between 0fr and 1fr, so the height animates without being measured. */}
+                    <div
+                      id="mobile-nav-deploy"
+                      className={cn(
+                        "grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
+                        mobileMenuOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "overflow-hidden bg-fd-foreground/[0.02] transition-[visibility] duration-200 motion-reduce:transition-none",
+                          // Hidden links must not take focus. Visibility flips after the close finishes.
+                          !mobileMenuOpen && "invisible",
+                        )}
+                      >
+                        <div className="border-t border-fd-border">
+                          {link.menu.map((entry) => {
+                            const here =
+                              current && pathname.startsWith(entry.href);
+                            return (
+                              <Link
+                                key={entry.href}
+                                href={entry.href}
+                                aria-current={here ? "page" : undefined}
+                                className={cn(
+                                  row,
+                                  "flex-col items-start gap-1",
+                                  here && rowCurrent,
+                                )}
+                              >
+                                <span>{entry.label}</span>
+                                <span className="text-xs leading-relaxed text-fd-muted-foreground/70">
+                                  {entry.description}
+                                </span>
+                              </Link>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            }
-            if (link.github || link.external) {
+                );
+              }
+              if (link.github || link.external) {
+                return (
+                  <a
+                    key={link.label}
+                    href={link.github ? githubUrl : link.href}
+                    {...(link.github || link.newTab
+                      ? { target: "_blank", rel: "noopener noreferrer" }
+                      : {})}
+                    className={cn(
+                      row,
+                      "border-b border-fd-border",
+                      link.end && "border-b-0",
+                    )}
+                  >
+                    {link.label}
+                    {link.github && stars !== null && stars >= 10 ? (
+                      <span className="ml-2 opacity-60">{stars}</span>
+                    ) : null}
+                    <ArrowUpRight
+                      aria-hidden="true"
+                      className="ml-1 size-3.5 opacity-60"
+                    />
+                  </a>
+                );
+              }
               return (
-                <a
-                  key={link.label}
-                  href={link.github ? githubUrl : link.href}
-                  {...(link.github || link.newTab
-                    ? { target: "_blank", rel: "noopener noreferrer" }
-                    : {})}
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  aria-current={current ? "page" : undefined}
                   className={cn(
                     row,
                     "border-b border-fd-border",
-                    link.end && "border-b-0",
+                    current && rowCurrent,
                   )}
                 >
                   {link.label}
-                  {link.github && stars !== null && stars >= 10 ? (
-                    <span className="ml-2 opacity-60">{stars}</span>
-                  ) : null}
-                  <ArrowUpRight
-                    aria-hidden="true"
-                    className="ml-1 size-3.5 opacity-60"
-                  />
-                </a>
+                </Link>
               );
-            }
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                aria-current={current ? "page" : undefined}
-                className={cn(
-                  row,
-                  "border-b border-fd-border",
-                  current && rowCurrent,
-                )}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
+            })}
+          </div>
         </nav>
-      ) : null}
+      </div>
     </header>
   );
 }
