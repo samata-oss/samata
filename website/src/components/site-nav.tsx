@@ -106,6 +106,8 @@ export function SiteNav({ stars }: { stars: number | null }) {
   const menuRef = useRef<HTMLDivElement | null>(null);
   // Below `md` the links don't fit in the bar, so they collapse into this panel.
   const [mobileOpen, setMobileOpen] = useState(false);
+  // The Deploy group inside that panel folds open on a tap.
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const activeIndex = links.findIndex((link) => link.match(pathname));
 
@@ -144,6 +146,7 @@ export function SiteNav({ stars }: { stars: number | null }) {
   useEffect(() => {
     setMenuOpen(false);
     setMobileOpen(false);
+    setMobileMenuOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -162,9 +165,12 @@ export function SiteNav({ stars }: { stars: number | null }) {
     };
   }, [mobileOpen]);
 
-  /** A row in the small-screen panel. */
+  /** A row in the small-screen panel. Its inset lines the text up with the logo. */
   const row =
-    "flex items-center px-4 py-3 text-fd-muted-foreground transition-colors hover:bg-fd-foreground/[0.06] hover:text-fd-foreground";
+    "relative flex items-center px-7 py-3.5 text-fd-muted-foreground transition-colors hover:bg-fd-foreground/[0.06] hover:text-fd-foreground";
+  /** The current page gets a bar down the panel's left edge. */
+  const rowCurrent =
+    "bg-fd-foreground/[0.04] text-fd-foreground before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-fd-primary";
 
   /** Full height, so the current-page line sits right on the header border. */
   const item =
@@ -187,7 +193,7 @@ export function SiteNav({ stars }: { stars: number | null }) {
       </Link>
       <span
         aria-hidden="true"
-        className="flex items-center px-1 text-fd-muted-foreground/40"
+        className="hidden items-center px-1 text-fd-muted-foreground/40 md:flex"
       >
         /
       </span>
@@ -358,28 +364,75 @@ export function SiteNav({ stars }: { stars: number | null }) {
         <nav
           id="mobile-nav"
           aria-label="Main"
-          className="absolute inset-x-0 top-full max-h-[calc(100svh-3.5rem)] overflow-y-auto border-b border-fd-border bg-fd-background py-1 shadow-lg md:hidden"
+          className="absolute inset-x-0 top-full max-h-[calc(100svh-3.5rem)] overflow-y-auto border-b border-fd-border bg-fd-background shadow-2xl shadow-black/60"
         >
-          {links.flatMap((link) => {
+          {links.map((link) => {
+            const current = link.match(pathname);
             if (link.menu) {
-              return link.menu.map((entry) => (
-                <Link
-                  key={entry.href}
-                  href={entry.href}
-                  className={cn(
-                    row,
-                    "flex-col items-start",
-                    link.match(pathname) &&
-                      pathname.startsWith(entry.href) &&
-                      "text-fd-foreground",
-                  )}
-                >
-                  <span>{entry.label}</span>
-                  <span className="mt-0.5 text-xs text-fd-muted-foreground">
-                    {entry.description}
-                  </span>
-                </Link>
-              ));
+              return (
+                <div key={link.label} className="border-b border-fd-border">
+                  <button
+                    type="button"
+                    aria-expanded={mobileMenuOpen}
+                    aria-controls="mobile-nav-deploy"
+                    onClick={() => setMobileMenuOpen((open) => !open)}
+                    className={cn(
+                      row,
+                      "w-full cursor-pointer justify-between",
+                      (current || mobileMenuOpen) && "text-fd-foreground",
+                    )}
+                  >
+                    {link.label}
+                    <ChevronDown
+                      aria-hidden="true"
+                      className={cn(
+                        "size-4 opacity-60 transition-transform",
+                        mobileMenuOpen && "rotate-180",
+                      )}
+                    />
+                  </button>
+                  {/* A grid row that eases between 0fr and 1fr, so the height animates without being measured. */}
+                  <div
+                    id="mobile-nav-deploy"
+                    className={cn(
+                      "grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
+                      mobileMenuOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "overflow-hidden bg-fd-foreground/[0.02] transition-[visibility] duration-200 motion-reduce:transition-none",
+                        // Hidden links must not take focus. Visibility flips after the close finishes.
+                        !mobileMenuOpen && "invisible",
+                      )}
+                    >
+                      <div className="border-t border-fd-border">
+                        {link.menu.map((entry) => {
+                          const here =
+                            current && pathname.startsWith(entry.href);
+                          return (
+                            <Link
+                              key={entry.href}
+                              href={entry.href}
+                              aria-current={here ? "page" : undefined}
+                              className={cn(
+                                row,
+                                "flex-col items-start gap-1",
+                                here && rowCurrent,
+                              )}
+                            >
+                              <span>{entry.label}</span>
+                              <span className="text-xs leading-relaxed text-fd-muted-foreground/70">
+                                {entry.description}
+                              </span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
             }
             if (link.github || link.external) {
               return (
@@ -389,7 +442,11 @@ export function SiteNav({ stars }: { stars: number | null }) {
                   {...(link.github || link.newTab
                     ? { target: "_blank", rel: "noopener noreferrer" }
                     : {})}
-                  className={row}
+                  className={cn(
+                    row,
+                    "border-b border-fd-border",
+                    link.end && "border-b-0",
+                  )}
                 >
                   {link.label}
                   {link.github && stars !== null && stars >= 10 ? (
@@ -406,10 +463,11 @@ export function SiteNav({ stars }: { stars: number | null }) {
               <Link
                 key={link.href}
                 href={link.href}
-                aria-current={link.match(pathname) ? "page" : undefined}
+                aria-current={current ? "page" : undefined}
                 className={cn(
                   row,
-                  link.match(pathname) && "text-fd-foreground",
+                  "border-b border-fd-border",
+                  current && rowCurrent,
                 )}
               >
                 {link.label}
