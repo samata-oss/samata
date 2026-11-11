@@ -67,18 +67,15 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
     answer: (
       <>
         <p>
-          Building AI voice agents DIY with LiveKit is when a team builds their
-          voice AI agents ontop of LiveKit&apos;s open source media servers (SFU
-          + SIP) alongside an agents SDK of their choice (e.g. LiveKit Agents or
-          Pipecat).
+          LiveKit gives you open source media servers (SFU + SIP) and an agents
+          SDK (LiveKit Agents or Pipecat), but not the management layer on top:
+          a dashboard for non-technical users, a REST API for GitOps-style agent
+          development, metrics, etc. Building directly on LiveKit means writing
+          all of that yourself.
         </p>
         <p className="mt-3">
-          While LiveKit provides open source voice infrastructure (SFU + SIP)
-          and an agent SDK to build AI voice agents, teams must still build from
-          scratch key agent management layer components like an agent-building
-          GUI for non-technical users, a REST API for GitOps driven agent
-          development, metrics etc. The LiveKit Agent Console, which does offer
-          these features, is not open source.
+          Samata is that layer, already built and open source. LiveKit&apos;s
+          own Agent Console offers these features, but it is not open source.
         </p>
       </>
     ),
