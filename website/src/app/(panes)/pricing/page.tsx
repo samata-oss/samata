@@ -15,7 +15,7 @@ const plans = [
   {
     name: "Open source",
     price: "$0",
-    note: "MIT licensed, forever",
+    note: "AGPL-3.0 now, MIT in November 2027",
     description: "Run the whole stack on your own infrastructure.",
     features: [
       "Control plane, worker and LiveKit setup",

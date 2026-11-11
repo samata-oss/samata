@@ -4,7 +4,7 @@ import { Faq } from "@/components/landing/faq";
 import { Features } from "@/components/landing/features";
 import { Reveal } from "@/components/landing/fx";
 import { InstallCommand } from "@/components/landing/install-command";
-import { Panel } from "@/components/landing/panel";
+import { boxSurface } from "@/components/landing/panel";
 import { LandingShell } from "@/components/landing/shell";
 import { card, ghost, primary } from "@/components/landing/styles";
 import { cn } from "@/lib/cn";
@@ -25,8 +25,8 @@ const installCommand = "npx @samata-oss/cli init";
 const openSource: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: Scale,
-    title: "MIT licensed",
-    body: "Use it commercially, fork it, change it. The licence is in the repo.",
+    title: "AGPL-3.0 licensed",
+    body: "Use it commercially, fork it, change it, and share your changes. It becomes MIT on November 10, 2027.",
   },
   {
     icon: Database,
@@ -84,7 +84,7 @@ export default async function HomePage() {
         lede="There is no hosted tier between you and your calls. The control plane, the worker and the LiveKit setup are all in the repo, yours to host, read and change."
       >
         <div className="@container">
-          <Panel title="Open source" meta="MIT">
+          <div className={boxSurface}>
             <div className="grid grid-cols-1 gap-px bg-white/[0.11] @xl:grid-cols-3">
               {openSource.map((item, index) => (
                 <div
@@ -136,7 +136,7 @@ export default async function HomePage() {
                 Contribute
               </Link>
             </div>
-          </Panel>
+          </div>
         </div>
       </Block>
 

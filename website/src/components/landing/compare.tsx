@@ -26,7 +26,7 @@ const columns: {
     tooltip:
       "DIY with LiveKit refers to building AI voice agents using LiveKit's SFU and SIP media servers to handle media traffic - the actual AI agent logic uses either LiveKit Agents or Pipecat SDKs.",
   },
-  { name: "Dograh", note: "Open source", faq: "dograh" },
+  { name: "Dograh", note: "Open source", faq: "other-oss" },
   { name: "Hosted platforms", note: "VAPI, Retell, etc." },
 ];
 
@@ -76,20 +76,12 @@ const rows: Row[] = [
     cells: [yes(""), no(""), yes(""), yes("")],
   },
   {
-    label: "SIP native",
-    cells: [yes(""), yes(""), no(""), yes("")],
-  },
-  {
     label: "WebRTC native",
     cells: [yes(""), yes(""), no(""), yes("")],
   },
   {
-    label: "$0 /min cloud fee",
-    cells: [yes(""), no("1 cent/min"), no("1 cent/min"), no("2-6 cents /min")],
-  },
-  {
-    label: "???",
-    cells: [yes(""), no("1 cent/min"), no("1 cent/min"), no("2-6 cents /min")],
+    label: "$0 hosting fee",
+    cells: [yes(""), no(""), no(""), no("")],
   },
 ];
 

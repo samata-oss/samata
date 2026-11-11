@@ -10,7 +10,7 @@
     "self-hosted",
     "samata"
   ],
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "homepage": "https://github.com/samata-oss/samata",
   "repository": {
     "type": "git",

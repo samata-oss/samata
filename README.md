@@ -544,5 +544,10 @@ website/                  Landing page and docs (Next.js + Fumadocs): `pnpm site
 
 Copyright 2026 Samata.
 
-Licensed under the [MIT License](LICENSE). You can use, modify,
-self-host, and redistribute it, including commercially.
+Licensed under the [GNU AGPL v3.0](LICENSE). You can use, modify, self-host,
+and redistribute it, including commercially. If you distribute it, or run a
+modified version as a network service, you have to make your source available
+under the same license.
+
+On November 10, 2027 the license changes to MIT. The terms are in
+[LICENSING.md](LICENSING.md).

@@ -73,7 +73,7 @@ function PaneLayout({ children }: { children: ReactNode }) {
                 )}
               >
                 <Scale aria-hidden="true" className="size-3 text-fd-primary" />
-                MIT
+                AGPL-3.0
                 <span aria-hidden="true" className="text-zinc-600">
                   |
                 </span>
