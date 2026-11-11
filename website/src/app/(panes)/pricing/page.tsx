@@ -15,7 +15,7 @@ const plans = [
   {
     name: "Open source",
     price: "$0",
-    note: "AGPL-3.0 now, MIT in November 2027",
+    note: "Self-hosted, no limits",
     description: "Run the whole stack on your own infrastructure.",
     features: [
       "Control plane, worker and LiveKit setup",
@@ -74,6 +74,7 @@ const faqs = [
 
 /** The comparison under the plans. `true` is a check, `false` a dash, a string is shown as is. */
 const comparison: { feature: string; values: [Cell, Cell, Cell] }[] = [
+  { feature: "Per-minute hosting fee", values: ["$0", "$0", "$0"] },
   { feature: "Runs on your own servers", values: [true, false, false] },
   { feature: "Hosted and updated by us", values: [false, true, true] },
   {
@@ -88,7 +89,6 @@ const comparison: { feature: string; values: [Cell, Cell, Cell] }[] = [
     feature: "Bring your own model and provider keys",
     values: [true, true, true],
   },
-  { feature: "No per-minute platform fee", values: [true, true, true] },
   {
     feature: "Teams, invitations and workspace API keys",
     values: [true, true, true],
