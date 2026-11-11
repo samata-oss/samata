@@ -13,7 +13,7 @@ const items: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: Scale,
     title: "AGPL-3.0 licensed",
-    body: "Use it commercially, fork it, change it, and share your changes. It becomes MIT on November 10, 2027.",
+    body: "Self-host it, fork it, change it. If you run a modified version as a service, share your changes under the same license. It becomes MIT on November 10, 2027.",
   },
   {
     icon: Database,
