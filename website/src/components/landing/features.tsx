@@ -1,5 +1,8 @@
+"use client";
+
 import { Panel } from "@/components/landing/panel";
-import type { ReactNode } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { type ReactNode, useRef, useState } from "react";
 
 /** A small outlined tag, the building block of every card's mini visual. */
 function Chip({
@@ -134,20 +137,83 @@ const features: {
   },
 ];
 
+const arrow =
+  "flex w-8 items-center justify-center text-zinc-500 transition-colors hover:text-zinc-200 disabled:text-zinc-800";
+
 /**
- * A ruled grid of what Samata does, each cell a number, a line of copy and a
- * small visual. The grid responds to its own width, since the right pane is
- * narrower than the viewport.
+ * What Samata does, each cell a number, a line of copy and a small visual.
+ * Narrow, it is a carousel: one card at a time, swiped or stepped with the
+ * arrows in the header. Wide, it is a ruled grid. It responds to its own
+ * width, since the right pane is narrower than the viewport.
  */
 export function Features() {
+  const scroller = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(0);
+  const last = features.length - 1;
+
+  /** The card nearest the left edge, or the last one once scrolled to the end. */
+  function onScroll() {
+    const el = scroller.current;
+    if (!el) return;
+    if (el.scrollLeft >= el.scrollWidth - el.clientWidth - 1) {
+      setActive(last);
+      return;
+    }
+    const cards = Array.from(el.children) as HTMLElement[];
+    const origin = cards[0]?.offsetLeft ?? 0;
+    const distances = cards.map((card) =>
+      Math.abs(card.offsetLeft - origin - el.scrollLeft),
+    );
+    setActive(distances.indexOf(Math.min(...distances)));
+  }
+
+  function go(index: number) {
+    const el = scroller.current;
+    const cards = el ? (Array.from(el.children) as HTMLElement[]) : [];
+    const card = cards[Math.max(0, Math.min(last, index))];
+    if (!el || !card) return;
+    el.scrollTo({ left: card.offsetLeft - cards[0].offsetLeft });
+  }
+
   return (
     <div className="@container">
-      <Panel title="Features">
-        <div className="grid grid-cols-1 gap-px bg-white/[0.11] @xl:grid-cols-3">
+      <Panel
+        title="Features"
+        meta={
+          <div className="-mr-2 flex items-stretch self-stretch @xl:hidden">
+            <button
+              type="button"
+              aria-label="Previous feature"
+              disabled={active === 0}
+              onClick={() => go(active - 1)}
+              className={arrow}
+            >
+              <ChevronLeft aria-hidden="true" className="size-3.5" />
+            </button>
+            <span className="flex w-9 items-center justify-center tabular-nums">
+              {active + 1} / {features.length}
+            </span>
+            <button
+              type="button"
+              aria-label="Next feature"
+              disabled={active === last}
+              onClick={() => go(active + 1)}
+              className={arrow}
+            >
+              <ChevronRight aria-hidden="true" className="size-3.5" />
+            </button>
+          </div>
+        }
+      >
+        <div
+          ref={scroller}
+          onScroll={onScroll}
+          className="flex snap-x snap-mandatory gap-px overflow-x-auto scroll-smooth bg-white/[0.11] [scrollbar-width:none] motion-reduce:scroll-auto @xl:grid @xl:grid-cols-3 @xl:overflow-visible [&::-webkit-scrollbar]:hidden"
+        >
           {features.map((feature, index) => (
             <div
               key={feature.title}
-              className="flex min-w-0 flex-col bg-[oklch(0.105_0.004_270)] p-4"
+              className="flex w-[86%] min-w-0 shrink-0 snap-start flex-col bg-[oklch(0.105_0.004_270)] p-4 @xl:w-auto"
             >
               <span className="text-[10px] text-zinc-600">
                 {String(index + 1).padStart(2, "0")}
