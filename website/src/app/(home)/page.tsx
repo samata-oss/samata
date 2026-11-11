@@ -30,14 +30,12 @@ export default async function HomePage() {
           What is Samata?
         </h2>
         <p className="mt-3 text-[13px] leading-[1.8] text-zinc-400">
-          Samata is the modern, open source voice orchestration platform built
-          on top of LiveKit for building AI voice agents. Skip the platform fees
-          without having to roll your own infrastructure from scratch.
+          Samata is the modern, open source voice orchestration platform for building AI voice agents - powered by LiveKit. Skip the platform fees without having to roll infrastructure from scratch - run it locally in less than a minute:
         </p>
-        <div className="mt-8">
+        <div className="mt-4">
           <InstallCommand command={installCommand} />
           <p className="mt-4 text-xs text-zinc-500">
-            Once npx runs, say hello to a beautiful dashboard.
+            Once npx runs, say hello to a beautiful dashboard, and try talking to you agent.
           </p>
         </div>
         {/* The "Management UI" tooltip in the comparison links here. */}
