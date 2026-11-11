@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { FaqItem } from "./faq-item";
 
@@ -88,8 +89,15 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
   },
   {
     question: "Is there a managed version?",
-    answer:
-      "Yes, if you would rather not run it yourself. See the Managed option under Deploy for the plans and pricing.",
+    answer: (
+      <p>
+        Yes, if you would rather not run it yourself. See the{" "}
+        <Link href="/pricing" className="text-fd-primary">
+          plans and pricing
+        </Link>
+        .
+      </p>
+    ),
   },
 ];
 

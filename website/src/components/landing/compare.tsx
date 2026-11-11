@@ -113,10 +113,9 @@ const rows: Row[] = [
     label: "WebRTC native",
     description: [
       <Fragment key="webrtc-what">
-        Calls run over WebRTC through LiveKit&apos;s SFU, in the browser and on
-        the phone. WebRTC is built for live conversation: a lost packet is
+        With Samata, phone calls run over WebRTC through LiveKit&apos;s SFU. WebRTC is the gold standard for live conversation: a lost packet is
         skipped instead of stalling the stream, and jitter buffers, echo
-        cancellation and noise suppression come built in. Read more from{" "}
+        cancellation and noise suppression come built in. Read more about performance benefits from {" "}
         <Ext href="https://livekit.com/blog/why-webrtc-beats-websockets-for-voice-ai-agents">
           LiveKit
         </Ext>{" "}
@@ -127,13 +126,7 @@ const rows: Row[] = [
         .
       </Fragment>,
       <Fragment key="webrtc-dograh">
-        Dograh&apos;s{" "}
-        <Ext href="https://docs.dograh.com/integrations/telephony/asterisk-ari">
-          Asterisk ARI integration
-        </Ext>
-        , for bringing your own SIP trunk or PBX, streams call audio over a
-        WebSocket. That runs on TCP, where one lost packet stalls everything
-        behind it.
+        Dograh streams call audio over a WebSocket, which runs on TCP, where one lost packet stalls everything.  Calls get more latency and jitter. See <Ext href="https://www.linkedin.com/posts/tom-shapland-b4494212_since-joining-livekit-a-lot-of-voice-ai-ugcPost-7338422829190717440-2KUU/">this post</Ext> for an example call highlighting the difference.
       </Fragment>,
     ],
     cells: [yes(""), yes(""), no(""), yes("")],

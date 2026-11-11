@@ -30,10 +30,11 @@ export default async function HomePage() {
           What is Samata?
         </h2>
         <p className="mt-3 text-[13px] leading-[1.8] text-zinc-400">
-          Samata is an open source AI voice orchestration platform built on top of LiveKit for building
-          AI voice agents. You describe an agent in JSON and push it over HTTP,
-          then take the call over the phone or the browser. Skip the platform fees without having 
-          to roll your own voice orchestration infrastructure from scratch.
+          Samata is an open source AI voice orchestration platform built on top
+          of LiveKit for building AI voice agents. You describe an agent in JSON
+          and push it over HTTP, then take the call over the phone or the
+          browser. Skip the platform fees without having to roll your own voice
+          orchestration infrastructure from scratch.
         </p>
         <div className="mt-8">
           <InstallCommand command={installCommand} />
@@ -68,7 +69,10 @@ export default async function HomePage() {
                 href={githubUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={cn(primary, "gap-2")}
+                className={cn(
+                  primary,
+                  "w-full justify-center gap-2 @2xl:w-auto",
+                )}
               >
                 Star on GitHub
                 {stars !== null && stars >= 10 ? (
@@ -76,18 +80,33 @@ export default async function HomePage() {
                 ) : null}
                 <ArrowUpRight aria-hidden="true" className="size-3.5" />
               </a>
-              <a
-                href={`${githubUrl}/issues`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(ghost, "gap-2")}
-              >
-                Open an issue
-                <ArrowUpRight aria-hidden="true" className="size-3.5" />
-              </a>
-              <Link href="/docs/contributing" className={ghost}>
-                Contribute
-              </Link>
+              {/* One row narrow, sharing its width (stacking only if it cannot fit); beside the star button wide. */}
+              <div className="flex w-full flex-wrap gap-3 @2xl:w-auto">
+                <a
+                  href={`${githubUrl}/issues`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    ghost,
+                    "flex-auto justify-center gap-2 whitespace-nowrap px-3 @2xl:flex-none @2xl:px-4",
+                  )}
+                >
+                  Open an issue
+                  <ArrowUpRight
+                    aria-hidden="true"
+                    className="hidden size-3.5 @2xl:block"
+                  />
+                </a>
+                <Link
+                  href="/docs/contributing"
+                  className={cn(
+                    ghost,
+                    "flex-auto justify-center whitespace-nowrap px-3 @2xl:flex-none @2xl:px-4",
+                  )}
+                >
+                  Contribute
+                </Link>
+              </div>
             </div>
           </div>
         </div>
