@@ -2,7 +2,8 @@
 
 import { cn } from "@/lib/cn";
 import { ChevronRight } from "lucide-react";
-import { useState } from "react";
+import Link from "next/link";
+import { Fragment, type ReactElement, useState } from "react";
 import { scrollToAnchor } from "./faq-item";
 import { FaqLink } from "./faq-link";
 import { Hint } from "./hint";
@@ -46,12 +47,29 @@ const yes = (text: string): Cell => ({ text, good: true });
 const no = (text: string): Cell => ({ text });
 const soon = (text: string): Cell => ({ text, soon: true });
 
+/** A paragraph of a row's description: plain text, or keyed elements when it has links in it. */
+type Paragraph = string | ReactElement;
+
+/** An inline link out of a description, in the accent colour and underlined. */
+function Ext({ href, children }: { href: string; children: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-fd-primary underline decoration-fd-primary/40 underline-offset-2 transition-colors hover:text-zinc-100"
+    >
+      {children}
+    </a>
+  );
+}
+
 type Row = {
   label: string;
   /** Makes the label a link that opens this FAQ (an `id` in faq.tsx). */
   faq?: string;
   /** Makes the row open on click, showing this text beneath it. A list is one paragraph per item. */
-  description?: string | string[];
+  description?: Paragraph | Paragraph[];
   /** Ends the description with a link to a FAQ or any element (an `id`). */
   more?: { to: string; label: string };
   cells: [Cell, Cell, Cell, Cell];
@@ -60,16 +78,20 @@ type Row = {
 const rows: Row[] = [
   {
     label: "Open source",
+    description:
+      "Samata's control plane, worker and LiveKit setup are all in the repo, licensed AGPL-3.0 and changing to MIT on November 10, 2027. DIY with LiveKit and Dograh are open source too. Hosted platforms like VAPI and Retell are not.",
     cells: [yes(""), yes(""), yes(""), no("")],
   },
   {
     label: "Self-host",
+    description:
+      "Run the whole stack on your own infrastructure with one compose file: control plane, worker, LiveKit, Postgres and TLS. Your provider keys, transcripts and call logs stay in your own Postgres. DIY with LiveKit and Dograh can be self-hosted too. Hosted platforms run your calls on their servers.",
     cells: [yes(""), yes(""), yes(""), no("")],
   },
   {
     label: "Management UI",
     description:
-      "Build agents, port phone numbers, view metrics, and more in the management UI. With DIY LiveKt You still build the agent management layer yourself: an agent-building GUI, a REST API for GitOps driven development, metrics and so on. The LiveKit Agent Console offers these, but is not open source.",
+      "Build agents, port phone numbers, view metrics, and more in the management UI. With DIY LiveKit you still build the agent management layer yourself: an agent-building GUI, a REST API for GitOps driven development, metrics and so on. The LiveKit Agent Console offers these, but is not open source.",
     more: { to: "dashboard", label: "View screenshot" },
     cells: [yes(""), no(""), yes(""), yes("")],
   },
@@ -89,10 +111,53 @@ const rows: Row[] = [
   },
   {
     label: "WebRTC native",
+    description: [
+      <Fragment key="webrtc-what">
+        Audio between the caller and the agent travels over WebRTC, which is
+        built for live conversation: media goes over UDP, so a lost packet is
+        skipped instead of stalling the stream, and jitter buffers, echo
+        cancellation and noise suppression come with it. Samata gets this from
+        LiveKit&apos;s SFU, which also bridges phone calls into the same rooms
+        as browser calls. LiveKit explains the difference in{" "}
+        <Ext href="https://livekit.com/blog/why-webrtc-beats-websockets-for-voice-ai-agents">
+          Why WebRTC beats WebSockets for realtime voice AI
+        </Ext>
+        , and ElevenLabs moved its agents to WebRTC for better echo cancellation
+        and noise removal in{" "}
+        <Ext href="https://elevenlabs.io/blog/conversational-ai-webrtc">
+          ElevenLabs Conversational AI now supports WebRTC
+        </Ext>
+        .
+      </Fragment>,
+      <Fragment key="webrtc-dograh">
+        Dograh&apos;s{" "}
+        <Ext href="https://docs.dograh.com/integrations/telephony/asterisk-ari">
+          Asterisk ARI integration
+        </Ext>
+        , its way to bring your own SIP trunk or PBX, streams call audio between
+        Asterisk and Dograh over a WebSocket. WebSockets run on TCP, where one
+        lost packet holds back everything behind it, which LiveKit&apos;s post
+        describes as audio that stalls and then arrives in a burst.
+      </Fragment>,
+    ],
     cells: [yes(""), yes(""), no(""), yes("")],
   },
   {
     label: "$0 hosting fee",
+    description: [
+      "Samata adds no platform fee. Self-hosted, you pay your model providers directly plus whatever it costs you to host it.",
+      <Fragment key="fee-managed">
+        On managed Samata a workspace is free up to 5 concurrent calls, then $20
+        a month, with no per-minute fee.{" "}
+        <Link
+          href="/pricing"
+          className="text-fd-primary underline decoration-fd-primary/40 underline-offset-2 transition-colors hover:text-zinc-100"
+        >
+          See pricing
+        </Link>
+        .
+      </Fragment>,
+    ],
     cells: [yes(""), no(""), no(""), no("")],
   },
 ];
@@ -215,7 +280,7 @@ function ComparisonRow({ row, selected }: { row: Row; selected: number }) {
                   {/* A dashed rule under the row, like the ones between rows, with the text lined up under the label. */}
                   <div className="space-y-3 py-3 pl-5 text-[12px] leading-[1.8] text-zinc-400">
                     {paragraphs.map((text, index) => (
-                      <p key={text}>
+                      <p key={typeof text === "string" ? text : text.key}>
                         {text}
                         {/* The link closes the last paragraph. */}
                         {more && index === paragraphs.length - 1 ? (
@@ -367,7 +432,7 @@ export function Compare() {
       <p className="mt-4 text-[11px] leading-[1.8] text-zinc-500">
         As of November 2026 - note: this list is not exhaustive, and if you
         think any information is outdated, inaccurate, or omissive, please let
-        us know at oss@samata.dev and we will update / fix it promptly.
+        us know at oss@samata.dev and we will update promptly.
       </p>
     </div>
   );
