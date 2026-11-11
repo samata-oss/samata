@@ -63,8 +63,8 @@ const faqs = [
     a: "Your model, speech and telephony providers bill you directly, at their own prices. Samata adds no margin to them.",
   },
   {
-    q: "What happens if a payment lapses?",
-    a: "The workspace drops back to the free limit, not to zero. Your agents and call logs stay where they are.",
+    q: "What counts as a concurrent call?",
+    a: "A call that is in progress at the same moment as others in your workspace. Ten calls spread across an hour that never overlap only ever count as one.",
   },
   {
     q: "Can I move between open source and managed?",
