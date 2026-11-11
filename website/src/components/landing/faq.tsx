@@ -10,52 +10,53 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
   },
   {
     id: "other-oss",
-    question: "How does Samata compare to other OSS voice platforms?",
+    question: "How does Samata compare to Dograh?",
     answer: (
       <>
         <p>
-          Dograh and OpenRing are also open source, self-hostable alternatives
-          to platforms like Vapi and Retell. The main difference is what they
-          run on. Neither is built on LiveKit: both run calls as Pipecat
-          pipelines. Samata runs on LiveKit&apos;s open source SFU and SIP
-          servers, so its phone calls go through a SIP server that already
-          supports things like warm transfers and encrypted trunks (TLS and
-          SRTP).
-        </p>
-        <p className="mt-3">
           <a
-            href="https://github.com/dograh-hq/dograh"
+            href="https://www.dograh.com/"
             target="_blank"
             rel="noopener noreferrer"
             className="text-fd-primary"
           >
             Dograh
           </a>{" "}
-          (BSD 2-Clause) is built around a visual workflow builder for designing
-          agents, with MCP support for AI coding assistants. If you want to
-          design conversations by dragging a workflow, Dograh is a good fit.
+          is also an open source, self-hostable alternative to Vapi and Retell,
+          with a visual workflow builder. The difference is the foundation.
+          Samata runs on LiveKit&apos;s WebRTC SFU and SIP servers while Dograh
+          streams audio over a WebSocket, which adds to latency and jitter.
         </p>
         <p className="mt-3">
+          WebRTC is built for live audio: a lost packet is skipped instead of
+          stalling the stream. Read more about why this matters from{" "}
           <a
-            href="https://github.com/elifalanrocha/openring"
+            href="https://livekit.com/blog/why-webrtc-beats-websockets-for-voice-ai-agents"
             target="_blank"
             rel="noopener noreferrer"
             className="text-fd-primary"
           >
-            OpenRing
+            LiveKit
           </a>{" "}
-          (MIT) has a Vapi-compatible API, so a Vapi client can move over by
-          changing its base URL. It implements SIP itself instead of using a SIP
-          server like LiveKit&apos;s. As of November 2026 its docs say no real
-          carrier has carried a call over its SIP trunks yet, transfers are a
-          SIP REFER rather than a warm transfer, and SIP over TLS is still on
-          its roadmap.
-        </p>
-        <p className="mt-3">
-          Samata is API first. You describe an agent in JSON and push it over
-          HTTP, it runs on LiveKit, and a visual dashboard stays in sync with
-          the code. If you want agents as code you can version, Samata is a good
-          fit.
+          and{" "}
+          <a
+            href="https://elevenlabs.io/blog/conversational-ai-webrtc"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-fd-primary"
+          >
+            ElevenLabs
+          </a>
+          , or see{" "}
+          <a
+            href="https://www.linkedin.com/posts/tom-shapland-b4494212_since-joining-livekit-a-lot-of-voice-ai-ugcPost-7338422829190717440-2KUU/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-fd-primary"
+          >
+            an example call
+          </a>{" "}
+          highlighting the difference.
         </p>
       </>
     ),
