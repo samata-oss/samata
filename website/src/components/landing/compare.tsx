@@ -113,19 +113,16 @@ const rows: Row[] = [
     label: "WebRTC native",
     description: [
       <Fragment key="webrtc-what">
-        Audio between the caller and the agent travels over WebRTC, which is
-        built for live conversation: media goes over UDP, so a lost packet is
+        Calls run over WebRTC through LiveKit&apos;s SFU, in the browser and on
+        the phone. WebRTC is built for live conversation: a lost packet is
         skipped instead of stalling the stream, and jitter buffers, echo
-        cancellation and noise suppression come with it. Samata gets this from
-        LiveKit&apos;s SFU, which also bridges phone calls into the same rooms
-        as browser calls. LiveKit explains the difference in{" "}
+        cancellation and noise suppression come built in. Read more from{" "}
         <Ext href="https://livekit.com/blog/why-webrtc-beats-websockets-for-voice-ai-agents">
-          Why WebRTC beats WebSockets for realtime voice AI
-        </Ext>
-        , and ElevenLabs moved its agents to WebRTC for better echo cancellation
-        and noise removal in{" "}
+          LiveKit
+        </Ext>{" "}
+        and{" "}
         <Ext href="https://elevenlabs.io/blog/conversational-ai-webrtc">
-          ElevenLabs Conversational AI now supports WebRTC
+          ElevenLabs
         </Ext>
         .
       </Fragment>,
@@ -134,10 +131,9 @@ const rows: Row[] = [
         <Ext href="https://docs.dograh.com/integrations/telephony/asterisk-ari">
           Asterisk ARI integration
         </Ext>
-        , its way to bring your own SIP trunk or PBX, streams call audio between
-        Asterisk and Dograh over a WebSocket. WebSockets run on TCP, where one
-        lost packet holds back everything behind it, which LiveKit&apos;s post
-        describes as audio that stalls and then arrives in a burst.
+        , for bringing your own SIP trunk or PBX, streams call audio over a
+        WebSocket. That runs on TCP, where one lost packet stalls everything
+        behind it.
       </Fragment>,
     ],
     cells: [yes(""), yes(""), no(""), yes("")],
@@ -145,10 +141,13 @@ const rows: Row[] = [
   {
     label: "$0 hosting fee",
     description: [
-      "Samata adds no platform fee. Self-hosted, you pay your model providers directly plus whatever it costs you to host it.",
+      "Samata has zero platform fee i.e. cents per minute - LiveKit Cloud, LiveKit's hosted offering, and Dograh's hosted offering both charge $0.01 per minute. Hosted platforms like VAPI and Retell are more expensive, often starting at $0.05 per minute.",
       <Fragment key="fee-managed">
-        On managed Samata a workspace is free up to 5 concurrent calls, then $20
-        a month, with no per-minute fee.{" "}
+        Samata also has cheaper monthly subscription tiers, which offers more
+        flexibility for users. For example, while LiveKit Cloud charges a $20
+        subscription fee for more than 5 concurrent calls, and jumps to $500 for
+        more than 20 concurrent calls, Samata charges a flat $20 monthly
+        subscription fee for more than 5 concurrent calls.{" "}
         <Link
           href="/pricing"
           className="text-fd-primary underline decoration-fd-primary/40 underline-offset-2 transition-colors hover:text-zinc-100"
@@ -430,9 +429,9 @@ export function Compare() {
         </div>
       </div>
       <p className="mt-4 text-[11px] leading-[1.8] text-zinc-500">
-        As of November 2026 - note: this list is not exhaustive, and if you
-        think any information is outdated, inaccurate, or omissive, please let
-        us know at oss@samata.dev and we will update promptly.
+        As of November 2026 - if you believe any information is outdated,
+        inaccurate, or omissive, please let us know at oss@samata.dev and we
+        will update promptly.
       </p>
     </div>
   );
