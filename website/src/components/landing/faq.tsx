@@ -6,7 +6,7 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
   {
     question: "Why open source?",
     answer:
-      "Samata is AGPL-3.0 licensed, changing to MIT on November 10, 2027, with no platform fee. You pay your model providers directly, plus whatever it costs you to host it. Everything is stored in your own Postgres. Transcripts, usage and call logs are stored there, and provider API keys are encrypted at rest and shown only as their last four characters.",
+      "Because building AI voice agents for other people shouldn't be this expensive. Gas and groceries cost more every month, and the tools you build with shouldn't take a bigger cut than they need to. So Samata is free to run yourself, with no platform fee and no markup on your providers. You pay them directly, plus whatever it costs you to host it, and nothing more. We believe affordable tools put building within reach of more people, and that it should stay that way.",
   },
   {
     id: "other-oss",
@@ -83,9 +83,9 @@ const faqs: { id?: string; question: string; answer: ReactNode }[] = [
     ),
   },
   {
-    question: "Which models and voices can I use?",
+    question: "Can I use my own models and voices?",
     answer:
-      "Each agent picks its own transcriber, model and voice. Supported providers include OpenAI, Groq, Deepgram, Cartesia, ElevenLabs, AssemblyAI and OpenRouter, or you can point to a custom endpoint.",
+      "Yes, bring your own. Use your own keys with providers like OpenAI, Groq, Deepgram, Cartesia, ElevenLabs, AssemblyAI and OpenRouter, or point to a custom endpoint.",
   },
   {
     question: "Is there a managed version?",
