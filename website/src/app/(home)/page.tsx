@@ -54,7 +54,7 @@ export default async function HomePage() {
       <Block
         id="compare"
         title="Own the voice  AI infrastructure, without reinventing the wheel"
-        lede="We found a lot of startups using LiveKit to build voice agents because they want to avoid the expensive hosting fees that come with platforms like VAPI and Retell.  At the same time, those same startups needed to write the plumbing that themselves like a dashboard for non technical users and a REST API to programmatically manage agents - Samata was conceived of as a solution to that problem.  We hope Samata is to AI voice agents what Coolify is to VPS hosting."
+        lede="Many startups build voice agents on LiveKit to avoid the hosting fees of VAPI and Retell, then write the same plumbing themselves: a dashboard for non-technical users and a REST API to manage agents. Samata is that missing layer. We hope it becomes to AI voice agents what Coolify is to VPS hosting."
       >
         <Compare />
       </Block>
