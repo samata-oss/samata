@@ -30,12 +30,16 @@ export default async function HomePage() {
           What is Samata?
         </h2>
         <p className="mt-3 text-[13px] leading-[1.8] text-zinc-400">
-          Samata is the modern, open source voice orchestration platform for building AI voice agents - powered by LiveKit. Skip the platform fees without having to roll infrastructure from scratch - run it locally in less than a minute:
+          Samata is the modern, open source voice orchestration platform for
+          building AI voice agents - powered by LiveKit. Skip the platform fees
+          without having to roll infrastructure from scratch - run it locally in
+          less than a minute:
         </p>
         <div className="mt-4">
           <InstallCommand command={installCommand} />
-          <p className="mt-4 text-xs text-zinc-500">
-            Once npx runs, say hello to a beautiful dashboard, and try talking to you agent.
+          <p className="mt-4 text-[13px] leading-[1.8] text-zinc-400">
+            Once npx runs, say hello to a beautiful dashboard - and try talking
+            to your agent.
           </p>
         </div>
         {/* The "Management UI" tooltip in the comparison links here. */}
@@ -50,7 +54,7 @@ export default async function HomePage() {
       <Block
         id="compare"
         title="Own the voice  AI infrastructure, without reinventing the wheel"
-        lede="Hosted voice platforms are the fastest way to a demo. Samata is for when the calls, the keys and the margin should stay with you, without writing the plumbing yourself."
+        lede="We found a lot of startups using LiveKit to build voice agents because they want to avoid the expensive hosting fees that come with platforms like VAPI and Retell.  At the same time, those same startups needed to write the plumbing that themselves like a dashboard for non technical users and a REST API to programmatically manage agents - Samata was conceived of as a solution to that problem.  We hope Samata is to AI voice agents what Coolify is to VPS hosting."
       >
         <Compare />
       </Block>
