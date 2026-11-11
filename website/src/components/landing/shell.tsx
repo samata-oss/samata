@@ -4,7 +4,6 @@ import { Specks } from "@/components/landing/specks";
 import { card, ghost, hero, legible } from "@/components/landing/styles";
 import { cn } from "@/lib/cn";
 import { githubUrl } from "@/lib/shared";
-import { Scale } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -72,8 +71,7 @@ function PaneLayout({ children }: { children: ReactNode }) {
                   legible,
                 )}
               >
-                <Scale aria-hidden="true" className="size-3 text-fd-primary" />
-                AGPL-3.0
+                Open source
                 <span aria-hidden="true" className="text-zinc-600">
                   |
                 </span>
