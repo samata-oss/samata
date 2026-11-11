@@ -4,41 +4,18 @@ import { Faq } from "@/components/landing/faq";
 import { Features } from "@/components/landing/features";
 import { Reveal } from "@/components/landing/fx";
 import { InstallCommand } from "@/components/landing/install-command";
+import { OpenSourceCards } from "@/components/landing/open-source-cards";
 import { boxSurface } from "@/components/landing/panel";
 import { LandingShell } from "@/components/landing/shell";
 import { card, ghost, primary } from "@/components/landing/styles";
 import { cn } from "@/lib/cn";
 import { getStars } from "@/lib/github";
 import { githubUrl } from "@/lib/shared";
-import {
-  ArrowUpRight,
-  Database,
-  Layers,
-  Scale,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
 const installCommand = "npx @samata-oss/cli init";
-
-const openSource: { icon: LucideIcon; title: string; body: string }[] = [
-  {
-    icon: Scale,
-    title: "AGPL-3.0 licensed",
-    body: "Use it commercially, fork it, change it, and share your changes. It becomes MIT on November 10, 2027.",
-  },
-  {
-    icon: Database,
-    title: "Your data stays put",
-    body: "API keys are encrypted at rest. Transcripts, usage and call logs sit in your Postgres.",
-  },
-  {
-    icon: Layers,
-    title: "Bring your own models",
-    body: "A transcriber, a model and a voice per agent: OpenAI, Groq, Deepgram, Cartesia, ElevenLabs, AssemblyAI, OpenRouter, or a custom endpoint.",
-  },
-];
 
 export default async function HomePage() {
   const stars = await getStars();
@@ -85,31 +62,7 @@ export default async function HomePage() {
       >
         <div className="@container">
           <div className={boxSurface}>
-            <div className="grid grid-cols-1 gap-px bg-white/[0.11] @xl:grid-cols-3">
-              {openSource.map((item, index) => (
-                <div
-                  key={item.title}
-                  className="flex min-w-0 flex-col bg-[oklch(0.105_0.004_270)] p-4"
-                >
-                  <span className="text-[10px] text-zinc-600">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <h3 className="mt-3 text-[13px] font-medium text-zinc-200">
-                    {item.title}
-                  </h3>
-                  <p className="mt-1.5 text-xs leading-[1.7] text-zinc-500">
-                    {item.body}
-                  </p>
-                  <div className="mt-auto pt-4">
-                    <item.icon
-                      aria-hidden="true"
-                      strokeWidth={1.5}
-                      className="size-5 text-fd-primary"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <OpenSourceCards />
             <div className="flex flex-wrap items-center gap-3 border-t border-white/[0.09] p-4">
               <a
                 href={githubUrl}
