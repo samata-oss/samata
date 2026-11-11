@@ -18,16 +18,28 @@ const columns: {
   faq?: string;
   /** Puts a "?" after the name that explains it in a hover/focus tooltip. */
   tooltip?: string;
+  /** The name in the narrow picker and table header. */
+  short: string;
+  /** One line under the narrow picker, in place of the tooltip. */
+  blurb?: string;
 }[] = [
-  { name: "Samata", note: "Open source", highlight: true },
+  { name: "Samata", short: "Samata", note: "Open source", highlight: true },
   {
     name: "DIY with LiveKit",
+    short: "DIY LiveKit",
+    blurb:
+      "Building on LiveKit's SFU and SIP servers, with LiveKit Agents or Pipecat for the agent logic.",
     note: "Open source",
     tooltip:
       "DIY with LiveKit refers to building AI voice agents using LiveKit's SFU and SIP media servers to handle media traffic - the actual AI agent logic uses either LiveKit Agents or Pipecat SDKs.",
   },
-  { name: "Dograh", note: "Open source", faq: "other-oss" },
-  { name: "Hosted platforms", note: "VAPI, Retell, etc." },
+  { name: "Dograh", short: "Dograh", note: "Open source", faq: "other-oss" },
+  {
+    name: "Hosted platforms",
+    short: "Hosted",
+    blurb: "VAPI, Retell, etc.",
+    note: "VAPI, Retell, etc.",
+  },
 ];
 
 const yes = (text: string): Cell => ({ text, good: true });
@@ -111,10 +123,17 @@ function Value({ cell }: { cell: Cell }) {
 }
 
 /**
+ * Narrow, the table shows Samata and one other column, picked above it. Every
+ * other column is hidden until the container is wide enough for all of them.
+ */
+const columnClass = (index: number, selected: number) =>
+  index === 0 || index === selected ? "" : "hidden @2xl:table-cell";
+
+/**
  * One row of the table. A row with a `description` opens on click (or Enter on
  * its label) and eases a line of text open beneath it.
  */
-function ComparisonRow({ row }: { row: Row }) {
+function ComparisonRow({ row, selected }: { row: Row; selected: number }) {
   const [open, setOpen] = useState(false);
   const detailId = `row-${row.label}`.replace(/\s+/g, "-");
   const expandable = Boolean(row.description);
@@ -135,10 +154,10 @@ function ComparisonRow({ row }: { row: Row }) {
       >
         <th
           scope="row"
-          className="py-3 pr-3 font-normal leading-[1.6] text-zinc-500"
+          className="py-3 pr-2 font-normal leading-[1.6] text-zinc-500 @2xl:pr-3"
         >
           {row.faq ? (
-            <span className="pl-5">
+            <span className="block pl-5">
               <FaqLink to={row.faq}>{row.label}</FaqLink>
             </span>
           ) : expandable ? (
@@ -162,13 +181,16 @@ function ComparisonRow({ row }: { row: Row }) {
             </button>
           ) : (
             // Lines up with the labels that have a caret before them.
-            <span className="pl-5">{row.label}</span>
+            <span className="block pl-5">{row.label}</span>
           )}
         </th>
         {row.cells.map((cell, index) => (
           <td
             key={columns[index].name}
-            className="px-3 py-3 text-center leading-[1.6]"
+            className={cn(
+              "px-2 py-3 text-center leading-[1.6] @2xl:px-3",
+              columnClass(index, selected),
+            )}
           >
             <Value cell={cell} />
           </td>
@@ -221,24 +243,77 @@ function ComparisonRow({ row }: { row: Row }) {
   );
 }
 
-/** Samata next to hosted voice platforms, a hand-built LiveKit setup and Dograh. */
+/** What sits under the picker for a column: a line about it, or a link to its FAQ. */
+function Caption({ column }: { column: (typeof columns)[number] }) {
+  if (column.blurb) return <>{column.blurb}</>;
+  if (column.faq) {
+    return (
+      <FaqLink to={column.faq}>How Samata compares to {column.name}</FaqLink>
+    );
+  }
+  return null;
+}
+
+/**
+ * Samata next to hosted voice platforms, a hand-built LiveKit setup and Dograh.
+ * Narrow, it is Samata against one of them at a time, picked with the buttons
+ * above the table. It responds to its own width, since the right pane is
+ * narrower than the viewport.
+ */
 export function Compare() {
+  const [selected, setSelected] = useState(1);
+  const caption = <Caption column={columns[selected]} />;
+
   return (
-    <>
+    <div className="@container">
       <div className={boxSurface}>
-        {/* Scrolls sideways on narrow screens only: scrolling clips the column tooltip above a heading. */}
-        <div className="overflow-x-auto p-4 min-[42rem]:overflow-visible">
-          <table className="w-full min-w-[40rem] border-collapse text-left text-xs">
+        <div className="p-4">
+          <div className="mb-4 @2xl:hidden">
+            <div className="grid grid-cols-3 divide-x divide-white/[0.11] border border-white/[0.11]">
+              {columns.slice(1).map((column, offset) => {
+                const index = offset + 1;
+                const active = index === selected;
+                return (
+                  <button
+                    key={column.name}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setSelected(index)}
+                    className={cn(
+                      "cursor-pointer px-1 py-2.5 text-center text-[11px] transition-colors",
+                      active
+                        ? "bg-fd-primary/[0.12] text-zinc-100 shadow-[inset_0_-2px_0_var(--color-fd-primary)]"
+                        : "text-zinc-500 hover:bg-white/[0.03] hover:text-zinc-300",
+                    )}
+                  >
+                    {column.short}
+                  </button>
+                );
+              })}
+            </div>
+            {columns[selected].blurb || columns[selected].faq ? (
+              <p className="mt-3 text-left text-[11px] leading-[1.7] text-zinc-500 [&>button]:text-left">
+                {caption}
+              </p>
+            ) : null}
+          </div>
+          <table className="w-full border-collapse text-left text-xs">
             <thead>
               <tr className="align-bottom">
-                <th scope="col" className="w-[20%] pb-3 font-normal">
+                <th
+                  scope="col"
+                  className="w-[54%] pb-3 font-normal @2xl:w-[20%]"
+                >
                   <span className="sr-only">Feature</span>
                 </th>
-                {columns.map((column) => (
+                {columns.map((column, index) => (
                   <th
                     key={column.name}
                     scope="col"
-                    className="px-3 pb-3 text-center font-normal"
+                    className={cn(
+                      "w-[24%] px-2 pb-3 text-center font-normal @2xl:w-auto @2xl:px-3",
+                      columnClass(index, selected),
+                    )}
                   >
                     <span
                       className={
@@ -247,23 +322,34 @@ export function Compare() {
                           : "block font-medium text-zinc-300"
                       }
                     >
-                      {column.faq ? (
-                        <FaqLink to={column.faq} underline={false}>
-                          {column.name}
-                        </FaqLink>
-                      ) : column.tooltip ? (
-                        <Hint
-                          id={`hint-${column.name}`.replace(/\s+/g, "-")}
-                          text={column.tooltip}
-                          icon
-                        >
-                          {column.name}
-                        </Hint>
+                      <span className="@2xl:hidden">{column.short}</span>
+                      {column.faq || column.tooltip ? (
+                        <>
+                          {/* Plain text narrow, where the picker above carries the link or explanation. */}
+                          <span className="hidden @2xl:inline">
+                            {column.faq ? (
+                              <FaqLink to={column.faq} underline={false}>
+                                {column.name}
+                              </FaqLink>
+                            ) : (
+                              <Hint
+                                id={`hint-${column.name}`.replace(/\s+/g, "-")}
+                                text={column.tooltip ?? ""}
+                                icon
+                              >
+                                {column.name}
+                              </Hint>
+                            )}
+                          </span>
+                        </>
                       ) : (
-                        column.name
+                        <span className="hidden @2xl:inline">
+                          {column.name}
+                        </span>
                       )}
                     </span>
-                    <span className="block text-[11px] text-zinc-600">
+                    {/* The picker above already shows the note, narrow. */}
+                    <span className="hidden text-[11px] text-zinc-600 @2xl:block">
                       {column.note}
                     </span>
                   </th>
@@ -272,7 +358,7 @@ export function Compare() {
             </thead>
             <tbody>
               {rows.map((row) => (
-                <ComparisonRow key={row.label} row={row} />
+                <ComparisonRow key={row.label} row={row} selected={selected} />
               ))}
             </tbody>
           </table>
@@ -283,6 +369,6 @@ export function Compare() {
         think any information is outdated, inaccurate, or omissive, please let
         us know at oss@samata.dev and we will update / fix it promptly.
       </p>
-    </>
+    </div>
   );
 }
