@@ -62,7 +62,7 @@ export default async function HomePage() {
       <Block
         id="open-source"
         title="Open source."
-        lede="There is no hosted tier between you and your calls. The control plane, the worker and the LiveKit setup are all in the repo, yours to host, read and change."
+        lede="The control plane, the worker and the LiveKit setup are all in the repo, yours to host, read and change."
       >
         <div className="@container">
           <div className={boxSurface}>
