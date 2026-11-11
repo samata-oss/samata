@@ -27,6 +27,9 @@ export default async function Layout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      // global.css smooth-scrolls. This tells Next to make its own scroll reset
+      // on navigation instant, or it lands part-way and tucks the title under the nav.
+      data-scroll-behavior="smooth"
       className={cn("antialiased", geist.variable, geistMono.variable)}
       suppressHydrationWarning
     >
