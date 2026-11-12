@@ -14,50 +14,68 @@ import {
   generateEnv,
   getEnvVar,
   isPortFree,
-  looksLikeCompose,
+  productionComposeUrl,
   setEnvVar,
   versionAtLeast,
 } from "./lib.mjs";
+import { fetchCompose } from "./compose.mjs";
+import { deploy } from "./deploy.mjs";
+import {
+  CMD,
+  CliError,
+  bold,
+  dim,
+  green,
+  note,
+  red,
+  run,
+  step,
+} from "./ui.mjs";
 
 /** `name:` in the compose file needs Compose 2.20; `--wait` needs 2.1. */
 const MIN_COMPOSE = "2.20.0";
 const DOCKER_INSTALL_URL = "https://docs.docker.com/get-started/get-docker/";
 
-/** An expected failure: print the message, exit 1, no stack trace. */
-class CliError extends Error {}
-
-const useColor = process.stdout.isTTY && !process.env.NO_COLOR;
-const paint = (code) => (text) =>
-  useColor ? `\u001b[${code}m${text}\u001b[0m` : text;
-const bold = paint("1");
-const dim = paint("2");
-const green = paint("32");
-const cyan = paint("36");
-const red = paint("31");
-
-const step = (text) => console.log(`${cyan("→")} ${text}`);
-const note = (text) => console.log(`  ${dim(text)}`);
-
-/** How people invoke this package, for the commands we tell them to run. */
-const CMD = "npx @samata-oss/cli";
-
-const HELP = `${bold("samata")}: run Samata on your machine with one command
+const HELP = `${bold("samata")}: run Samata with one command
 
 ${bold("Usage")}
-  ${CMD} init [dir]   Download the stack into ./samata (or [dir]) and start it
+  ${CMD} init [dir]
+      Run it on this machine: download the stack into ./samata (or [dir]) and start it
+  ${CMD} deploy --host <user@host>
+      Install and start it on a server you can SSH into
 
-${bold("Options")}
+${bold("Options for init")}
   --port <n>                   Dashboard port on this machine (default ${DEFAULT_PORT})
   --no-start                   Write docker-compose.yml and .env, but don't start anything
   --no-open                    Don't open the dashboard in your browser
   --force                      Re-download docker-compose.yml even if it already exists
+
+${bold("Options for deploy")}
+  --host <user@host>           The server. The user is optional: ubuntu, ec2-user, admin and
+                               root are tried when you leave it out (also an ~/.ssh/config alias)
+  -i, --identity <file>        SSH private key. On AWS this is the .pem from the key pair you
+                               picked when launching the instance
+  -p, --ssh-port <n>           SSH port (default 22)
+  --domain <name>              Dashboard hostname, with a DNS A record pointing at the server.
+                               Default: <ip>.sslip.io, which needs no DNS setup (fine for trying
+                               it out; use a domain of your own for production)
+  --livekit-domain <name>      LiveKit hostname (default livekit.<domain>), also an A record
+  --env-file <file>            Extra KEY=VALUE settings to put in the server's .env
+  --version-tag <tag>          Image tag to run, e.g. 0.1.0 (default edge: pin one in production)
+  --skip-dns-check             Don't check that your domains point at the server
+
+${bold("Options for both")}
   --ref <git ref>              Branch, tag or commit of ${bold("samata-oss/samata")} to download from (default main)
   --compose <url|path>         Use this compose file instead of the one in the repo
   -v, --version                Print the version
   -h, --help                   Show this help
 
-Needs Docker with Compose v2. Re-running \`init\` in the same folder keeps your
+${bold("init")} needs Docker with Compose v2. Re-running it in the same folder keeps your
 .env and just starts the stack again.
+
+${bold("deploy")} needs ssh on this machine and a server with a public IP: Ubuntu, Debian or
+Amazon Linux, 2+ GB of memory. It installs Docker if missing. Re-running it keeps the
+server's .env, so it doubles as an upgrade.
 `;
 
 export async function main(argv) {
@@ -80,6 +98,14 @@ export async function main(argv) {
         force: { type: "boolean", default: false },
         ref: { type: "string" },
         compose: { type: "string" },
+        host: { type: "string" },
+        identity: { type: "string", short: "i" },
+        "ssh-port": { type: "string", short: "p" },
+        domain: { type: "string" },
+        "livekit-domain": { type: "string" },
+        "env-file": { type: "string" },
+        "version-tag": { type: "string" },
+        "skip-dns-check": { type: "boolean", default: false },
         version: { type: "boolean", short: "v", default: false },
         help: { type: "boolean", short: "h", default: false },
       },
@@ -100,6 +126,38 @@ export async function main(argv) {
   const [command, dir] = positionals;
   if (values.help || !command) {
     console.log(HELP);
+    return;
+  }
+  if (command === "deploy") {
+    if (positionals.length > 1) {
+      throw new CliError(
+        `deploy takes no arguments, got "${positionals[1]}". Pass the server with --host user@host.`,
+      );
+    }
+    let sshPort;
+    if (values["ssh-port"] !== undefined) {
+      sshPort = Number(values["ssh-port"]);
+      if (!Number.isInteger(sshPort) || sshPort < 1 || sshPort > 65535) {
+        throw new CliError(`--ssh-port must be a number from 1 to 65535.`);
+      }
+    }
+    await deploy({
+      host: values.host,
+      identity: values.identity,
+      sshPort,
+      domain: values.domain,
+      livekitDomain: values["livekit-domain"],
+      envFile: values["env-file"],
+      version: values["version-tag"],
+      skipDnsCheck: values["skip-dns-check"],
+      compose:
+        values.compose ??
+        productionComposeUrl({
+          repo: process.env.SAMATA_REPO || undefined,
+          ref: values.ref,
+        }),
+      repo: process.env.SAMATA_REPO || undefined,
+    });
     return;
   }
   if (command !== "init") {
@@ -303,66 +361,6 @@ async function checkPorts(ports) {
     );
   }
   throw new CliError(lines.join("\n"));
-}
-
-async function fetchCompose(source) {
-  let text;
-  if (/^https?:\/\//.test(source)) {
-    let res;
-    try {
-      res = await fetch(source, { signal: AbortSignal.timeout(20_000) });
-    } catch (err) {
-      throw new CliError(
-        `Couldn't download ${source}: ${err.cause?.message ?? err.message}\nCheck your connection and try again.`,
-      );
-    }
-    if (!res.ok) {
-      throw new CliError(
-        `Couldn't download ${source} (HTTP ${res.status}).${
-          res.status === 404
-            ? " Check --ref, or pass --compose with your own file."
-            : ""
-        }`,
-      );
-    }
-    text = await res.text();
-  } else {
-    try {
-      text = await readFile(source, "utf8");
-    } catch {
-      throw new CliError(`Couldn't read the compose file at ${source}.`);
-    }
-  }
-  if (!looksLikeCompose(text)) {
-    throw new CliError(`${source} doesn't look like a docker compose file.`);
-  }
-  return text;
-}
-
-/**
- * Run a command. By default output is captured; with `inherit` it streams to
- * the terminal (for the image pull progress). Never rejects: failure to spawn
- * comes back as `error`.
- */
-function run(cmd, args, { cwd, inherit = false } = {}) {
-  return new Promise((resolve) => {
-    const child = spawn(cmd, args, {
-      cwd,
-      stdio: inherit ? "inherit" : ["ignore", "pipe", "pipe"],
-    });
-    let stdout = "";
-    let stderr = "";
-    child.stdout?.on("data", (chunk) => {
-      stdout += chunk;
-    });
-    child.stderr?.on("data", (chunk) => {
-      stderr += chunk;
-    });
-    child.on("error", (error) =>
-      resolve({ code: null, stdout, stderr, error }),
-    );
-    child.on("close", (code) => resolve({ code, stdout, stderr }));
-  });
 }
 
 function openBrowser(url) {

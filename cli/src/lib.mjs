@@ -1,5 +1,7 @@
 import { randomBytes } from "node:crypto";
 import net from "node:net";
+import os from "node:os";
+import { CliError } from "./ui.mjs";
 
 export const DEFAULT_REPO = "samata-oss/samata";
 export const DEFAULT_REF = "main";
@@ -55,7 +57,7 @@ export function getEnvVar(content, key) {
 export function setEnvVar(content, key, value) {
   const line = `${key}=${value}`;
   const re = new RegExp(`^${key}=.*$`, "m");
-  if (re.test(content)) return content.replace(re, line);
+  if (re.test(content)) return content.replace(re, () => line);
   return `${content}${content === "" || content.endsWith("\n") ? "" : "\n"}${line}\n`;
 }
 
@@ -98,4 +100,483 @@ export async function findFreePort(start) {
 /** A compose file we're willing to write to disk: it must look like one. */
 export function looksLikeCompose(text) {
   return /^services:\s*$/m.test(text);
+}
+
+// ---------------------------------------------------------------------------
+// deploy: everything here is pure so it can be tested without a server.
+// ---------------------------------------------------------------------------
+
+/** Where the stack lives on the server, and its compose project name. */
+export const DEPLOY_DIR = "/opt/samata";
+export const DEPLOY_PROJECT = "samata";
+
+/** Where the production compose file lives in the repo. */
+export function productionComposeUrl({
+  repo = DEFAULT_REPO,
+  ref = DEFAULT_REF,
+} = {}) {
+  return `https://raw.githubusercontent.com/${repo}/${ref}/deploy/docker-compose.yml`;
+}
+
+/** Ports the server must accept, from the production compose file. */
+export const FIREWALL_TCP = [
+  { port: 80, why: "HTTP (certificate issuance)" },
+  { port: 443, why: "dashboard and API (HTTPS)" },
+  { port: 7881, why: "WebRTC over TCP" },
+  { port: 5060, why: "SIP signalling" },
+];
+export const FIREWALL_UDP = [
+  { port: "7882", why: "WebRTC media" },
+  { port: "5060", why: "SIP signalling" },
+  { port: "10000-10100", why: "SIP media" },
+];
+
+/** Default logins of the common server images, in the order we try them. */
+export const SSH_USER_CANDIDATES = [
+  "ubuntu", // Ubuntu (AWS, GCP, ...)
+  "ec2-user", // Amazon Linux
+  "admin", // Debian on AWS
+  "debian",
+  "root",
+];
+
+const HOST_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const USER_RE = /^[A-Za-z_][A-Za-z0-9._-]*$/;
+
+/**
+ * `ubuntu@1.2.3.4` -> `{ user: "ubuntu", host: "1.2.3.4" }`. The user is
+ * optional. Both are checked strictly because they end up on an ssh command
+ * line: a host starting with `-` would be read as an ssh option.
+ */
+export function parseHost(input) {
+  if (!input) {
+    throw new CliError(
+      "Which server? Pass it with --host, e.g.  --host ubuntu@203.0.113.7",
+    );
+  }
+  const at = input.lastIndexOf("@");
+  const user = at === -1 ? undefined : input.slice(0, at);
+  const host = at === -1 ? input : input.slice(at + 1);
+  if (user !== undefined && !USER_RE.test(user)) {
+    throw new CliError(`"${user}" isn't a valid SSH user name.`);
+  }
+  if (!HOST_RE.test(host)) {
+    throw new CliError(
+      host.includes(":")
+        ? `"${input}": put the SSH port in --ssh-port, and use an IPv4 address or a hostname.`
+        : `"${host}" isn't a valid hostname or IPv4 address.`,
+    );
+  }
+  return { user, host };
+}
+
+/** `~/key.pem` -> `/Users/me/key.pem`. Shells do this, but not for `--identity=~/x`. */
+export function expandHome(p, home = os.homedir()) {
+  if (p === "~") return home;
+  if (p.startsWith("~/")) return `${home}/${p.slice(2)}`;
+  return p;
+}
+
+/** Problems with a private key file that ssh would only report cryptically. */
+export function checkIdentityFile({ file, exists, mode, platform }) {
+  if (!exists) {
+    return `The key file ${file} doesn't exist. On AWS it's the .pem you downloaded when you created the key pair.`;
+  }
+  if (/\.ppk$/i.test(file)) {
+    return `${file} is a PuTTY key (.ppk), which OpenSSH can't read. Convert it:  puttygen ${file} -O private-openssh -o key.pem`;
+  }
+  // Windows has no Unix permission bits to check.
+  if (platform !== "win32" && (mode & 0o077) !== 0) {
+    return `${file} is readable by other users, so ssh will refuse to use it. Run:  chmod 400 ${file}`;
+  }
+  return null;
+}
+
+/** What went wrong with an ssh attempt, from everything it printed. */
+export function classifySshFailure(output) {
+  const text = String(output);
+  const forced = text.match(
+    /login as the user "([^"]+)" rather than the user "root"/i,
+  );
+  if (forced) return { kind: "wrong-user", suggested: forced[1] };
+  if (
+    /REMOTE HOST IDENTIFICATION HAS CHANGED|Host key verification failed/i.test(
+      text,
+    )
+  )
+    return { kind: "host-key-changed" };
+  if (/UNPROTECTED PRIVATE KEY FILE/i.test(text))
+    return { kind: "key-permissions" };
+  if (/incorrect passphrase|bad passphrase/i.test(text))
+    return { kind: "key-passphrase" };
+  if (/Load key .*(invalid format|error in libcrypto)/i.test(text))
+    return { kind: "key-format" };
+  if (/Too many authentication failures/i.test(text))
+    return { kind: "too-many-keys" };
+  if (/Could not resolve hostname/i.test(text)) return { kind: "resolve" };
+  if (/timed out/i.test(text)) return { kind: "timeout" };
+  if (/Connection refused/i.test(text)) return { kind: "refused" };
+  if (/No route to host|Network is unreachable/i.test(text))
+    return { kind: "unreachable" };
+  if (/Permission denied/i.test(text)) return { kind: "auth" };
+  return { kind: "unknown" };
+}
+
+/** A message for a failed ssh attempt that says what to do about it. */
+export function sshFailureMessage({
+  kind,
+  suggested,
+  user,
+  host,
+  port = 22,
+  identity,
+  tried = [],
+  detail = "",
+}) {
+  const who = user ? `${user}@${host}` : host;
+  switch (kind) {
+    case "wrong-user":
+      return `That server doesn't allow logging in as root. Use:  --host ${suggested}@${host}`;
+    case "auth": {
+      const lines = [
+        tried.length > 1
+          ? `SSH refused every login I tried on ${host} (${tried.join(", ")}).`
+          : `SSH refused the login as ${who}.`,
+        "",
+      ];
+      lines.push(
+        identity
+          ? `  • Is ${identity} the key pair this server was launched with? On AWS the key is fixed at launch: you can't pick another one later.`
+          : `  • No key given, so ssh only tried what's in your agent and ~/.ssh. On AWS, pass the .pem from the key pair you chose at launch:  -i ~/Downloads/<name>.pem`,
+        tried.length > 1
+          ? `  • Is it a different user? Pass it as --host <user>@${host}. Images vary: "ubuntu", "ec2-user", "admin", "root"...`
+          : `  • Wrong user? Ubuntu images use "ubuntu", Amazon Linux "ec2-user", Debian "admin". Leave the user out of --host to have me try them.`,
+        `  • Password logins aren't supported: the key has to be authorized on the server.`,
+      );
+      return lines.join("\n");
+    }
+    case "too-many-keys":
+      return [
+        `SSH gave up on ${who} after too many keys were offered (your ssh-agent has several).`,
+        `Pass the one you want with  -i <key file>  and I'll offer only that.`,
+      ].join("\n");
+    case "host-key-changed":
+      return [
+        `The server's host key for ${host} changed since you last connected. That's normal if you`,
+        `rebuilt the server or moved an Elastic IP to a new instance, but it can also mean someone is`,
+        `intercepting the connection. If you expected it, forget the old key and run this again:`,
+        "",
+        `  ssh-keygen -R ${port === 22 ? host : `"[${host}]:${port}"`}`,
+      ].join("\n");
+    case "key-permissions":
+      return `Your key file is readable by other users, so ssh refuses it. Run:  chmod 400 <key file>`;
+    case "key-passphrase":
+      return `That passphrase didn't unlock the key.`;
+    case "key-format":
+      return `ssh couldn't read the key file. It must be an OpenSSH or PEM private key (not .ppk, and not the .pub half).`;
+    case "resolve":
+      return `Couldn't resolve "${host}". Check the spelling (and that it's a hostname or an ~/.ssh/config alias).`;
+    case "timeout":
+      return [
+        `Timed out connecting to ${host} on port ${port}.`,
+        "",
+        `  • Is the address right? AWS gives an instance a new public IP each time it's stopped and started, unless it has an Elastic IP.`,
+        `  • Does the firewall allow SSH (TCP ${port}) from your IP? On AWS that's an inbound rule on the instance's security group.`,
+      ].join("\n");
+    case "refused":
+      return `${host} refused the connection on port ${port}. SSH isn't running there, or it listens on another port (--ssh-port).`;
+    case "unreachable":
+      return `No route to ${host}. Check the address and your network.`;
+    default:
+      return `Couldn't connect to ${who}.${detail ? `\n\n${detail.trim()}` : ""}`;
+  }
+}
+
+/** Cloud providers, from the DMI strings the server reports about its hardware. */
+const CLOUDS = [
+  {
+    id: "aws",
+    name: "AWS",
+    firewall: "security group",
+    match: /amazon|\bec2\b/,
+  },
+  {
+    id: "gcp",
+    name: "Google Cloud",
+    firewall: "VPC firewall rule",
+    match: /google/,
+  },
+  {
+    id: "azure",
+    name: "Azure",
+    firewall: "network security group",
+    match: /microsoft/,
+  },
+  {
+    id: "oracle",
+    name: "Oracle Cloud",
+    firewall: "security list",
+    match: /oracle/,
+  },
+  {
+    id: "hetzner",
+    name: "Hetzner",
+    firewall: "Cloud Firewall",
+    match: /hetzner/,
+  },
+  {
+    id: "digitalocean",
+    name: "DigitalOcean",
+    firewall: "Cloud Firewall",
+    match: /digitalocean/,
+  },
+  { id: "vultr", name: "Vultr", firewall: "firewall group", match: /vultr/ },
+];
+
+export function detectCloud(dmi) {
+  const text = String(dmi ?? "").toLowerCase();
+  const cloud = CLOUDS.find((c) => c.match.test(text));
+  return cloud
+    ? { id: cloud.id, name: cloud.name, firewall: cloud.firewall }
+    : { id: "unknown", name: "your server", firewall: "firewall" };
+}
+
+export function isIPv4(text) {
+  const parts = String(text).split(".");
+  return (
+    parts.length === 4 &&
+    parts.every((p) => /^\d{1,3}$/.test(p) && Number(p) <= 255)
+  );
+}
+
+/** Addresses that aren't reachable from the internet, so no public DNS can point at them. */
+export function isPrivateIPv4(ip) {
+  const [a, b] = String(ip).split(".").map(Number);
+  return (
+    a === 10 ||
+    a === 127 ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 169 && b === 254) ||
+    (a === 100 && b >= 64 && b <= 127)
+  );
+}
+
+/** Hostnames that need no DNS setup: sslip.io answers with the IP in the name. */
+export function sslipDomains(ip) {
+  const dashed = ip.replaceAll(".", "-");
+  return {
+    domain: `${dashed}.sslip.io`,
+    livekitDomain: `livekit.${dashed}.sslip.io`,
+  };
+}
+
+export function isHostname(text) {
+  return /^(?=.{1,253}$)([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/.test(
+    text,
+  );
+}
+
+/** Which of the hostnames don't resolve to `ip`, given what each resolved to. */
+export function dnsProblems(ip, resolved) {
+  const problems = [];
+  for (const [name, addresses] of Object.entries(resolved)) {
+    if (addresses.length === 0) {
+      problems.push({ name, found: [] });
+    } else if (!addresses.includes(ip)) {
+      problems.push({ name, found: addresses });
+    }
+  }
+  return problems;
+}
+
+/** A fresh production `.env`, with newly generated secrets. */
+export function generateProdEnv({
+  domain,
+  livekitDomain,
+  imagePrefix,
+  version,
+}) {
+  const lines = [
+    "# Generated by `npx @samata-oss/cli deploy`. Keep this file: your database and the",
+    "# provider keys stored in it can only be read with these secrets.",
+    "",
+    `SAMATA_IMAGE_PREFIX=${imagePrefix}`,
+    ...(version ? [`SAMATA_VERSION=${version}`] : ["# SAMATA_VERSION=edge"]),
+    "",
+    `SAMATA_DOMAIN=${domain}`,
+    `LIVEKIT_DOMAIN=${livekitDomain}`,
+    "",
+    `POSTGRES_PASSWORD=${secret()}`,
+    `SAMATA_WEBHOOK_SECRET=${secret()}`,
+    `BETTER_AUTH_SECRET=${secret()}`,
+    "LIVEKIT_API_KEY=samata",
+    `LIVEKIT_API_SECRET=${secret()}`,
+    "",
+  ];
+  return lines.join("\n");
+}
+
+/**
+ * The `.env` to put on the server: a new one with fresh secrets, or the one
+ * already there (its secrets kept) with the settings this run sets.
+ */
+export function buildEnv({
+  existing,
+  domain,
+  livekitDomain,
+  imagePrefix,
+  version,
+  extraVars = {},
+}) {
+  const base =
+    existing ??
+    generateProdEnv({ domain, livekitDomain, imagePrefix, version });
+  const vars = {
+    SAMATA_DOMAIN: domain,
+    LIVEKIT_DOMAIN: livekitDomain,
+    ...(version ? { SAMATA_VERSION: version } : {}),
+    ...extraVars,
+  };
+  if (
+    existing !== undefined &&
+    getEnvVar(existing, "SAMATA_IMAGE_PREFIX") === undefined
+  ) {
+    vars.SAMATA_IMAGE_PREFIX = imagePrefix;
+  }
+  return mergeEnv(base, vars);
+}
+
+/** `ghcr.io/<owner>` for a `<owner>/<repo>` GitHub slug. */
+export function imagePrefixFor(repo = DEFAULT_REPO) {
+  return `ghcr.io/${repo.split("/")[0].toLowerCase()}`;
+}
+
+/** KEY=VALUE lines of a dotenv file, as an object. Comments and blank lines are skipped. */
+export function parseEnvFile(text) {
+  const vars = {};
+  const lines = String(text).split(/\r?\n/);
+  for (const [i, raw] of lines.entries()) {
+    const line = raw.trim();
+    if (line === "" || line.startsWith("#")) continue;
+    const match = line.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (!match) {
+      throw new CliError(
+        `Line ${i + 1} of the env file isn't KEY=VALUE: ${raw.slice(0, 40)}`,
+      );
+    }
+    vars[match[1]] = match[2];
+  }
+  return vars;
+}
+
+/** Put every `vars` entry into `.env` content, replacing existing lines. */
+export function mergeEnv(content, vars) {
+  let out = content;
+  for (const [key, value] of Object.entries(vars)) {
+    out = setEnvVar(out, key, value);
+  }
+  return out;
+}
+
+/** Secrets that make stored data unreadable when they change. */
+const DATA_SECRETS = [
+  "POSTGRES_PASSWORD",
+  "BETTER_AUTH_SECRET",
+  "SAMATA_ENCRYPTION_KEY",
+];
+
+/** Which data-protecting secrets `vars` would change in an existing `.env`. */
+export function changedDataSecrets(existing, vars) {
+  return DATA_SECRETS.filter((key) => {
+    const old = getEnvVar(existing, key);
+    return key in vars && old !== undefined && old !== vars[key];
+  });
+}
+
+/** `samata:key=value` lines from the server's probe script. */
+export function parseProbe(stdout) {
+  const probe = {};
+  for (const line of String(stdout).split(/\r?\n/)) {
+    const match = line.match(/^samata:([a-z_]+)=(.*)$/);
+    if (match) probe[match[1]] = match[2].trim();
+  }
+  return probe;
+}
+
+const KB_PER_GB = 1024 * 1024;
+
+/**
+ * What the probe says about the server: `errors` stop the deploy, `warnings`
+ * are printed. `needs` says what has to be installed.
+ */
+export function assessServer(probe) {
+  const errors = [];
+  const warnings = [];
+
+  if (probe.sudo === "no") {
+    errors.push(
+      `${probe.user || "This user"} can't use sudo without a password, and I need it to install and run Docker. Log in as a user that can (ubuntu / ec2-user on AWS), or root.`,
+    );
+  }
+
+  const arch = probe.arch;
+  if (arch && !["x86_64", "amd64", "aarch64", "arm64"].includes(arch)) {
+    errors.push(
+      `This server's CPU (${arch}) isn't supported: the images are built for x86_64 and arm64.`,
+    );
+  }
+
+  const dockerReady = Boolean(probe.docker_server);
+  const composeOk = versionAtLeast(probe.compose ?? "", "2.20.0");
+  const needs = {
+    docker: !dockerReady,
+    composePlugin: dockerReady ? !composeOk : probe.os_id === "amzn",
+  };
+  if (
+    needs.docker &&
+    !probe.docker_cli &&
+    !["ubuntu", "debian", "raspbian", "amzn"].includes(probe.os_id)
+  ) {
+    errors.push(
+      `I can only install Docker on Ubuntu, Debian and Amazon Linux (this is ${probe.os_id || "unknown"}). Install Docker with Compose v2 yourself and run this again: I'll detect it.`,
+    );
+  }
+  if (probe.docker_cli && !dockerReady) {
+    warnings.push(
+      "Docker is installed but its daemon isn't running; I'll try to start it.",
+    );
+  }
+
+  const memKb = Number(probe.mem_kb);
+  if (memKb > 0 && memKb < 1.8 * KB_PER_GB) {
+    warnings.push(
+      `This server has ${(memKb / KB_PER_GB).toFixed(1)} GB of memory. Samata runs a database, Redis, LiveKit and the app: use 2 GB at least, 4 GB to be comfortable (on AWS, t3.medium rather than t3.micro).`,
+    );
+  }
+  const diskKb = Number(probe.disk_kb);
+  if (diskKb > 0 && diskKb < 8 * KB_PER_GB) {
+    warnings.push(
+      `Only ${(diskKb / KB_PER_GB).toFixed(1)} GB of disk is free. The images need several GB (AWS gives you an 8 GB volume by default: make it 20 GB or more).`,
+    );
+  }
+
+  const busy = (probe.busy_ports ?? "").split(/\s+/).filter(Boolean);
+  if (busy.length > 0) {
+    errors.push(
+      `Port ${busy.join(", ")} is already used by something else on the server (a web server, perhaps). Stop it, or use a fresh server.`,
+    );
+  }
+
+  if (probe.volume === "1" && probe.env_exists === "0") {
+    errors.push(
+      [
+        `The server has a Samata database from an earlier install (docker volume "${DEPLOY_PROJECT}_postgres-data"),`,
+        `but no ${DEPLOY_DIR}/.env to unlock it. Restore that .env, or start over (this deletes the data):`,
+        `  docker volume rm ${DEPLOY_PROJECT}_postgres-data`,
+      ].join("\n"),
+    );
+  }
+
+  return { errors, warnings, needs };
 }
