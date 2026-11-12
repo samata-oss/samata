@@ -3,7 +3,8 @@
   "icon": "Server",
   "pages": [
     "index",
-    "networking",
+    "firewall",
+    "domain",
     "cli",
     "manual",
     "livekit-cloud",

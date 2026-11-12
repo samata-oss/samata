@@ -28,13 +28,13 @@ selected. A Cloud Firewall only matters if you attached one.
 Launch an **Ubuntu 24.04** instance (`t3.small` or larger, 20 GB volume) and
 create a new key pair when asked: AWS downloads a `.pem` file, so keep it.
 Attach an **Elastic IP**, since a plain public IP changes when the instance
-restarts, and add the [ports](/docs/self-host/networking) to its **security group**.
+restarts, and add the [ports](/docs/self-host/firewall) to its **security group**.
 
 </Tab>
 <Tab value="Google Cloud">
 
 Create a VM with **Ubuntu 24.04** (`e2-medium` or larger) and reserve a static
-external IP. Open the [ports](/docs/self-host/networking) with a VPC firewall
+external IP. Open the [ports](/docs/self-host/firewall) with a VPC firewall
 rule, then connect once with `gcloud compute ssh <vm-name>`. That creates the
 key at `~/.ssh/google_compute_engine`.
 
@@ -118,7 +118,8 @@ Open the URL the CLI prints and create an account.
 ## Next
 
 <Cards>
-  <Card title="Ports and domains" href="/docs/self-host/networking" />
+  <Card title="Set up a firewall" href="/docs/self-host/firewall" />
+  <Card title="Set up a domain" href="/docs/self-host/domain" />
   <Card title="CLI reference" href="/docs/self-host/cli" />
   <Card title="Upgrades" href="/docs/self-host/upgrades" />
 </Cards>

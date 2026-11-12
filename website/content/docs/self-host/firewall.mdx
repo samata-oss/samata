@@ -1,0 +1,17 @@
+---
+title: Set up a firewall
+description: The ports to open on your server.
+---
+
+Open these ports on the server's firewall: an AWS security group, a Google Cloud
+VPC firewall rule, or a Hetzner or DigitalOcean Cloud Firewall. If you didn't
+attach a firewall, there's nothing to do.
+
+| Port                              | Used for                                |
+| --------------------------------- | --------------------------------------- |
+| `80`, `443`                       | Caddy: automatic TLS, dashboard and API |
+| `7881/tcp`, `7882/udp`            | WebRTC media                            |
+| `5060/tcp+udp`, `10000-10100/udp` | SIP, only for phone calls               |
+
+The CLI can test the TCP ports from your machine but not UDP, so open those too,
+or calls connect without audio.
