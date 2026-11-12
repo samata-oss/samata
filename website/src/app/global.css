@@ -33,7 +33,7 @@
  * and white text lean towards the indigo hue instead of Tailwind's flat zinc
  * and pure white.
  */
-.landing {
+.landing:where(.dark, .dark *) {
   /* A touch deeper than the dashboard's 0.15, so it still reads as dark. */
   --color-fd-background: oklch(0.125 0.005 270);
   --color-fd-card: oklch(0.155 0.006 270);
@@ -71,6 +71,16 @@ html {
 *::-webkit-scrollbar-thumb:hover {
   background-color: oklch(0.4 0.006 60);
 }
+:root:not(.dark) *::-webkit-scrollbar-track,
+:root:not(.dark) *::-webkit-scrollbar-corner {
+  background: oklch(0.97 0 0);
+}
+:root:not(.dark) *::-webkit-scrollbar-thumb {
+  background-color: oklch(0.8 0.004 60);
+}
+:root:not(.dark) *::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.7 0.004 60);
+}
 @supports not selector(::-webkit-scrollbar) {
   * {
     scrollbar-width: thin;
@@ -103,12 +113,12 @@ html {
  * the waves glow faintly through it and the text stays easy to read. No
  * backdrop-filter: it flickers over the animated canvas behind.
  */
-.landing #nd-docs-layout {
+.landing:where(.dark, .dark *) #nd-docs-layout {
   background-color: oklch(0.125 0.005 270 / 0.86);
 }
-.landing #nd-sidebar,
-.landing #nd-page,
-.landing #nd-toc {
+.landing:where(.dark, .dark *) #nd-sidebar,
+.landing:where(.dark, .dark *) #nd-page,
+.landing:where(.dark, .dark *) #nd-toc {
   background-color: transparent;
 }
 

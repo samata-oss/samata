@@ -1,3 +1,4 @@
+import { DiscordIcon, GitHubIcon, XIcon } from "@/components/social-icons";
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 import { githubUrl } from "./shared";
 
@@ -9,6 +10,34 @@ export function baseOptions(): BaseLayoutProps {
       title: null,
       url: "/",
     },
-    githubUrl,
+    // Icons in the sidebar footer. X and Discord have no destination yet, so
+    // they point at "#".
+    links: [
+      {
+        type: "icon",
+        text: "GitHub",
+        label: "GitHub",
+        url: githubUrl,
+        external: true,
+        icon: <GitHubIcon />,
+        on: "menu",
+      },
+      {
+        type: "icon",
+        text: "X",
+        label: "X",
+        url: "#",
+        icon: <XIcon />,
+        on: "menu",
+      },
+      {
+        type: "icon",
+        text: "Discord",
+        label: "Discord",
+        url: "#",
+        icon: <DiscordIcon />,
+        on: "menu",
+      },
+    ],
   };
 }

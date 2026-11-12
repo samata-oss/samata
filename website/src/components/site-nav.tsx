@@ -28,8 +28,8 @@ type NavLink = {
   end?: boolean;
 };
 
-/** Pages that sit in the landing page's two-pane frame. */
-const landingPaths = ["/", "/pricing", "/docs"];
+/** Pages that sit in the landing page's two-pane frame, pinned to its dark palette. */
+const landingPaths = ["/", "/pricing"];
 
 const links: NavLink[] = [
   { href: "/", label: "Home", match: (path: string) => path === "/" },
@@ -92,6 +92,8 @@ export function SiteNav({ stars }: { stars: number | null }) {
   const home = landingPaths.some((path) =>
     path === "/" ? pathname === "/" : pathname.startsWith(path),
   );
+  // The docs take the landing palette in dark mode and follow the theme toggle.
+  const docs = pathname.startsWith("/docs");
 
   const navRef = useRef<HTMLElement>(null);
   const linkRefs = useRef<(HTMLElement | null)[]>([]);
@@ -183,6 +185,7 @@ export function SiteNav({ stars }: { stars: number | null }) {
         "sticky top-0 z-40 flex h-14 shrink-0 items-stretch gap-1 border-b border-fd-border bg-fd-background/80 px-4 font-mono text-sm text-fd-foreground backdrop-blur-md",
         // The landing page pins its own darker palette, so the bar matches it.
         home && "dark landing",
+        docs && "landing",
       )}
     >
       <Link
