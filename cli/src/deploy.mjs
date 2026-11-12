@@ -493,6 +493,7 @@ async function connect(ssh, { user, host, port, identity }) {
   // user name), then the logins of the common server images.
   const attempts = user ? [user] : [undefined, ...SSH_USER_CANDIDATES];
   const tried = [];
+  let passwordOffered = false;
   let last;
   for (const candidate of attempts) {
     if (!user) {
@@ -512,6 +513,7 @@ async function connect(ssh, { user, host, port, identity }) {
     }
     const output = `${res.stdout}\n${res.stderr}`;
     last = { ...classifySshFailure(output), detail: res.stderr };
+    passwordOffered ||= Boolean(last.passwordOffered);
     tried.push(candidate ?? "your default user");
     // Only a refused login is worth another user; anything else won't change.
     const retry = !user && ["auth", "wrong-user"].includes(last.kind);
@@ -523,6 +525,7 @@ async function connect(ssh, { user, host, port, identity }) {
     sshFailureMessage({
       ...last,
       kind,
+      passwordOffered,
       user,
       host,
       port,

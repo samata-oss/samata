@@ -204,6 +204,44 @@ test("sshFailureMessage tells AWS users about the key pair and the security grou
   assert.match(sshFailureMessage({ kind: "too-many-keys", host: "h" }), /-i/);
 });
 
+test("a server that offers a password gets the ssh-copy-id fix, not the AWS advice", () => {
+  // Hetzner without an SSH key: sshd still lists password as a way in.
+  const keyOnly = classifySshFailure("root@1.2.3.4: Permission denied (publickey).");
+  assert.deepEqual(keyOnly, { kind: "auth", passwordOffered: false });
+  for (const methods of ["publickey,password", "publickey,keyboard-interactive"]) {
+    assert.deepEqual(
+      classifySshFailure(`root@1.2.3.4: Permission denied (${methods}).`),
+      { kind: "auth", passwordOffered: true },
+    );
+  }
+
+  const msg = sshFailureMessage({
+    kind: "auth",
+    passwordOffered: true,
+    host: "1.2.3.4",
+    tried: ["root", "ubuntu"],
+  });
+  assert.match(msg, /ssh-copy-id root@1\.2\.3\.4/);
+  assert.match(msg, /never passwords/);
+  assert.doesNotMatch(msg, /\.pem|ec2-user/);
+
+  // A given user and key are respected.
+  const given = sshFailureMessage({
+    kind: "auth",
+    passwordOffered: true,
+    user: "admin",
+    host: "1.2.3.4",
+    identity: "/k/id_ed25519",
+  });
+  assert.match(given, /ssh-copy-id -i \/k\/id_ed25519\.pub admin@1\.2\.3\.4/);
+
+  // Key-only servers (AWS) keep the existing advice.
+  assert.match(
+    sshFailureMessage({ kind: "auth", host: "1.2.3.4", passwordOffered: false }),
+    /\.pem/,
+  );
+});
+
 test("detectCloud reads the hardware strings", () => {
   assert.equal(
     detectCloud("Amazon EC2 m5.large Amazon EC2 Amazon EC2 ").id,

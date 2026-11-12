@@ -218,7 +218,16 @@ export function classifySshFailure(output) {
   if (/Connection refused/i.test(text)) return { kind: "refused" };
   if (/No route to host|Network is unreachable/i.test(text))
     return { kind: "unreachable" };
-  if (/Permission denied/i.test(text)) return { kind: "auth" };
+  if (/Permission denied/i.test(text)) {
+    // ssh ends with "Permission denied (publickey,password)." listing the
+    // methods the server would still accept. We never send a password, but a
+    // server that takes one tells us how the user can fix it.
+    const methods = text.match(/Permission denied \(([^)]*)\)/i)?.[1] ?? "";
+    return {
+      kind: "auth",
+      passwordOffered: /\b(password|keyboard-interactive)\b/i.test(methods),
+    };
+  }
   return { kind: "unknown" };
 }
 
@@ -232,12 +241,30 @@ export function sshFailureMessage({
   identity,
   tried = [],
   detail = "",
+  passwordOffered = false,
 }) {
   const who = user ? `${user}@${host}` : host;
   switch (kind) {
     case "wrong-user":
       return `That server doesn't allow logging in as root. Use:  --host ${suggested}@${host}`;
     case "auth": {
+      if (passwordOffered) {
+        // Typical of a server created without an SSH key (Hetzner emails a
+        // root password instead). Password logins are never used here.
+        const target = user ? who : `root@${host}`;
+        const copy = identity
+          ? `ssh-copy-id -i ${identity}.pub ${target}`
+          : `ssh-copy-id ${target}`;
+        return [
+          `${host} accepts a password login but none of your SSH keys. I only deploy with keys, never passwords.`,
+          "",
+          `Authorize your key once with the password you were given (Hetzner emails it, DigitalOcean shows it):`,
+          "",
+          `  ${copy}`,
+          "",
+          `Then run this again. No key yet? Create one first:  ssh-keygen -t ed25519`,
+        ].join("\n");
+      }
       const lines = [
         tried.length > 1
           ? `SSH refused every login I tried on ${host} (${tried.join(", ")}).`
