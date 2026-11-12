@@ -12,15 +12,15 @@ export default function Layout({ children }: LayoutProps<"/docs">) {
     // The site bar above is sticky and `NAV_HEIGHT` tall. Fumadocs sizes its
     // layout and offsets its sticky parts by `--fd-banner-height`, so telling it
     // the bar is a banner puts the docs right below it.
-    // In dark mode the docs wear the landing page's palette and its waves. The
-    // theme toggle in the sidebar switches them to the plain light palette.
+    // The docs wear the landing page's waves. In dark mode they also take its
+    // palette; the theme toggle in the sidebar switches to the light one.
     <div className="landing flex flex-1 flex-col bg-fd-background text-fd-foreground">
       <div
         className="relative isolate flex flex-1 flex-col"
         style={{ "--fd-banner-height": NAV_HEIGHT } as CSSProperties}
       >
-        <DitherSky className="fixed inset-0 -z-10 hidden opacity-40 dark:block" />
-        <Specks className="fixed inset-0 -z-10 hidden size-full dark:block" />
+        <DitherSky className="landing-art fixed inset-0 -z-10 opacity-40" />
+        <Specks className="landing-art fixed inset-0 -z-10 size-full" />
         <DocsLayout
           tree={source.getPageTree()}
           {...baseOptions()}

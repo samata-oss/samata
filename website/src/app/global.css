@@ -69,7 +69,7 @@
   --color-zinc-950: oklch(0.97 0.003 270);
 }
 /* The wave and speck art is drawn light on dark: flip it, keeping the hues. */
-:root:not(.dark) .landing-theme .landing-art {
+:root:not(.dark) .landing-art {
   filter: invert(1) hue-rotate(180deg);
 }
 /* The hero mark turns indigo instead (see the filter in the landing shell). */
@@ -162,6 +162,16 @@ html {
 .landing:where(.dark, .dark *) #nd-sidebar,
 .landing:where(.dark, .dark *) #nd-page,
 .landing:where(.dark, .dark *) #nd-toc {
+  background-color: transparent;
+}
+
+/* The same translucent surface in light mode, so the inverted waves show through. */
+:root:not(.dark) .landing #nd-docs-layout {
+  background-color: oklch(0.985 0.002 270 / 0.62);
+}
+:root:not(.dark) .landing #nd-sidebar,
+:root:not(.dark) .landing #nd-page,
+:root:not(.dark) .landing #nd-toc {
   background-color: transparent;
 }
 
