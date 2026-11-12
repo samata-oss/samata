@@ -1,5 +1,5 @@
-import { AudioLinesIcon } from "lucide-react";
 import type * as React from "react";
+import { LogoMark } from "@/components/logo-mark";
 import { NavMain } from "@/components/nav-main";
 import type { NavGroup } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -29,6 +29,7 @@ export function AppSidebar({
   workspaceId,
   workspaces,
   groups,
+  showLivekit = true,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   user: { name: string; email: string };
@@ -36,6 +37,8 @@ export function AppSidebar({
   workspaceId: string;
   workspaces: { id: string; name: string }[];
   groups: NavGroup[];
+  /** The LiveKit host chip. Self-hosters want it; the managed cloud hides it. */
+  showLivekit?: boolean;
 }) {
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -43,9 +46,7 @@ export function AppSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" render={<a href="/assistants" />}>
-              <div className="flex aspect-square size-7 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-[inset_0_1px_0_0_oklch(1_0_0/20%)]">
-                <AudioLinesIcon className="size-4" />
-              </div>
+              <LogoMark />
               <div className="grid flex-1 text-left leading-tight">
                 <span className="truncate text-sm font-semibold tracking-tight">
                   Samata
@@ -62,20 +63,22 @@ export function AppSidebar({
         <NavMain groups={groups} />
       </SidebarContent>
       <SidebarFooter>
-        <div className="flex items-center gap-2 rounded-md border border-sidebar-border px-2.5 py-1.5 group-data-[collapsible=icon]:hidden">
-          <span className="relative flex size-2">
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-chart-4 opacity-60" />
-            <span className="relative inline-flex size-2 rounded-full bg-chart-4" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[11px] leading-tight text-sidebar-foreground/50">
-              LiveKit
+        {showLivekit && (
+          <div className="flex items-center gap-2 rounded-md border border-sidebar-border px-2.5 py-1.5 group-data-[collapsible=icon]:hidden">
+            <span className="relative flex size-2">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-chart-4 opacity-60" />
+              <span className="relative inline-flex size-2 rounded-full bg-chart-4" />
             </span>
-            <span className="block truncate font-mono text-[11px] leading-tight">
-              {livekitHost()}
+            <span className="min-w-0 flex-1">
+              <span className="block text-[11px] leading-tight text-sidebar-foreground/50">
+                LiveKit
+              </span>
+              <span className="block truncate font-mono text-[11px] leading-tight">
+                {livekitHost()}
+              </span>
             </span>
-          </span>
-        </div>
+          </div>
+        )}
         <NavUser
           name={user.name}
           email={user.email}

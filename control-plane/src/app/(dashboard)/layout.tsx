@@ -39,6 +39,7 @@ export default async function DashboardLayout({
         workspaceId={organizationId}
         workspaces={workspaces}
         groups={groups}
+        showLivekit={!cloudEnabled()}
       />
       <SidebarInset className="h-svh overflow-hidden">
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">

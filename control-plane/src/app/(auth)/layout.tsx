@@ -1,6 +1,6 @@
-import { AudioLinesIcon } from "lucide-react";
 import { DitherSky } from "@/components/auth/dither-sky";
 import { Specks } from "@/components/auth/specks";
+import { LogoMark } from "@/components/logo-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 // These pages read the database and the session on every request.
@@ -29,9 +29,7 @@ export default function AuthLayout({
       <ThemeToggle className="fixed top-4 right-4" />
       <div className="relative w-full max-w-sm space-y-6">
         <div className="flex items-center justify-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-[inset_0_1px_0_0_oklch(1_0_0/20%)]">
-            <AudioLinesIcon className="size-4" />
-          </div>
+          <LogoMark className="size-8" />
           <span className="text-lg font-semibold tracking-tight">Samata</span>
         </div>
         {children}

@@ -1,6 +1,7 @@
 import { count, desc, eq, max } from "drizzle-orm";
 import { ChevronRightIcon } from "lucide-react";
 import Link from "next/link";
+import { cloudEnabled } from "@/cloud/config";
 import { CreateAssistantDialog } from "@/components/assistants/create-assistant-dialog";
 import { EmptyState, PageShell } from "@/components/page-shell";
 import {
@@ -45,8 +46,14 @@ export default async function AssistantsIndex() {
     >
       {rows.length === 0 ? (
         <EmptyState title="No assistants yet">
-          Create one with the button above, run <code>pnpm db:seed</code>, or{" "}
-          <code>POST /api/agents</code>.
+          {cloudEnabled() ? (
+            "Create one with the button above."
+          ) : (
+            <>
+              Create one with the button above, run <code>pnpm db:seed</code>,
+              or <code>POST /api/agents</code>.
+            </>
+          )}
         </EmptyState>
       ) : (
         <div className="overflow-hidden rounded-lg border bg-card">
