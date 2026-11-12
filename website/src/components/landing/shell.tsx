@@ -2,7 +2,7 @@ import { DitherSky } from "@/components/landing/dither-sky";
 import { HeroMark } from "@/components/landing/hero-mark";
 import { Specks } from "@/components/landing/specks";
 import { card, ghost, hero, legible } from "@/components/landing/styles";
-import { GitHubIcon, XIcon } from "@/components/social-icons";
+import { XIcon } from "@/components/social-icons";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/cn";
 import { githubUrl } from "@/lib/shared";
@@ -150,8 +150,9 @@ function PaneLayout({ children }: { children: ReactNode }) {
               >
                 Issues
               </a>
-              <PaneIcons className="ml-auto" />
             </nav>
+            {/* In the corner of the pane, clear of the links. */}
+            <PaneIcons className="absolute right-4 bottom-3.5 hidden lg:flex" />
           </div>
         </div>
       </aside>
@@ -163,26 +164,19 @@ function PaneLayout({ children }: { children: ReactNode }) {
   );
 }
 
-/** X, GitHub and the theme switch, along the left pane's bottom edge. */
+/** X and the light / dark switch. */
 function PaneIcons({ className }: { className?: string }) {
-  const icon =
-    "inline-flex size-6 items-center justify-center transition-colors hover:text-white [&_svg]:size-4";
   return (
     <div className={cn("flex items-center gap-1 text-zinc-400", className)}>
       {/* No destination for X yet, so it's a plain icon, not a link. */}
-      <span role="img" aria-label="X" className={icon}>
+      <span
+        role="img"
+        aria-label="X"
+        className="inline-flex size-6 items-center justify-center [&_svg]:size-4"
+      >
         <XIcon />
       </span>
-      <a
-        href={githubUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="GitHub"
-        className={icon}
-      >
-        <GitHubIcon />
-      </a>
-      <span aria-hidden="true" className="mx-1 h-3.5 w-px bg-white/[0.14]" />
+      <span aria-hidden="true" className="h-3.5 w-px bg-white/[0.14]" />
       <ThemeToggle />
     </div>
   );
