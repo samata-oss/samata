@@ -49,6 +49,40 @@ prebuilt images:
 | `ghcr.io/<org>/samata-control-plane` | Next.js control plane. Applies database migrations on boot. |
 | `ghcr.io/<org>/samata-worker`        | Stateless livekit-agents worker. Scale it horizontally.     |
 
+### With the CLI
+
+If you have a server you can SSH into (any provider: Hetzner, AWS, GCP, a VPS
+under your desk), one command does the rest:
+
+```bash
+npx @samata-oss/cli deploy --host ubuntu@203.0.113.7
+```
+
+It installs Docker if needed, generates the secrets, starts the stack and waits
+until the dashboard answers over HTTPS. Re-run it to upgrade: it keeps the
+server's `.env`, so your data and keys stay readable.
+
+- **Hostnames.** With no `--domain` it uses `<ip>.sslip.io` names, which need no
+  DNS setup: fine for trying it out. For production, point two A records
+  (`samata.example.com` and `livekit.samata.example.com`) at the server and pass
+  `--domain samata.example.com` (`--livekit-domain` to name the second one).
+- **AWS.** Pass the `.pem` of the key pair you picked at launch with `-i`
+  (`-i ~/Downloads/my-key.pem`). Leave the user out of `--host` and it tries
+  `ubuntu`, `ec2-user`, `admin` and `root`. Use an Elastic IP (a plain public IP
+  changes on every stop/start), at least a `t3.small` with 20 GB of disk, and add
+  inbound rules to the instance's security group for the ports below. It can
+  check the TCP ones from your machine but not UDP, so open those too or calls
+  connect without audio.
+- **Ubuntu, Debian and Amazon Linux** are supported for the Docker install. On
+  anything else, install Docker with Compose v2 yourself and run the command.
+- `--env-file` adds your own `KEY=VALUE` settings to the server's `.env`;
+  `--version-tag 0.1.0` pins a release (the default tracks `edge`);
+  `--ssh-port` and `--skip-dns-check` do what they say. `--help` lists everything.
+
+Ports to open: **TCP** 80, 443, 7881, 5060 and **UDP** 7882, 5060, 10000-10100.
+
+### By hand
+
 On a server with ports 80, 443, 7881/tcp and 7882/udp open, and DNS records
 for two hostnames pointing at it:
 
@@ -528,7 +562,7 @@ The open-source app reaches this code through one file,
 docker-compose.yml        Dev infra: LiveKit, LiveKit SIP, Redis, Postgres, worker (profile)
 deploy/                   Production compose (prebuilt images + Caddy) and .env.example,
                           plus docker-compose.local.yml for `npx @samata-oss/cli`
-cli/                      The `@samata-oss/cli` npm package (`npx @samata-oss/cli init`), no dependencies
+cli/                      The `@samata-oss/cli` npm package (`init` runs it locally, `deploy` puts it on a server over SSH), no dependencies
 infra/livekit/            Dev livekit.yaml, sip.yaml (dev keys: devkey / samata_dev_secret_…)
 control-plane/            Next.js 16, Hono under /api, Drizzle (agent, call_log), Dockerfile
                           (src/cloud/: managed-cloud billing, off unless SAMATA_CLOUD=1)

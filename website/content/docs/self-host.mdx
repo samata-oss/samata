@@ -1,6 +1,6 @@
 ---
 title: Self-host
-description: Run Samata on a server from prebuilt images with automatic TLS.
+description: Run Samata on a server with just one line of code.
 icon: Server
 ---
 
@@ -12,20 +12,150 @@ images to GHCR, and `deploy/docker-compose.yml` runs the whole stack from them.
 | `ghcr.io/<org>/samata-control-plane` | Next.js control plane. Applies database migrations on boot. |
 | `ghcr.io/<org>/samata-worker`        | Stateless livekit-agents worker. Scale it horizontally.     |
 
-## Requirements
+## Deploy
 
-A server with these ports open, and DNS records for two hostnames pointing at it:
+Create a server, then run one command from your laptop. Pick your provider:
 
-| Port                 | Used for                                |
-| -------------------- | --------------------------------------- |
-| `80`, `443`          | Caddy: automatic TLS, dashboard and API |
-| `7881/tcp`, `7882/udp` | WebRTC media                          |
-| `5060/tcp+udp`, `10000-10100/udp` | SIP, only for phone calls  |
+<Tabs items={["Hetzner", "DigitalOcean", "AWS", "Google Cloud", "Other"]}>
+<Tab value="Hetzner">
 
-The two hostnames are `SAMATA_DOMAIN` (dashboard and API) and `LIVEKIT_DOMAIN`
-(LiveKit and SIP).
+Create a server with **Ubuntu 24.04**, at least 2 GB of memory, and your SSH key
+selected. There's no firewall unless you attach one.
 
-## Install
+```bash
+npx @samata-oss/cli deploy --host root@<server-ip>
+```
+
+</Tab>
+<Tab value="DigitalOcean">
+
+Create a droplet with **Ubuntu 24.04**, at least 2 GB of memory, and your SSH key
+selected. A Cloud Firewall only matters if you attached one.
+
+```bash
+npx @samata-oss/cli deploy --host root@<droplet-ip>
+```
+
+</Tab>
+<Tab value="AWS">
+
+Launch an **Ubuntu 24.04** instance (`t3.small` or larger, 20 GB volume). At
+launch, choose a key pair whose public key you [imported](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html)
+(your `~/.ssh/id_ed25519.pub`, say). Attach an **Elastic IP**, since a plain public
+IP changes when the instance restarts, and add the [ports](#ports-and-hostnames)
+to its **security group**.
+
+```bash
+npx @samata-oss/cli deploy --host ubuntu@<elastic-ip>
+```
+
+Using the `.pem` AWS generated for you instead? Pass it with `-i`, and make sure
+only you can read it (`chmod 400 my-key.pem`):
+
+```bash
+npx @samata-oss/cli deploy --host ubuntu@<elastic-ip> -i ~/Downloads/my-key.pem
+```
+
+The user is `ubuntu` on Ubuntu, `ec2-user` on Amazon Linux and `admin` on Debian.
+Leave it out and the CLI tries each one.
+
+</Tab>
+<Tab value="Google Cloud">
+
+Create a VM with **Ubuntu 24.04** (`e2-medium` or larger) and reserve a static
+external IP. Add your public key to the instance's SSH keys as
+`<user>:<public key>`: that `<user>` is the login. Then open the
+[ports](#ports-and-hostnames) with a VPC firewall rule.
+
+```bash
+npx @samata-oss/cli deploy --host <user>@<external-ip>
+```
+
+If your organization uses OS Login, add the key with
+`gcloud compute os-login ssh-keys add` instead.
+
+</Tab>
+<Tab value="Other">
+
+Any Ubuntu, Debian or Amazon Linux server with a public IPv4 address and key
+login as `root` or a user with passwordless sudo: Azure, Vultr, Linode, a VPS,
+a machine under your desk.
+
+```bash
+npx @samata-oss/cli deploy --host <user>@<server-ip>
+```
+
+On any other Linux, install Docker with Compose v2.20 or newer first and the CLI
+carries on from there.
+
+</Tab>
+</Tabs>
+
+The CLI connects over SSH, installs Docker if it's missing, generates the
+secrets, writes the compose file and `.env` to `/opt/samata`, starts the stack,
+and waits until the dashboard answers over HTTPS. It needs `ssh` on your machine
+and nothing else.
+
+<Callout type="warn">
+  **Sign up as soon as it finishes.** The first account becomes the owner of the
+  install. After that, sign-up is invitation-only.
+</Callout>
+
+Run it again to upgrade: it keeps the server's `.env`, so your data and stored
+provider keys stay readable. Logins are by SSH key only, not password. On Hetzner
+and DigitalOcean, skipping the SSH key when you create the server gives you an
+emailed root password, which the CLI can't use; run `ssh-copy-id root@<ip>` first.
+
+## Ports and hostnames
+
+Open these ports on the server's firewall (an AWS security group, a Google Cloud
+VPC rule, a Hetzner or DigitalOcean Cloud Firewall):
+
+| Port                              | Used for                                |
+| --------------------------------- | --------------------------------------- |
+| `80`, `443`                       | Caddy: automatic TLS, dashboard and API |
+| `7881/tcp`, `7882/udp`            | WebRTC media                            |
+| `5060/tcp+udp`, `10000-10100/udp` | SIP, only for phone calls               |
+
+The CLI can test the TCP ports from your machine but not UDP, so open those too,
+or calls connect without audio.
+
+Two hostnames are involved: `SAMATA_DOMAIN` (dashboard and API) and
+`LIVEKIT_DOMAIN` (LiveKit and SIP). With no `--domain`, the CLI uses
+`<ip>.sslip.io` names that need no DNS setup, which is fine for trying Samata
+out. For production, point two `A` records at the server and pass the first:
+
+```bash
+npx @samata-oss/cli deploy --host ubuntu@<elastic-ip> --domain samata.example.com
+```
+
+The second name defaults to `livekit.samata.example.com`. The CLI checks that
+both resolve to the server before it starts anything.
+
+## CLI options
+
+| Option                  | What it does                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- |
+| `--host <user@host>`    | The server. The user is optional.                                                                       |
+| `-i, --identity <file>` | SSH private key, if it isn't one ssh already uses.                                                      |
+| `--domain <name>`       | Dashboard hostname. Default `<ip>.sslip.io`. Add `--livekit-domain` to name the second one.             |
+| `--env-file <file>`     | Extra `KEY=VALUE` settings for the server's `.env`: see the [environment reference](/docs/environment). |
+| `--version-tag <tag>`   | Image tag, such as `0.1.0`. Default `edge`: pin a release in production.                                |
+
+`npx @samata-oss/cli --help` lists the rest (SSH port, skipping the DNS check, a
+custom compose file). `--env-file` won't change `POSTGRES_PASSWORD`,
+`BETTER_AUTH_SECRET` or `SAMATA_ENCRYPTION_KEY` on a server that already has data,
+since that would make the database and stored provider keys unreadable.
+
+If `https://<domain>` doesn't answer within three minutes, the CLI tests each TCP
+port, prints the end of Caddy's log, and names the firewall to check. To look
+yourself:
+`ssh <user>@<ip> "cd /opt/samata && sudo docker compose -p samata logs -f"`.
+
+## Install by hand
+
+If you'd rather not use the CLI, or your server can't be reached over SSH from
+where you work, run the stack yourself.
 
 ```bash
 mkdir samata && cd samata
@@ -39,8 +169,8 @@ This starts Caddy (automatic TLS), the control plane, the worker, LiveKit, Redis
 Postgres and the SIP server. Add `--scale worker=N` for more concurrent calls.
 
 <Callout type="warn">
-**Sign up as soon as you deploy.** The first account becomes the owner of the
-install. After that, sign-up is invitation-only.
+  **Sign up as soon as you deploy.** The first account becomes the owner of the
+  install. After that, sign-up is invitation-only.
 </Callout>
 
 ## Configure `.env`
@@ -88,7 +218,7 @@ The control plane applies pending database migrations on boot. Set
 `SAMATA_AUTO_MIGRATE=0` to manage migrations yourself.
 
 <Callout type="info">
-**Upgrading from keys in env:** the worker and control plane no longer read
-`OPENAI_API_KEY`, `DEEPGRAM_API_KEY` or `CARTESIA_API_KEY`. Add those keys on
-Provider Keys, then remove them from your env.
+  **Upgrading from keys in env:** the worker and control plane no longer read
+  `OPENAI_API_KEY`, `DEEPGRAM_API_KEY` or `CARTESIA_API_KEY`. Add those keys on
+  Provider Keys, then remove them from your env.
 </Callout>
