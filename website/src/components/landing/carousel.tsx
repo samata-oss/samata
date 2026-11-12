@@ -15,7 +15,7 @@ export const carouselTrack =
 
 /** One card in the track: most of the width, so the next one peeks in. */
 export const carouselCard =
-  "flex w-[86%] min-w-0 shrink-0 snap-start flex-col bg-[oklch(0.105_0.004_270)] p-4 @xl:w-auto";
+  "flex w-[86%] min-w-0 shrink-0 snap-start flex-col bg-[var(--landing-box)] p-4 @xl:w-auto";
 
 /** Tracks which card of a `carouselTrack` is in view, and steps between them. */
 export function useCarousel(count: number) {

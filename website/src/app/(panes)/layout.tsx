@@ -5,9 +5,9 @@ import { LandingShell } from "@/components/landing/shell";
  * only swap what scrolls in the right one.
  */
 export default function Layout({ children }: LayoutProps<"/">) {
-  // Same pinned dark palette as the home page.
+  // Same palette and theme toggle as the home page.
   return (
-    <div className="dark landing flex flex-1 flex-col bg-fd-background text-fd-foreground">
+    <div className="landing landing-theme flex flex-1 flex-col bg-fd-background text-fd-foreground">
       <LandingShell pane={false}>{children}</LandingShell>
     </div>
   );

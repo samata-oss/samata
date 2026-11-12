@@ -35,6 +35,8 @@
  */
 .landing:where(.dark, .dark *) {
   /* A touch deeper than the dashboard's 0.15, so it still reads as dark. */
+  --landing-bg: oklch(0.125 0.005 270);
+  --landing-box: oklch(0.105 0.004 270);
   --color-fd-background: oklch(0.125 0.005 270);
   --color-fd-card: oklch(0.155 0.006 270);
   --color-white: oklch(0.97 0.003 270);
@@ -43,6 +45,47 @@
   --color-zinc-500: oklch(0.62 0.012 270);
   --color-zinc-600: oklch(0.5 0.012 270);
   --color-zinc-700: oklch(0.4 0.012 270);
+}
+
+/*
+ * Landing page in light mode. Its components are written for dark, with white
+ * and zinc utilities, so the light palette swaps them: white becomes ink,
+ * black becomes paper, and the zinc greys run the other way.
+ */
+:root:not(.dark) .landing-theme {
+  --landing-bg: oklch(0.985 0.002 270);
+  --landing-box: oklch(0.965 0.003 270);
+  --color-fd-background: oklch(0.985 0.002 270);
+  --color-white: oklch(0.2 0.01 270);
+  --color-black: oklch(0.985 0.002 270);
+  --color-zinc-100: oklch(0.25 0.01 270);
+  --color-zinc-200: oklch(0.3 0.01 270);
+  --color-zinc-300: oklch(0.36 0.01 270);
+  --color-zinc-400: oklch(0.44 0.01 270);
+  --color-zinc-500: oklch(0.52 0.01 270);
+  --color-zinc-600: oklch(0.62 0.01 270);
+  --color-zinc-700: oklch(0.76 0.008 270);
+  --color-zinc-800: oklch(0.86 0.006 270);
+  --color-zinc-950: oklch(0.97 0.003 270);
+}
+/* The wave and speck art is drawn light on dark: flip it, keeping the hues. */
+:root:not(.dark) .landing-theme .landing-art {
+  filter: invert(1) hue-rotate(180deg);
+}
+/* The hero mark turns indigo instead (see the filter in the landing shell). */
+:root:not(.dark) .landing-theme .landing-mark {
+  filter: url(#samata-indigo);
+}
+/* The dashboard screenshot is dark UI: invert it, keeping its hues. */
+:root:not(.dark) .landing-theme .landing-shot {
+  filter: invert(1) hue-rotate(180deg);
+}
+:root:not(.dark) .landing-theme .text-gradient-soft {
+  background-image: linear-gradient(
+    to bottom,
+    oklch(0.2 0.01 270),
+    oklch(0.45 0.01 270)
+  );
 }
 
 html {

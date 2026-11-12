@@ -2,8 +2,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 /** The near-black surface shared by every box on the landing page. */
-export const boxSurface =
-  "border border-white/[0.11] bg-[oklch(0.105_0.004_270)]";
+export const boxSurface = "border border-white/[0.11] bg-[var(--landing-box)]";
 
 /**
  * A flat dark box: a hairline border, a header row (the title, or tabs, on the

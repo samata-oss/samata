@@ -1,6 +1,6 @@
 /** A tight dark halo, so small text stays readable over the dither. */
 export const legible =
-  "[text-shadow:0_0_3px_oklch(0.125_0.005_270),0_0_8px_oklch(0.125_0.005_270),0_0_16px_oklch(0.125_0.005_270)]";
+  "[text-shadow:0_0_3px_var(--landing-bg),0_0_8px_var(--landing-bg),0_0_16px_var(--landing-bg)]";
 
 /**
  * A dark card: the dither shows through the gaps and, faintly, through the card.
@@ -10,7 +10,7 @@ export const legible =
  * translucent fill has nothing to re-sample, so it cannot glitch.
  */
 export const card =
-  "border border-white/[0.11] bg-[oklch(0.125_0.005_270/0.86)]";
+  "border border-white/[0.11] bg-[color-mix(in_oklab,var(--landing-bg)_86%,transparent)]";
 
 export const primary =
   "inline-flex h-9 items-center bg-fd-primary px-4 text-xs font-medium text-fd-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.18)] transition-colors hover:bg-fd-primary/85";

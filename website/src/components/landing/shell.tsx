@@ -2,6 +2,8 @@ import { DitherSky } from "@/components/landing/dither-sky";
 import { HeroMark } from "@/components/landing/hero-mark";
 import { Specks } from "@/components/landing/specks";
 import { card, ghost, hero, legible } from "@/components/landing/styles";
+import { GitHubIcon, XIcon } from "@/components/social-icons";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/cn";
 import { githubUrl } from "@/lib/shared";
 import Link from "next/link";
@@ -32,12 +34,21 @@ export function LandingShell({
       {/* Both layers share one fixed wrapper that is pinned to its own GPU layer. Without that, the browser can drop and re-create the layers under the cards as the canvases repaint, which flickers. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 -z-10 transform-gpu [backface-visibility:hidden] [contain:strict] [will-change:transform]"
+        className="landing-art pointer-events-none fixed inset-0 -z-10 transform-gpu [backface-visibility:hidden] [contain:strict] [will-change:transform]"
       >
         <DitherSky className="absolute inset-0 opacity-60" />
         {/* White and grey specks over the dark, thinning out where the waves rise. */}
         <Specks className="absolute inset-0 size-full" />
       </div>
+      {/* Light mode recolours the hero mark: its luminance becomes brand indigo. */}
+      <svg aria-hidden="true" width="0" height="0" className="absolute">
+        <filter id="samata-indigo" colorInterpolationFilters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0.0893 0.3004 0.0303 0 0  0.0914 0.3075 0.031 0 0  0.2158 0.726 0.0733 0 0  0 0 0 1 0"
+          />
+        </filter>
+      </svg>
       {pane ? (
         <PaneLayout>{children}</PaneLayout>
       ) : (
@@ -57,7 +68,7 @@ function PaneLayout({ children }: { children: ReactNode }) {
           <div className="relative flex h-full flex-col px-6 py-10 sm:px-8 lg:justify-center lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:px-8 lg:pt-6 lg:pb-28 xl:px-10">
             {/* The mark and the copy sit together as one block, centred in the pane. */}
             <div className="flex justify-center pb-8 lg:pb-[clamp(1.5rem,4vh,3.5rem)]">
-              <HeroMark className="size-48 sm:size-52 lg:size-[clamp(11rem,16vw,20rem)]" />
+              <HeroMark className="landing-mark size-48 sm:size-52 lg:size-[clamp(11rem,16vw,20rem)]" />
             </div>
 
             {/* The copy sits flush left, low in the pane. */}
@@ -67,7 +78,7 @@ function PaneLayout({ children }: { children: ReactNode }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(
-                  "inline-flex items-center gap-2 border border-white/[0.14] bg-[oklch(0.125_0.005_270/0.7)] px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-white/25 hover:text-white",
+                  "inline-flex items-center gap-2 border border-white/[0.14] bg-[color-mix(in_oklab,var(--landing-bg)_70%,transparent)] px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-white/25 hover:text-white",
                   legible,
                 )}
               >
@@ -107,6 +118,7 @@ function PaneLayout({ children }: { children: ReactNode }) {
                   GitHub
                 </a>
               </div>
+              <PaneIcons className="mt-8 lg:hidden" />
             </div>
 
             {/* Quiet links along the bottom edge. */}
@@ -138,6 +150,7 @@ function PaneLayout({ children }: { children: ReactNode }) {
               >
                 Issues
               </a>
+              <PaneIcons className="ml-auto" />
             </nav>
           </div>
         </div>
@@ -146,6 +159,31 @@ function PaneLayout({ children }: { children: ReactNode }) {
       <main className="relative min-w-0 space-y-4 p-4 sm:p-5 lg:space-y-5 lg:p-6">
         {children}
       </main>
+    </div>
+  );
+}
+
+/** X, GitHub and the theme switch, along the left pane's bottom edge. */
+function PaneIcons({ className }: { className?: string }) {
+  const icon =
+    "inline-flex size-6 items-center justify-center transition-colors hover:text-white [&_svg]:size-4";
+  return (
+    <div className={cn("flex items-center gap-1 text-zinc-400", className)}>
+      {/* No destination for X yet, so it's a plain icon, not a link. */}
+      <span role="img" aria-label="X" className={icon}>
+        <XIcon />
+      </span>
+      <a
+        href={githubUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="GitHub"
+        className={icon}
+      >
+        <GitHubIcon />
+      </a>
+      <span aria-hidden="true" className="mx-1 h-3.5 w-px bg-white/[0.14]" />
+      <ThemeToggle />
     </div>
   );
 }

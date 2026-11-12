@@ -44,11 +44,11 @@ export function DashboardShot() {
             width={2880}
             height={1800}
             sizes="(min-width: 1024px) 55vw, 100vw"
-            className="block size-full object-cover object-top"
+            className="landing-shot block size-full object-cover object-top"
           />
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-[oklch(0.105_0.004_270)] to-transparent"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-[var(--landing-box)] to-transparent"
           />
           <span
             aria-hidden="true"
@@ -76,13 +76,13 @@ export function DashboardShot() {
           height={1800}
           sizes="95vw"
           quality={90}
-          className="block h-auto max-h-[92vh] w-auto max-w-[95vw] border border-white/[0.11] object-contain"
+          className="landing-shot block h-auto max-h-[92vh] w-auto max-w-[95vw] border border-white/[0.11] object-contain"
         />
         <button
           type="button"
           onClick={close}
           aria-label="Close"
-          className="absolute -top-3 -right-3 flex size-8 cursor-pointer items-center justify-center border border-white/[0.14] bg-[oklch(0.105_0.004_270)] text-zinc-300 transition-colors hover:text-white"
+          className="absolute -top-3 -right-3 flex size-8 cursor-pointer items-center justify-center border border-white/[0.14] bg-[var(--landing-box)] text-zinc-300 transition-colors hover:text-white"
         >
           <X className="size-4" />
         </button>

@@ -1,8 +1,8 @@
 export default function Layout({ children }: LayoutProps<"/">) {
-  // The marketing site uses the dashboard's dark palette: a soft charcoal, not
-  // pure black. Pin dark so the docs theme cannot lighten it.
+  // Dark is the default: the dashboard's palette, a soft charcoal rather than
+  // pure black. The toggle in the left pane switches to `landing-theme`'s light.
   return (
-    <div className="dark landing flex min-h-screen flex-col bg-fd-background text-fd-foreground">
+    <div className="landing landing-theme flex min-h-screen flex-col bg-fd-background text-fd-foreground">
       {children}
     </div>
   );

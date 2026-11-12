@@ -55,7 +55,7 @@ export function UseCaseTabs({ items }: { items: UseCase[] }) {
                 className={cn(
                   "flex shrink-0 items-center gap-2 border-r border-white/[0.07] px-4 py-2.5 font-mono text-xs transition-colors",
                   selected
-                    ? "relative bg-[oklch(0.12_0.005_270)] text-fd-foreground after:absolute after:inset-x-0 after:top-0 after:h-px after:bg-fd-primary"
+                    ? "relative bg-[var(--landing-bg)] text-fd-foreground after:absolute after:inset-x-0 after:top-0 after:h-px after:bg-fd-primary"
                     : "text-fd-muted-foreground hover:bg-white/[0.04] hover:text-fd-foreground",
                 )}
               >
