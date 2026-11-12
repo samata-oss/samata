@@ -15,6 +15,15 @@ export function fmtDuration(seconds: number | null | undefined) {
   return s ? `${m}m ${s}s` : `${m}m`;
 }
 
+export function fmtDate(date: Date | string | null | undefined) {
+  if (!date) return "—";
+  return new Date(date).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export function fmtDateTime(date: Date | string | null | undefined) {
   if (!date) return "—";
   return new Date(date).toLocaleString(undefined, {

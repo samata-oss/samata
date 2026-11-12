@@ -1,5 +1,6 @@
 import { PageShell, Stat } from "@/components/page-shell";
 import { Badge } from "@/components/ui/badge";
+import { fmtDate } from "@/lib/format";
 import { canManageTeam } from "@/lib/workspace";
 import { requireWorkspaceSession } from "@/server/workspace";
 import { BillingButtons } from "./billing-buttons";
@@ -49,6 +50,11 @@ export async function BillingPage({
         <Stat
           label="Plan"
           value={<Badge variant={current.variant}>{current.label}</Badge>}
+          hint={
+            state.cancelsAt
+              ? `Cancels on ${fmtDate(state.cancelsAt)}, then back to Free`
+              : undefined
+          }
         />
         <Stat
           label="Calls running now"

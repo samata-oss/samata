@@ -15,6 +15,12 @@ export const billingAccount = pgTable("billing_account", {
   stripeSubscriptionId: text("stripe_subscription_id"),
   /** Stripe's subscription status; null until the workspace subscribes. */
   subscriptionStatus: text("subscription_status"),
+  /**
+   * When the subscription is set to end (cancelled at the end of the billing
+   * period, or on a scheduled date); null while it will renew. The status
+   * stays `active` until then.
+   */
+  cancelAt: timestamp("cancel_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

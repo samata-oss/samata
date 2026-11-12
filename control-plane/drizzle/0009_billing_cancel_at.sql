@@ -1,0 +1,1 @@
+ALTER TABLE "billing_account" ADD COLUMN "cancel_at" timestamp;

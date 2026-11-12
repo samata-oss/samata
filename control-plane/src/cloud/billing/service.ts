@@ -67,6 +67,8 @@ export type BillingState = {
   status: string | null;
   /** Subscribed, so there is no concurrent-call limit. */
   subscribed: boolean;
+  /** Subscribed, but set to end on this date (cancelled, not yet over). */
+  cancelsAt: Date | null;
   hasCustomer: boolean;
   freeLimit: number;
   /** Calls running right now. */
@@ -104,10 +106,14 @@ export async function getBillingState(
     accountOf(organizationId),
     activeCallCount(organizationId),
   ]);
+  const subscribed = ACTIVE_STATUSES.includes(
+    account?.subscriptionStatus ?? "",
+  );
   return {
     configured: Boolean(billingConfig()?.priceId),
     status: account?.subscriptionStatus ?? null,
-    subscribed: ACTIVE_STATUSES.includes(account?.subscriptionStatus ?? ""),
+    subscribed,
+    cancelsAt: subscribed ? (account?.cancelAt ?? null) : null,
     hasCustomer: account !== undefined,
     freeLimit: freeConcurrentCalls(),
     activeCalls,
@@ -265,6 +271,9 @@ export async function handleStripeWebhook(
     .set({
       stripeSubscriptionId: subscription.id,
       subscriptionStatus: subscription.status,
+      cancelAt: subscription.cancel_at
+        ? new Date(subscription.cancel_at * 1000)
+        : null,
     })
     .where(eq(billingAccount.stripeCustomerId, customerId))
     .returning({ organizationId: billingAccount.organizationId });
