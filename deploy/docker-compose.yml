@@ -8,8 +8,6 @@
 # Using LiveKit Cloud instead? Delete the livekit + sip services and point
 # LIVEKIT_URL / LIVEKIT_PUBLIC_URL / keys in .env at your project.
 
-x-samata-image: &samata-version ${SAMATA_VERSION:-edge}
-
 services:
   # TLS for both public hostnames. Browsers require wss:// for WebRTC
   # signalling and your tool/webhook servers should only talk https.
