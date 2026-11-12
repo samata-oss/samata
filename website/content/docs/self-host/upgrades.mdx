@@ -1,20 +1,143 @@
 ---
-title: Upgrades
-description: Release images, tags, and migrations.
+title: How to upgrade
+description: Step-by-step upgrade for a self-hosted install, with the CLI or by hand.
 ---
 
-Every release ships two images to GHCR, and `deploy/docker-compose.yml` runs the
-whole stack from them:
+An upgrade pulls newer images and restarts the stack. Your data lives in Docker
+volumes and your secrets in the server's `.env`, and neither is touched. The
+control plane applies any new database migrations when it starts.
 
-| Image                                | What it is                                                  |
-| ------------------------------------ | ----------------------------------------------------------- |
-| `ghcr.io/<org>/samata-control-plane` | Next.js control plane. Applies database migrations on boot. |
-| `ghcr.io/<org>/samata-worker`        | Stateless livekit-agents worker. Scale it horizontally.     |
+## Upgrade with the CLI
 
-`.github/workflows/images.yml` builds both images for amd64 and arm64 on every PR.
-Pushes to the default branch publish `:edge`, and `v*` tags publish `:X.Y.Z`,
-`:X.Y` and `:latest`. In production, pin a release with `SAMATA_VERSION` rather
-than tracking `edge`, which moves on every push to the default branch.
+<Steps>
+<Step>
 
-The control plane applies pending database migrations on boot. Set
-`SAMATA_AUTO_MIGRATE=0` to manage migrations yourself.
+### Back up the database
+
+Migrations can't be undone, so a dump taken now is your way back. On the server:
+
+```bash
+cd /opt/samata
+sudo docker compose -p samata exec -T postgres \
+  pg_dump -U samata samata > samata-$(date +%F).sql
+```
+
+</Step>
+<Step>
+
+### Re-run the deploy
+
+From your own machine, run the same command you used to install, with
+`--version-tag` set to the version you want. Pick a tab:
+
+<Tabs items={["Latest", "Specific version"]}>
+<Tab value="Latest">
+
+```bash
+npx @samata-oss/cli deploy --host <user@host> --version-tag edge
+```
+
+For now, `edge` tracks the latest commit on `main`, so it can change at any time.
+Use a specific version if you need something stable.
+
+</Tab>
+<Tab value="Specific version">
+
+```bash
+npx @samata-oss/cli deploy --host <user@host> --version-tag 0.2.0
+```
+
+Use this to pin a release in production. To upgrade later, pass the new tag.
+
+</Tab>
+</Tabs>
+
+</Step>
+<Step>
+
+### Check that it came up
+
+The CLI waits until `https://<domain>/api/health` answers and prints the summary.
+If it doesn't, see [the CLI reference](/docs/self-host/cli) for what it checks.
+
+</Step>
+</Steps>
+
+## Upgrade by hand
+
+If you [installed by hand](/docs/self-host/manual), do the same from the folder
+that holds your `docker-compose.yml` and `.env`.
+
+<Steps>
+<Step>
+
+### Back up the database
+
+```bash
+docker compose exec -T postgres pg_dump -U samata samata > samata-$(date +%F).sql
+```
+
+</Step>
+<Step>
+
+### Update the compose file
+
+Releases can change `docker-compose.yml`. Download the one for your version and
+compare it with yours before replacing it:
+
+```bash
+curl -O https://raw.githubusercontent.com/samata-oss/samata/main/deploy/docker-compose.yml
+```
+
+If you set a custom image prefix or removed services (for LiveKit Cloud), reapply
+those edits.
+
+</Step>
+<Step>
+
+### Set the version
+
+In `.env`, set `SAMATA_VERSION` to the release you want:
+
+```bash
+SAMATA_VERSION=0.2.0
+```
+
+</Step>
+<Step>
+
+### Pull and restart
+
+```bash
+docker compose pull
+docker compose up -d --wait
+```
+
+</Step>
+<Step>
+
+### Check the logs
+
+```bash
+docker compose logs --tail 50 control-plane
+```
+
+Look for the migrations finishing, then open the dashboard and sign in.
+
+</Step>
+</Steps>
+
+## Roll back
+
+Point `SAMATA_VERSION` at the earlier tag and run `docker compose pull` and
+`docker compose up -d` again. If the newer release applied a migration, the older
+one may not run against it: restore your dump first.
+
+```bash
+docker compose stop control-plane worker
+docker compose exec -T postgres psql -U samata -d postgres \
+  -c "DROP DATABASE samata WITH (FORCE)" -c "CREATE DATABASE samata"
+docker compose exec -T postgres psql -U samata samata < samata-2026-01-01.sql
+```
+
+Then set the earlier version and start the stack again.
