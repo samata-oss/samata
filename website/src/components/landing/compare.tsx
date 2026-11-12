@@ -134,13 +134,13 @@ const rows: Row[] = [
   {
     label: "$0 hosting fee",
     description: [
-      "Samata has zero platform fee i.e. cents per minute - LiveKit Cloud, LiveKit's hosted offering, and Dograh's hosted offering both charge $0.01 per minute. Hosted platforms like VAPI and Retell are more expensive, often starting at $0.05 per minute.",
+      "Whether you host Samata yourself or let us host, Samata has zero platform fee - there is no cents per minute charge.  LiveKit Cloud, LiveKit's hosted offering, and Dograh's hosted offering both charge $0.01 per minute. Hosted platforms like VAPI and Retell are more expensive, often starting at $0.05 per minute.",
       <Fragment key="fee-managed">
         Samata also has cheaper monthly subscription tiers, which offers more
-        flexibility for users. For example, while LiveKit Cloud charges a $20
+        flexibility for users. For example, while LiveKit Cloud charges a $50
         subscription fee for more than 5 concurrent calls, and jumps to $500 for
         more than 20 concurrent calls, Samata charges a flat $20 monthly
-        subscription fee for more than 5 concurrent calls.{" "}
+        subscription fee for anything more than 5 concurrent calls.{" "}
         <Link
           href="/pricing"
           className="text-fd-primary underline decoration-fd-primary/40 underline-offset-2 transition-colors hover:text-zinc-100"
