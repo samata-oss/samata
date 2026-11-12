@@ -172,7 +172,7 @@ function PaneIcons({ className }: { className?: string }) {
       <span
         role="img"
         aria-label="X"
-        className="inline-flex size-6 items-center justify-center [&_svg]:size-4"
+        className="inline-flex size-6 items-center justify-center [&_svg]:size-3.5"
       >
         <XIcon />
       </span>

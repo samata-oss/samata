@@ -19,7 +19,7 @@ export function baseOptions(): BaseLayoutProps {
         label: "GitHub",
         url: githubUrl,
         external: true,
-        icon: <GitHubIcon />,
+        icon: <GitHubIcon className="size-4!" />,
         on: "menu",
       },
       {
@@ -27,7 +27,7 @@ export function baseOptions(): BaseLayoutProps {
         text: "X",
         label: "X",
         url: "#",
-        icon: <XIcon />,
+        icon: <XIcon className="size-4!" />,
         on: "menu",
       },
       {
@@ -35,7 +35,7 @@ export function baseOptions(): BaseLayoutProps {
         text: "Discord",
         label: "Discord",
         url: "#",
-        icon: <DiscordIcon />,
+        icon: <DiscordIcon className="size-4!" />,
         on: "menu",
       },
     ],
