@@ -14,6 +14,7 @@ import {
   SSH_USER_CANDIDATES,
   assessServer,
   buildEnv,
+  planBackup,
   changedDataSecrets,
   checkIdentityFile,
   classifySshFailure,
@@ -31,7 +32,7 @@ import {
   sshFailureMessage,
   sslipDomains,
 } from "./lib.mjs";
-import { INSTALL_SCRIPT, PROBE_SCRIPT } from "./remote.mjs";
+import { BACKUP_SCRIPT, INSTALL_SCRIPT, PROBE_SCRIPT } from "./remote.mjs";
 import {
   CMD,
   CliError,
@@ -328,6 +329,33 @@ async function deployTo(ssh, opts) {
     step("Docker is ready");
   }
 
+  // ---- Back up. Before anything changes: the new version applies its
+  // database migrations when it starts, and those can't be undone. ----
+  const backup = planBackup(probe, { enabled: opts.backup !== false });
+  let backupFile;
+  if (backup.run) {
+    step("Backing up the database");
+    const result = await ssh.exec("bash -s", { input: BACKUP_SCRIPT });
+    backupFile = parseProbe(result.stdout).backup;
+    if (result.code !== 0 || !backupFile) {
+      throw new CliError(
+        [
+          "",
+          red("Couldn't back up the database, so I haven't changed anything."),
+          result.stderr.trim(),
+          "",
+          "  • Fix the error above and run this again, or",
+          `  • skip the backup with --no-backup if you've got one of your own.`,
+        ].join("\n"),
+      );
+    }
+    note(`Saved ${backupFile}`);
+  } else if (backup.reason === "stopped") {
+    warn(
+      "The stack isn't running, so I can't back up the database. Skipping the backup.",
+    );
+  }
+
   // ---- Files. ----
   step(
     `Writing ${bold(`${DEPLOY_DIR}/docker-compose.yml`)} and ${bold(".env")}`,
@@ -404,6 +432,7 @@ async function deployTo(ssh, opts) {
       identity: ssh.identity,
       prefix,
       version: getEnvVar(env, "SAMATA_VERSION"),
+      backup: backupFile,
     }),
   );
 }
@@ -419,6 +448,7 @@ export function renderSummary({
   identity,
   prefix,
   version,
+  backup,
 }) {
   const lines = [
     "",
@@ -426,6 +456,9 @@ export function renderSummary({
     "",
     `  Dashboard   ${bold(url)}`,
     `  Server      ${target}   ${dim(`(files in ${DEPLOY_DIR})`)}`,
+    ...(backup
+      ? [`  Backup      ${backup}   ${dim("(taken before this upgrade)")}`]
+      : []),
     "",
     bold("Next"),
     `  1. Open the dashboard and sign up now: ${bold("the first account owns the install")}.`,

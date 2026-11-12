@@ -12,19 +12,6 @@ control plane applies any new database migrations when it starts.
 <Steps>
 <Step>
 
-### Back up the database
-
-Migrations can't be undone, so a dump taken now is your way back. On the server:
-
-```bash
-cd /opt/samata
-sudo docker compose -p samata exec -T postgres \
-  pg_dump -U samata samata > samata-$(date +%F).sql
-```
-
-</Step>
-<Step>
-
 ### Re-run the deploy
 
 From your own machine, run the same command you used to install, with
@@ -52,6 +39,11 @@ Use this to pin a release in production. To upgrade later, pass the new tag.
 </Tab>
 </Tabs>
 
+Before it changes anything, the CLI dumps the database to
+`/opt/samata/backups/samata-<timestamp>.sql` on the server and keeps the last five.
+Migrations can't be undone, so this is your way back. The upgrade stops if the
+backup fails. Pass `--no-backup` to skip it if you take your own.
+
 </Step>
 <Step>
 
@@ -72,6 +64,8 @@ that holds your `docker-compose.yml` and `.env`.
 <Step>
 
 ### Back up the database
+
+Migrations can't be undone, so a dump taken now is your way back.
 
 ```bash
 docker compose exec -T postgres pg_dump -U samata samata > samata-$(date +%F).sql
@@ -131,13 +125,14 @@ Look for the migrations finishing, then open the dashboard and sign in.
 
 Point `SAMATA_VERSION` at the earlier tag and run `docker compose pull` and
 `docker compose up -d` again. If the newer release applied a migration, the older
-one may not run against it: restore your dump first.
+one may not run against it: restore your dump first. If you used the CLI, the dumps
+are in `/opt/samata/backups` on the server; run these from `/opt/samata` with `sudo`.
 
 ```bash
 docker compose stop control-plane worker
 docker compose exec -T postgres psql -U samata -d postgres \
   -c "DROP DATABASE samata WITH (FORCE)" -c "CREATE DATABASE samata"
-docker compose exec -T postgres psql -U samata samata < samata-2026-01-01.sql
+docker compose exec -T postgres psql -U samata samata < backups/samata-20260101-120000.sql
 ```
 
 Then set the earlier version and start the stack again.

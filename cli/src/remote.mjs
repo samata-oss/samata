@@ -1,4 +1,9 @@
-import { DEPLOY_DIR, DEPLOY_PROJECT } from "./lib.mjs";
+import {
+  BACKUPS_KEPT,
+  BACKUP_DIR,
+  DEPLOY_DIR,
+  DEPLOY_PROJECT,
+} from "./lib.mjs";
 
 // Scripts we run on the server with `ssh host bash -s`, the script on stdin.
 //
@@ -58,6 +63,43 @@ main() {
     done
   fi
   emit busy_ports "\${busy# }"
+}
+main </dev/null
+`;
+
+/**
+ * Dumps the database to BACKUP_DIR before an upgrade and keeps the newest few.
+ * Prints `samata:backup=<file>` on success. The dump is written to a temporary
+ * name first so a half-finished one never looks like a backup.
+ */
+export const BACKUP_SCRIPT = `
+main() {
+  set -eu
+  fail() { echo "samata: $*" >&2; exit 1; }
+
+  SUDO=""
+  [ "$(id -u)" -ne 0 ] && SUDO="sudo"
+
+  dir="${BACKUP_DIR}"
+  $SUDO mkdir -p "$dir"
+  $SUDO chmod 700 "$dir"
+  file="$dir/samata-$(date +%Y%m%d-%H%M%S).sql"
+
+  # The redirect runs as root inside sh, so the dump is never readable by others.
+  if ! $SUDO sh -c 'umask 077; cd ${DEPLOY_DIR} && docker compose -p ${DEPLOY_PROJECT} exec -T postgres pg_dump -U samata samata > "$1"' sh "$file.partial"; then
+    $SUDO rm -f "$file.partial"
+    fail "pg_dump failed (is the postgres container running?)"
+  fi
+  if ! $SUDO test -s "$file.partial"; then
+    $SUDO rm -f "$file.partial"
+    fail "the database dump came out empty"
+  fi
+  $SUDO mv "$file.partial" "$file"
+
+  # Newest first; drop everything after the ones we keep.
+  $SUDO sh -c 'ls -1t "$1"/samata-*.sql 2>/dev/null | tail -n +$(($2 + 1)) | while read -r old; do rm -f "$old"; done' sh "$dir" ${BACKUPS_KEPT}
+
+  printf 'samata:backup=%s\\n' "$file"
 }
 main </dev/null
 `;

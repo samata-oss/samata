@@ -63,6 +63,7 @@ ${bold("Options for deploy")}
   --env-file <file>            Extra KEY=VALUE settings to put in the server's .env
   --version-tag <tag>          Image tag to run, e.g. 0.1.0 (default edge: pin one in production)
   --skip-dns-check             Don't check that your domains point at the server
+  --no-backup                  On a re-run, don't dump the database to /opt/samata/backups first
 
 ${bold("Options for both")}
   --ref <git ref>              Branch, tag or commit of ${bold("samata-oss/samata")} to download from (default main)
@@ -75,7 +76,8 @@ ${bold("init")} needs Docker with Compose v2. Re-running it in the same folder k
 
 ${bold("deploy")} needs ssh on this machine and a server with a public IP: Ubuntu, Debian or
 Amazon Linux, 2+ GB of memory. It installs Docker if missing. Re-running it keeps the
-server's .env, so it doubles as an upgrade.
+server's .env, so it doubles as an upgrade, and dumps the database first (the last 5
+dumps are kept in /opt/samata/backups).
 `;
 
 export async function main(argv) {
@@ -106,6 +108,7 @@ export async function main(argv) {
         "env-file": { type: "string" },
         "version-tag": { type: "string" },
         "skip-dns-check": { type: "boolean", default: false },
+        "no-backup": { type: "boolean", default: false },
         version: { type: "boolean", short: "v", default: false },
         help: { type: "boolean", short: "h", default: false },
       },
@@ -150,6 +153,7 @@ export async function main(argv) {
       envFile: values["env-file"],
       version: values["version-tag"],
       skipDnsCheck: values["skip-dns-check"],
+      backup: !values["no-backup"],
       compose:
         values.compose ??
         productionComposeUrl({

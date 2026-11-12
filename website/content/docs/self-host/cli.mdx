@@ -10,6 +10,7 @@ description: Options for npx @samata-oss/cli deploy, and what to check when it f
 | `--domain <name>`       | Dashboard hostname. Default `<ip>.sslip.io`. Add `--livekit-domain` to name the second one.             |
 | `--env-file <file>`     | Extra `KEY=VALUE` settings for the server's `.env`: see the [environment reference](/docs/environment). |
 | `--version-tag <tag>`   | Image tag, such as `0.1.0`. Default `edge`: pin a release in production.                                |
+| `--no-backup`           | On a re-run, skip the database dump to `/opt/samata/backups` that's taken before upgrading.             |
 
 `npx @samata-oss/cli --help` lists the rest (SSH port, skipping the DNS check, a
 custom compose file). `--env-file` won't change `POSTGRES_PASSWORD`,

@@ -110,6 +110,23 @@ export function looksLikeCompose(text) {
 export const DEPLOY_DIR = "/opt/samata";
 export const DEPLOY_PROJECT = "samata";
 
+/** Database dumps taken before an upgrade, and how many of them we keep. */
+export const BACKUP_DIR = `${DEPLOY_DIR}/backups`;
+export const BACKUPS_KEPT = 5;
+
+/**
+ * Whether a run should dump the database first. Only a re-run has one to dump,
+ * and only a running stack can be asked for it. `reason` says why not.
+ */
+export function planBackup(probe, { enabled = true } = {}) {
+  if (!enabled) return { run: false, reason: "disabled" };
+  if (probe.env_exists !== "1" || probe.volume !== "1") {
+    return { run: false, reason: "fresh" };
+  }
+  if (!(Number(probe.running) > 0)) return { run: false, reason: "stopped" };
+  return { run: true, reason: "" };
+}
+
 /** Where the production compose file lives in the repo. */
 export function productionComposeUrl({
   repo = DEFAULT_REPO,

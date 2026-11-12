@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { test } from "node:test";
 import {
+  BACKUPS_KEPT,
+  BACKUP_DIR,
   assessServer,
   buildEnv,
+  planBackup,
   changedDataSecrets,
   checkIdentityFile,
   classifySshFailure,
@@ -34,7 +37,7 @@ import {
   firewallSummary,
   renderSummary,
 } from "../src/deploy.mjs";
-import { INSTALL_SCRIPT, PROBE_SCRIPT } from "../src/remote.mjs";
+import { BACKUP_SCRIPT, INSTALL_SCRIPT, PROBE_SCRIPT } from "../src/remote.mjs";
 
 test("parseHost splits user and host, and refuses anything that could be an ssh option", () => {
   assert.deepEqual(parseHost("ubuntu@203.0.113.7"), {
@@ -206,9 +209,14 @@ test("sshFailureMessage tells AWS users about the key pair and the security grou
 
 test("a server that offers a password gets the ssh-copy-id fix, not the AWS advice", () => {
   // Hetzner without an SSH key: sshd still lists password as a way in.
-  const keyOnly = classifySshFailure("root@1.2.3.4: Permission denied (publickey).");
+  const keyOnly = classifySshFailure(
+    "root@1.2.3.4: Permission denied (publickey).",
+  );
   assert.deepEqual(keyOnly, { kind: "auth", passwordOffered: false });
-  for (const methods of ["publickey,password", "publickey,keyboard-interactive"]) {
+  for (const methods of [
+    "publickey,password",
+    "publickey,keyboard-interactive",
+  ]) {
     assert.deepEqual(
       classifySshFailure(`root@1.2.3.4: Permission denied (${methods}).`),
       { kind: "auth", passwordOffered: true },
@@ -237,7 +245,11 @@ test("a server that offers a password gets the ssh-copy-id fix, not the AWS advi
 
   // Key-only servers (AWS) keep the existing advice.
   assert.match(
-    sshFailureMessage({ kind: "auth", host: "1.2.3.4", passwordOffered: false }),
+    sshFailureMessage({
+      kind: "auth",
+      host: "1.2.3.4",
+      passwordOffered: false,
+    }),
     /\.pem/,
   );
 });
@@ -561,10 +573,36 @@ test("assessServer: Docker installed but stopped is started, not reinstalled", (
   assert.equal(stopped.warnings.length, 1);
 });
 
+test("planBackup backs up a running re-run, and says why when it doesn't", () => {
+  const rerun = { env_exists: "1", volume: "1", running: "7" };
+  assert.deepEqual(planBackup(rerun), { run: true, reason: "" });
+  assert.equal(planBackup(rerun, { enabled: false }).run, false);
+  assert.equal(planBackup(rerun, { enabled: false }).reason, "disabled");
+  // A first install has no database yet.
+  assert.equal(
+    planBackup({ env_exists: "0", volume: "0", running: "0" }).reason,
+    "fresh",
+  );
+  assert.equal(planBackup({ ...rerun, volume: "0" }).reason, "fresh");
+  // The dump comes from the running postgres container.
+  assert.equal(planBackup({ ...rerun, running: "0" }).reason, "stopped");
+  assert.equal(planBackup({ ...rerun, running: undefined }).reason, "stopped");
+});
+
+test("BACKUP_SCRIPT dumps to a temporary name, keeps the dump private and prunes old ones", () => {
+  assert.match(BACKUP_SCRIPT, new RegExp(`dir="${BACKUP_DIR}"`));
+  assert.match(BACKUP_SCRIPT, /chmod 700 "\$dir"/);
+  assert.match(BACKUP_SCRIPT, /umask 077/);
+  assert.match(BACKUP_SCRIPT, /\.partial/);
+  assert.match(BACKUP_SCRIPT, new RegExp(`"\\$dir" ${BACKUPS_KEPT}\\n`));
+  assert.match(BACKUP_SCRIPT, /samata:backup=/);
+});
+
 // A syntax error in these would only show up on someone's server.
 for (const [name, script] of [
   ["PROBE_SCRIPT", PROBE_SCRIPT],
   ["INSTALL_SCRIPT", INSTALL_SCRIPT],
+  ["BACKUP_SCRIPT", BACKUP_SCRIPT],
 ]) {
   test(`${name} is valid bash`, (t) => {
     const bash = spawnSync("bash", ["--version"]);
@@ -577,7 +615,7 @@ for (const [name, script] of [
 test("remote scripts read all of their input before running anything", () => {
   // The last line calls main with stdin closed: a command that reads stdin
   // (apt, docker) must not swallow the rest of a piped script.
-  for (const script of [PROBE_SCRIPT, INSTALL_SCRIPT]) {
+  for (const script of [PROBE_SCRIPT, INSTALL_SCRIPT, BACKUP_SCRIPT]) {
     assert.match(script.trim(), /\nmain <\/dev\/null$/);
   }
 });
