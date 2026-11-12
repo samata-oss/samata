@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 import { emailEnabled } from "@/server/email";
+import { authCard } from "@/components/auth/styles";
 
 export default async function ForgotPasswordPage({
   searchParams,
@@ -10,7 +11,7 @@ export default async function ForgotPasswordPage({
   // A production install without Resend can't deliver the link.
   if (!emailEnabled()) {
     return (
-      <div className="space-y-4 rounded-lg border bg-card/80 p-6 shadow-2xl shadow-black/10 backdrop-blur">
+      <div className={authCard}>
         <h1 className="text-lg font-semibold tracking-tight">
           Password reset isn't available
         </h1>

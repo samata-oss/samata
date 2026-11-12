@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
+import { authCard } from "@/components/auth/styles";
 
 type Mode = "sign-in" | "sign-up";
 
@@ -101,7 +102,7 @@ export function SignInForm({
 
   if (confirmationSentTo) {
     return (
-      <div className="space-y-4 rounded-lg border bg-card/80 p-6 shadow-2xl shadow-black/10 backdrop-blur">
+      <div className={authCard}>
         <h1 className="text-lg font-semibold tracking-tight">
           Check your email
         </h1>
@@ -124,7 +125,7 @@ export function SignInForm({
   }
 
   return (
-    <div className="space-y-4 rounded-lg border bg-card/80 p-6 shadow-2xl shadow-black/10 backdrop-blur">
+    <div className={authCard}>
       <div className="space-y-1">
         <h1 className="text-lg font-semibold tracking-tight">
           {signingUp ? "Create your account" : "Sign in"}

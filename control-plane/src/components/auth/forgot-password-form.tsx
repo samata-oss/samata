@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
+import { authCard } from "@/components/auth/styles";
 
 /** Asks for an address and emails a reset link. The answer is the same whether or not the address has an account. */
 export function ForgotPasswordForm({ initialEmail }: { initialEmail: string }) {
@@ -34,7 +35,7 @@ export function ForgotPasswordForm({ initialEmail }: { initialEmail: string }) {
   }
 
   return (
-    <div className="space-y-4 rounded-lg border bg-card/80 p-6 shadow-2xl shadow-black/10 backdrop-blur">
+    <div className={authCard}>
       <div className="space-y-1">
         <h1 className="text-lg font-semibold tracking-tight">
           Reset your password

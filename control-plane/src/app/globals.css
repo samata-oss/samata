@@ -165,3 +165,19 @@
     transparent 75%
   );
 }
+
+/*
+ * Sign-in pages: the marketing site's look. Square corners, and a page colour
+ * the dither art is built against. The art is drawn light on dark, so light
+ * mode flips it, keeping the hues.
+ */
+.auth-theme {
+  --radius: 0px;
+  --auth-bg: oklch(0.985 0.002 270);
+}
+.dark .auth-theme {
+  --auth-bg: oklch(0.125 0.005 270);
+}
+:root:not(.dark) .auth-art {
+  filter: invert(1) hue-rotate(180deg);
+}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
+import { authCard } from "@/components/auth/styles";
 
 /**
  * Where the emailed link lands. Better Auth checks the token, then sends the
@@ -14,7 +15,7 @@ export default async function ResetPasswordPage({
 
   if (!token || error) {
     return (
-      <div className="space-y-4 rounded-lg border bg-card/80 p-6 shadow-2xl shadow-black/10 backdrop-blur">
+      <div className={authCard}>
         <h1 className="text-lg font-semibold tracking-tight">
           This link isn't valid
         </h1>

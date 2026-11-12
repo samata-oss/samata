@@ -4,6 +4,7 @@ import { AcceptInvitation } from "@/components/auth/accept-invitation";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { pendingInvitation } from "@/server/invitations";
 import { getUser } from "@/server/workspace";
+import { authCard } from "@/components/auth/styles";
 
 function Card({
   title,
@@ -13,7 +14,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-4 rounded-lg border bg-card/80 p-6 shadow-2xl shadow-black/10 backdrop-blur">
+    <div className={authCard}>
       <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
       {children}
     </div>
