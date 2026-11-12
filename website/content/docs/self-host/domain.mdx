@@ -3,22 +3,77 @@ title: Set up a domain
 description: Use your own hostnames instead of the default sslip.io names.
 ---
 
-Samata serves two hostnames from the same server: one for the dashboard and API,
-one for LiveKit (browser audio and SIP). Caddy gets a TLS certificate for each.
+<Steps>
+<Step>
 
-| Hostname                               | Serves            | Set with           |
-| -------------------------------------- | ----------------- | ------------------ |
-| `samata.example.com`                   | Dashboard and API | `--domain`         |
-| `livekit.samata.example.com` (default) | LiveKit and SIP   | `--livekit-domain` |
+### Create two DNS records
 
-With no `--domain`, the CLI uses `<ip>.sslip.io` names that need no DNS setup,
-which is fine for trying Samata out. For production, create two `A` records that
-both point at the server's IP, then pass the first name:
+Samata needs two hostnames that both point at your server: one for the dashboard
+and API, one for LiveKit. At your DNS provider, create two `A` records with the
+server's static public IP. Pick a tab for a subdomain (use this if the domain already hosts
+something else) or a root domain (use this if it's new):
+
+<Tabs items={["Subdomain", "Root domain"]}>
+<Tab value="Subdomain">
+
+| Type | Name                         | Value         |
+| ---- | ---------------------------- | ------------- |
+| `A`  | `samata.example.com`         | `<server-ip>` |
+| `A`  | `livekit.samata.example.com` | `<server-ip>` |
+
+Some providers want only the part before your domain. In that case, enter
+`samata` and `livekit.samata`.
+
+</Tab>
+<Tab value="Root domain">
+
+| Type | Name                  | Value         |
+| ---- | --------------------- | ------------- |
+| `A`  | `example.com`         | `<server-ip>` |
+| `A`  | `livekit.example.com` | `<server-ip>` |
+
+Most providers show the root domain as `@`. In that case, enter `@` and
+`livekit`.
+
+</Tab>
+</Tabs>
+
+Wait for the records to propagate before you continue.
+
+</Step>
+<Step>
+
+### Deploy with your domain
+
+From your own machine, run the deploy command and pass the first name. The
+LiveKit name defaults to `livekit.` plus that name, so you only need
+`--livekit-domain` if you want something else. Pick a tab:
+
+<Tabs items={["Subdomain", "Root domain"]}>
+<Tab value="Subdomain">
 
 ```bash
-npx @samata-oss/cli deploy --host ubuntu@<elastic-ip> --domain samata.example.com
+npx @samata-oss/cli deploy --host ubuntu@<server-ip> --domain samata.example.com
 ```
 
-The second name defaults to `livekit.` plus the first, so you only need
-`--livekit-domain` if you want something else. The CLI checks that both resolve
-to the server before it starts anything.
+</Tab>
+<Tab value="Root domain">
+
+```bash
+npx @samata-oss/cli deploy --host ubuntu@<server-ip> --domain example.com
+```
+
+</Tab>
+</Tabs>
+
+</Step>
+<Step>
+
+### Check that it came up
+
+Before it starts anything, the CLI checks that both names resolve to the server.
+If either doesn't, fix the DNS record and run the command again. Once the deploy
+finishes, open your domain in a browser to reach the dashboard.
+
+</Step>
+</Steps>
