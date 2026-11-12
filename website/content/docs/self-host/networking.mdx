@@ -1,0 +1,36 @@
+---
+title: Ports and domains
+description: The firewall ports to open and the two hostnames Samata needs.
+---
+
+Open these ports on the server's firewall (an AWS security group, a Google Cloud
+VPC rule, a Hetzner or DigitalOcean Cloud Firewall):
+
+| Port                              | Used for                                |
+| --------------------------------- | --------------------------------------- |
+| `80`, `443`                       | Caddy: automatic TLS, dashboard and API |
+| `7881/tcp`, `7882/udp`            | WebRTC media                            |
+| `5060/tcp+udp`, `10000-10100/udp` | SIP, only for phone calls               |
+
+The CLI can test the TCP ports from your machine but not UDP, so open those too,
+or calls connect without audio.
+
+Samata serves two hostnames from the same server: one for the dashboard and API,
+one for LiveKit (browser audio and SIP). Caddy gets a TLS certificate for each.
+
+| Hostname                               | Serves            | Set with           |
+| -------------------------------------- | ----------------- | ------------------ |
+| `samata.example.com`                   | Dashboard and API | `--domain`         |
+| `livekit.samata.example.com` (default) | LiveKit and SIP   | `--livekit-domain` |
+
+With no `--domain`, the CLI uses `<ip>.sslip.io` names that need no DNS setup,
+which is fine for trying Samata out. For production, create two `A` records that
+both point at the server's IP, then pass the first name:
+
+```bash
+npx @samata-oss/cli deploy --host ubuntu@<elastic-ip> --domain samata.example.com
+```
+
+The second name defaults to `livekit.` plus the first, so you only need
+`--livekit-domain` if you want something else. The CLI checks that both resolve
+to the server before it starts anything.

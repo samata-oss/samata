@@ -1,0 +1,12 @@
+{
+  "title": "Self-host",
+  "icon": "Server",
+  "pages": [
+    "index",
+    "networking",
+    "cli",
+    "manual",
+    "livekit-cloud",
+    "upgrades"
+  ]
+}

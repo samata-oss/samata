@@ -1,0 +1,29 @@
+---
+title: CLI reference
+description: Options for npx @samata-oss/cli deploy, and what to check when it fails.
+---
+
+| Option                  | What it does                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- |
+| `--host <user@host>`    | The server. The user is optional.                                                                       |
+| `-i, --identity <file>` | SSH private key, if it isn't one ssh already uses.                                                      |
+| `--domain <name>`       | Dashboard hostname. Default `<ip>.sslip.io`. Add `--livekit-domain` to name the second one.             |
+| `--env-file <file>`     | Extra `KEY=VALUE` settings for the server's `.env`: see the [environment reference](/docs/environment). |
+| `--version-tag <tag>`   | Image tag, such as `0.1.0`. Default `edge`: pin a release in production.                                |
+
+`npx @samata-oss/cli --help` lists the rest (SSH port, skipping the DNS check, a
+custom compose file). `--env-file` won't change `POSTGRES_PASSWORD`,
+`BETTER_AUTH_SECRET` or `SAMATA_ENCRYPTION_KEY` on a server that already has data,
+since that would make the database and stored provider keys unreadable.
+
+If `https://<domain>` doesn't answer within three minutes, the CLI tests each TCP
+port, prints the end of Caddy's log, and names the firewall to check. To look
+yourself:
+`ssh <user>@<ip> "cd /opt/samata && sudo docker compose -p samata logs -f"`.
+
+## Re-running and upgrading
+
+Run it again to upgrade: it keeps the server's `.env`, so your data and stored
+provider keys stay readable. Logins are by SSH key only, not password. On Hetzner
+and DigitalOcean, skipping the SSH key when you create the server gives you an
+emailed root password, which the CLI can't use; run `ssh-copy-id root@<ip>` first.

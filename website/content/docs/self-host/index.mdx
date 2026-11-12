@@ -1,0 +1,124 @@
+---
+title: Quickstart
+description: Create a server and run one command to self-host Samata.
+---
+
+<Steps>
+<Step>
+
+### Create a server
+
+Pick your provider.
+
+<Tabs groupId="provider" persist items={["Hetzner", "DigitalOcean", "AWS", "Google Cloud", "Other"]}>
+<Tab value="Hetzner">
+
+Create a server with **Ubuntu 24.04**, at least 2 GB of memory, and your SSH key
+selected. There's no firewall unless you attach one.
+
+</Tab>
+<Tab value="DigitalOcean">
+
+Create a droplet with **Ubuntu 24.04**, at least 2 GB of memory, and your SSH key
+selected. A Cloud Firewall only matters if you attached one.
+
+</Tab>
+<Tab value="AWS">
+
+Launch an **Ubuntu 24.04** instance (`t3.small` or larger, 20 GB volume) and
+create a new key pair when asked: AWS downloads a `.pem` file, so keep it.
+Attach an **Elastic IP**, since a plain public IP changes when the instance
+restarts, and add the [ports](/docs/self-host/networking) to its **security group**.
+
+</Tab>
+<Tab value="Google Cloud">
+
+Create a VM with **Ubuntu 24.04** (`e2-medium` or larger) and reserve a static
+external IP. Open the [ports](/docs/self-host/networking) with a VPC firewall
+rule, then connect once with `gcloud compute ssh <vm-name>`. That creates the
+key at `~/.ssh/google_compute_engine`.
+
+</Tab>
+<Tab value="Other">
+
+Any Ubuntu, Debian or Amazon Linux server with a public IPv4 address works:
+Azure, Vultr, Linode, a VPS, a machine under your desk. On any other Linux,
+install Docker with Compose v2.20 or newer first.
+
+You'll log in as `root` or a user with passwordless sudo.
+
+</Tab>
+</Tabs>
+
+</Step>
+<Step>
+
+### Run one command
+
+Run this from your laptop. It needs `ssh` and nothing else.
+
+<Tabs groupId="provider" persist items={["Hetzner", "DigitalOcean", "AWS", "Google Cloud", "Other"]}>
+<Tab value="Hetzner">
+
+```bash
+npx @samata-oss/cli deploy --host root@<server-ip>
+```
+
+</Tab>
+<Tab value="DigitalOcean">
+
+```bash
+npx @samata-oss/cli deploy --host root@<droplet-ip>
+```
+
+</Tab>
+<Tab value="AWS">
+
+```bash
+chmod 400 ~/Downloads/my-key.pem
+npx @samata-oss/cli deploy --host ubuntu@<elastic-ip> -i ~/Downloads/my-key.pem
+```
+
+</Tab>
+<Tab value="Google Cloud">
+
+```bash
+npx @samata-oss/cli deploy --host $USER@<external-ip> -i ~/.ssh/google_compute_engine
+```
+
+</Tab>
+<Tab value="Other">
+
+```bash
+npx @samata-oss/cli deploy --host <user>@<server-ip>
+```
+
+</Tab>
+</Tabs>
+
+The CLI installs Docker if it's missing, generates the secrets, writes the
+compose file and `.env` to `/opt/samata`, starts the stack, and waits until the
+dashboard answers over HTTPS.
+
+</Step>
+<Step>
+
+### Sign up
+
+Open the URL the CLI prints and create an account.
+
+<Callout type="warn">
+  **Do this right away.** The first account becomes the owner of the install.
+  After that, sign-up is invitation-only.
+</Callout>
+
+</Step>
+</Steps>
+
+## Next
+
+<Cards>
+  <Card title="Ports and domains" href="/docs/self-host/networking" />
+  <Card title="CLI reference" href="/docs/self-host/cli" />
+  <Card title="Upgrades" href="/docs/self-host/upgrades" />
+</Cards>

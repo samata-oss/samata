@@ -1,0 +1,16 @@
+---
+title: LiveKit Cloud
+description: Use LiveKit Cloud instead of running LiveKit and SIP yourself.
+---
+
+The worker and control plane only need `LIVEKIT_URL` and API keys. To use
+LiveKit Cloud, delete the `livekit` and `sip` services from the compose file and
+point `.env` at your project:
+
+```bash
+LIVEKIT_URL=wss://<project>.livekit.cloud
+LIVEKIT_PUBLIC_URL=wss://<project>.livekit.cloud
+```
+
+Running the media layer yourself (public IPs, UDP, TURN) is the hardest part of
+self-hosting, so this is a reasonable starting point.

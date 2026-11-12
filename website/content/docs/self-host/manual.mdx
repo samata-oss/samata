@@ -1,0 +1,43 @@
+---
+title: Install by hand
+description: Run the compose stack yourself, without the CLI.
+---
+
+If you'd rather not use the CLI, or your server can't be reached over SSH from
+where you work, run the stack yourself.
+
+```bash
+mkdir samata && cd samata
+curl -O https://raw.githubusercontent.com/samata-oss/samata/main/deploy/docker-compose.yml
+curl -o .env https://raw.githubusercontent.com/samata-oss/samata/main/deploy/.env.example
+$EDITOR .env            # domains and secrets
+docker compose up -d
+```
+
+This starts Caddy (automatic TLS), the control plane, the worker, LiveKit, Redis,
+Postgres and the SIP server. Add `--scale worker=N` for more concurrent calls.
+
+<Callout type="warn">
+  **Sign up as soon as you deploy.** The first account becomes the owner of the
+  install. After that, sign-up is invitation-only.
+</Callout>
+
+## Configure `.env`
+
+At minimum, set the image prefix, both domains, and the secrets. Generate each
+secret with `openssl rand -hex 32`.
+
+```bash
+SAMATA_IMAGE_PREFIX=ghcr.io/your-org
+SAMATA_DOMAIN=samata.example.com
+LIVEKIT_DOMAIN=livekit.example.com
+
+POSTGRES_PASSWORD=
+SAMATA_WEBHOOK_SECRET=
+BETTER_AUTH_SECRET=
+LIVEKIT_API_SECRET=
+```
+
+Model provider keys (OpenAI, Deepgram, ...) are **not** in `.env`: sign in and add
+them on the dashboard's **Provider Keys** page. Everything else is covered in the
+[environment reference](/docs/environment).

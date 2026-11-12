@@ -214,12 +214,6 @@ provider's defaults. Keys are never part of the config:
 runs on the assistant's model provider with the same key, using the provider's
 small default model unless `analysisPlan.model` says otherwise.
 
-**Upgrading:** the worker and control plane no longer read `OPENAI_API_KEY`,
-`DEEPGRAM_API_KEY` or `CARTESIA_API_KEY`. Add those keys on Provider Keys, then
-remove them from your env. An assistant that pointed `openai` at another host
-with `baseUrl` is now `custom` (its OpenAI key was never meant for that host);
-switch it to the provider's own entry if there is one.
-
 ### Accounts and workspaces
 
 The dashboard has real accounts (email and password, plus optional Google),
