@@ -12,6 +12,7 @@ import {
   DEFAULT_ORGANIZATION_SLUG,
 } from "@/lib/workspace";
 import {
+  notifySignup,
   provisionWorkspace,
   requireEmailVerification,
   signUpsOpen,
@@ -34,6 +35,15 @@ const google =
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       }
     : null;
+
+/** Where the request came from, for links when no public URL is configured. */
+function requestOrigin(request: Request | undefined) {
+  try {
+    return request ? new URL(request.url).origin : "";
+  } catch {
+    return "";
+  }
+}
 
 /** Whether "Continue with Google" is configured. */
 export const googleEnabled = google !== null;
@@ -148,6 +158,11 @@ export const auth = betterAuth({
         },
         after: async (user, context) => {
           const body = context?.body as Record<string, unknown> | undefined;
+          // Not awaited: sign-up shouldn't wait on a mail provider.
+          void notifySignup(
+            { ...user, emailVerified: user.emailVerified ?? false },
+            publicUrl() || requestOrigin(context?.request),
+          );
           if (await provisionWorkspace(user, body?.workspaceName)) return;
           await claimDefaultWorkspace(user.id);
         },

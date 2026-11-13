@@ -25,6 +25,7 @@ export function AppSidebar({
   workspaceName,
   workspaceId,
   workspaces,
+  viewingAs = false,
   groups,
   showLivekit = true,
   ...props
@@ -33,6 +34,8 @@ export function AppSidebar({
   workspaceName: string;
   workspaceId: string;
   workspaces: { id: string; name: string }[];
+  /** The superuser is viewing as this account: switching workspace changes the view, not a session. */
+  viewingAs?: boolean;
   groups: NavGroup[];
   /** The LiveKit host chip. Self-hosters want it; the managed cloud hides it. */
   showLivekit?: boolean;
@@ -44,6 +47,7 @@ export function AppSidebar({
           workspaceName={workspaceName}
           workspaceId={workspaceId}
           workspaces={workspaces}
+          viewingAs={viewingAs}
         />
       </SidebarHeader>
       <SidebarContent>
@@ -66,11 +70,7 @@ export function AppSidebar({
             </span>
           </div>
         )}
-        <NavUser
-          name={user.name}
-          email={user.email}
-          workspaceName={workspaceName}
-        />
+        <NavUser name={user.name} email={user.email} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

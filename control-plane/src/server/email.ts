@@ -157,6 +157,27 @@ export function sendInvitationEmail(
   });
 }
 
+/** Tells the superuser that someone created a cloud account. */
+export function sendSignupNotification(
+  to: string,
+  newUser: { name: string; email: string; emailVerified: boolean },
+  url: string | null,
+) {
+  return send({
+    to,
+    subject: `New Samata sign-up: ${newUser.email}`,
+    paragraphs: [
+      `${newUser.name} just signed up for Samata cloud.`,
+      `Email: ${newUser.email}`,
+      newUser.emailVerified
+        ? "Email confirmed: yes"
+        : "Email confirmed: not yet (their workspace is created once they confirm)",
+      `Signed up: ${new Date().toUTCString()}`,
+    ],
+    action: url ? { label: "View in Admin", url } : undefined,
+  });
+}
+
 /** Someone tried to sign up with an address that already has an account. */
 export function sendExistingAccountEmail(
   to: string,

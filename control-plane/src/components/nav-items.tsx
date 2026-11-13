@@ -6,6 +6,7 @@ import {
   CreditCardIcon,
   KeyRoundIcon,
   PhoneIcon,
+  ShieldIcon,
   ScrollTextIcon,
   SettingsIcon,
   UsersIcon,
@@ -15,9 +16,15 @@ import type { NavGroup } from "@/components/nav-main";
 
 /**
  * Every top-level page. Drives both the sidebar and the command palette.
- * `cloud` adds the pages only the managed cloud has.
+ * `cloud` adds the pages only the managed cloud has; `superuser` adds Super user.
  */
-export const navGroups = ({ cloud }: { cloud: boolean }): NavGroup[] => [
+export const navGroups = ({
+  cloud,
+  superuser = false,
+}: {
+  cloud: boolean;
+  superuser?: boolean;
+}): NavGroup[] => [
   {
     label: "Build",
     items: [
@@ -57,4 +64,14 @@ export const navGroups = ({ cloud }: { cloud: boolean }): NavGroup[] => [
         : []),
     ],
   },
+  ...(superuser
+    ? [
+        {
+          label: "Super user",
+          items: [
+            { title: "Users", url: "/admin/users", icon: <ShieldIcon /> },
+          ],
+        },
+      ]
+    : []),
 ];

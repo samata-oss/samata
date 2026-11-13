@@ -1,5 +1,6 @@
 import { cloudEnabled } from "@/cloud/config";
-import { emailEnabled } from "@/server/email";
+import { SUPERUSER_EMAIL } from "@/lib/superuser";
+import { emailEnabled, sendSignupNotification } from "@/server/email";
 
 /**
  * The only door from the open-source app into `src/cloud/`. The hook does
@@ -74,4 +75,28 @@ export async function provisionWorkspace(
   if (!user.emailVerified) return true;
   await createPersonalWorkspace(user);
   return true;
+}
+
+/**
+ * Called once when an account is created. On the managed cloud, tells the
+ * superuser who signed up. Never throws: a failed notification must not break
+ * someone's sign-up.
+ */
+export async function notifySignup(
+  user: { name: string; email: string; emailVerified: boolean },
+  appUrl: string,
+) {
+  if (!cloudEnabled()) return;
+  if (user.email.trim().toLowerCase() === SUPERUSER_EMAIL) return;
+  try {
+    await sendSignupNotification(
+      SUPERUSER_EMAIL,
+      user,
+      appUrl
+        ? `${appUrl}/admin/users?q=${encodeURIComponent(user.email)}`
+        : null,
+    );
+  } catch (err) {
+    console.error("[signup] could not notify the superuser", err);
+  }
 }

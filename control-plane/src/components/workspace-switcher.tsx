@@ -3,6 +3,7 @@
 import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { switchViewAsWorkspaceAction } from "@/app/(dashboard)/admin/actions";
 import { LogoMark } from "@/components/logo-mark";
 import {
   DropdownMenu,
@@ -46,18 +47,30 @@ export function WorkspaceSwitcher({
   workspaceName,
   workspaceId,
   workspaces,
+  viewingAs = false,
 }: {
   workspaceName: string;
   workspaceId: string;
   workspaces: { id: string; name: string }[];
+  viewingAs?: boolean;
 }) {
   const router = useRouter();
 
   async function switchTo(organizationId: string) {
     if (organizationId === workspaceId) return;
-    const result = await authClient.organization.setActive({ organizationId });
-    if (result.error) {
-      toast.error(result.error.message ?? "Could not switch workspace.");
+    // The superuser's own session must keep its workspace: viewing another
+    // account's workspaces only changes the view.
+    const error = viewingAs
+      ? await switchViewAsWorkspaceAction(organizationId).then((r) =>
+          r.ok ? null : r.error,
+        )
+      : await authClient.organization
+          .setActive({ organizationId })
+          .then((r) =>
+            r.error ? (r.error.message ?? "Could not switch workspace.") : null,
+          );
+    if (error) {
+      toast.error(error);
       return;
     }
     // Another workspace's assistants and logs live at other URLs: start over.

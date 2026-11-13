@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/sidebar";
 import { eq } from "drizzle-orm";
 import { cloudEnabled } from "@/cloud/config";
+import { ViewAsBanner } from "@/components/admin/view-as-banner";
 import { CommandPalette } from "@/components/command-palette";
 import { navGroups } from "@/components/nav-items";
 import { db } from "@/db";
@@ -23,14 +24,20 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, workspaceName, organizationId, workspaces } =
-    await requireWorkspaceSession();
+  const {
+    user,
+    workspaceName,
+    organizationId,
+    workspaces,
+    isSuperuser,
+    viewingAs,
+  } = await requireWorkspaceSession();
   const assistants = await db
     .select({ slug: agent.slug, name: agent.name })
     .from(agent)
     .where(eq(agent.organizationId, organizationId))
     .orderBy(agent.name);
-  const groups = navGroups({ cloud: cloudEnabled() });
+  const groups = navGroups({ cloud: cloudEnabled(), superuser: isSuperuser });
   return (
     <SidebarProvider>
       <AppSidebar
@@ -38,10 +45,12 @@ export default async function DashboardLayout({
         workspaceName={workspaceName}
         workspaceId={organizationId}
         workspaces={workspaces}
+        viewingAs={viewingAs !== null}
         groups={groups}
         showLivekit={!cloudEnabled()}
       />
       <SidebarInset className="h-svh overflow-hidden">
+        {viewingAs && <ViewAsBanner name={user.name} email={user.email} />}
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator
@@ -54,7 +63,9 @@ export default async function DashboardLayout({
             <ThemeToggle />
           </div>
         </header>
-        <main className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">{children}</main>
+        <main className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
+          {children}
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );

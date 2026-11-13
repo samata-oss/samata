@@ -10,18 +10,10 @@ import {
 import { authClient } from "@/lib/auth-client";
 
 /**
- * Who is signed in, which workspace they're in, and a way out. Switching
- * workspace is at the top of the sidebar (`WorkspaceSwitcher`).
+ * Who is signed in and a way out. The workspace, and switching it, is at the
+ * top of the sidebar (`WorkspaceSwitcher`).
  */
-export function NavUser({
-  name,
-  email,
-  workspaceName,
-}: {
-  name: string;
-  email: string;
-  workspaceName: string;
-}) {
+export function NavUser({ name, email }: { name: string; email: string }) {
   const router = useRouter();
 
   async function signOut() {
@@ -35,7 +27,7 @@ export function NavUser({
       <SidebarMenuItem>
         <SidebarMenuButton
           size="lg"
-          tooltip={`${name} · ${workspaceName}`}
+          tooltip={`${name} · ${email}`}
           className="pointer-events-none"
         >
           <div className="flex aspect-square size-7 items-center justify-center rounded-md bg-sidebar-accent font-mono text-[11px] font-medium uppercase">
@@ -43,7 +35,7 @@ export function NavUser({
           </div>
           <div className="grid flex-1 text-left text-sm leading-tight">
             <span className="truncate font-medium">{name}</span>
-            <span className="truncate text-xs">{workspaceName}</span>
+            <span className="truncate text-xs">{email}</span>
           </div>
         </SidebarMenuButton>
       </SidebarMenuItem>

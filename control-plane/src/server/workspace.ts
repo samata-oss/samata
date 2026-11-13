@@ -1,10 +1,12 @@
 import { asc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { db } from "@/db";
-import { member, organization } from "@/db/schema";
+import { member, organization, user as userTable } from "@/db/schema";
+import { isSuperuser } from "@/lib/superuser";
 import { auth } from "@/server/auth";
+import { viewAsFromHeaders } from "@/server/view-as";
 
 export type WorkspaceSession = {
   user: { id: string; name: string; email: string };
@@ -13,6 +15,13 @@ export type WorkspaceSession = {
   role: string;
   /** Every workspace the user belongs to, for the switcher. */
   workspaces: { id: string; name: string }[];
+  /** The signed-in account is the superuser (and isn't viewing as someone else). */
+  isSuperuser: boolean;
+  /**
+   * Set while the superuser is viewing as another account: `user` is then that
+   * account, and this is the superuser who is really signed in.
+   */
+  viewingAs: { realUser: { id: string; name: string; email: string } } | null;
 };
 
 export type SessionLookup =
@@ -32,8 +41,47 @@ export async function lookupSession(h: Headers): Promise<SessionLookup> {
   const current = await auth.api.getSession({ headers: h });
   if (!current) return { kind: "anonymous" };
 
-  const { user } = current;
-  const memberships = await db
+  const real = current.user;
+  const superuser = isSuperuser(real);
+
+  // The superuser viewing as someone else: everything below runs as them.
+  const viewAs = superuser ? viewAsFromHeaders(h) : null;
+  if (viewAs && viewAs.by === real.id) {
+    const viewed = await viewedAccount(viewAs.userId, viewAs.organizationId);
+    if (viewed) {
+      return {
+        kind: "ok",
+        session: {
+          ...viewed,
+          isSuperuser: false,
+          viewingAs: {
+            realUser: { id: real.id, name: real.name, email: real.email },
+          },
+        },
+      };
+    }
+    // The account is gone, or has no workspace to look at: carry on as
+    // yourself rather than get stuck on a page you can't leave.
+  }
+
+  const memberships = await membershipsOf(real.id);
+  const active = current.session.activeOrganizationId;
+  const picked =
+    memberships.find((m) => m.organizationId === active) ?? memberships[0];
+  if (!picked) return { kind: "no-workspace", user: real };
+
+  return {
+    kind: "ok",
+    session: {
+      ...sessionFor(real, picked, memberships),
+      isSuperuser: superuser,
+      viewingAs: null,
+    },
+  };
+}
+
+function membershipsOf(userId: string) {
+  return db
     .select({
       organizationId: member.organizationId,
       role: member.role,
@@ -41,25 +89,44 @@ export async function lookupSession(h: Headers): Promise<SessionLookup> {
     })
     .from(member)
     .innerJoin(organization, eq(organization.id, member.organizationId))
-    .where(eq(member.userId, user.id))
+    .where(eq(member.userId, userId))
     .orderBy(asc(member.createdAt));
+}
 
-  const active = current.session.activeOrganizationId;
-  const chosen = memberships.find((m) => m.organizationId === active);
-  const picked = chosen ?? memberships[0];
-  if (!picked) return { kind: "no-workspace", user };
+type Membership = Awaited<ReturnType<typeof membershipsOf>>[number];
 
+function sessionFor(
+  user: { id: string; name: string; email: string },
+  picked: Membership,
+  memberships: Membership[],
+) {
   return {
-    kind: "ok",
-    session: {
-      user: { id: user.id, name: user.name, email: user.email },
-      ...picked,
-      workspaces: memberships.map((m) => ({
-        id: m.organizationId,
-        name: m.workspaceName,
-      })),
-    },
+    user: { id: user.id, name: user.name, email: user.email },
+    ...picked,
+    workspaces: memberships.map((m) => ({
+      id: m.organizationId,
+      name: m.workspaceName,
+    })),
   };
+}
+
+/** Another account as the superuser sees it: null if it doesn't exist or has no workspace. */
+async function viewedAccount(userId: string, organizationId?: string) {
+  const [viewed] = await db
+    .select({
+      id: userTable.id,
+      name: userTable.name,
+      email: userTable.email,
+    })
+    .from(userTable)
+    .where(eq(userTable.id, userId))
+    .limit(1);
+  if (!viewed) return null;
+  const memberships = await membershipsOf(viewed.id);
+  const picked =
+    memberships.find((m) => m.organizationId === organizationId) ??
+    memberships[0];
+  return picked ? sessionFor(viewed, picked, memberships) : null;
 }
 
 /**
@@ -86,3 +153,19 @@ export const getUser = cache(async () => {
   const current = await auth.api.getSession({ headers: await headers() });
   return current?.user ?? null;
 });
+
+/** For the superuser's own pages. Anyone else (or the superuser viewing as someone) gets a 404. */
+export async function requireSuperuser() {
+  const session = await requireWorkspaceSession();
+  if (!session.isSuperuser) notFound();
+  return session;
+}
+
+/**
+ * The real signed-in account when it is the superuser, whoever it is viewing
+ * as. For the actions that start, change and end viewing.
+ */
+export async function getSuperuser() {
+  const me = await getUser();
+  return me && isSuperuser(me) ? me : null;
+}
