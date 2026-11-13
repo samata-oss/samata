@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { member, organization } from "@/db/schema";
 import { pendingInvitationFor } from "@/server/invitations";
@@ -60,6 +60,7 @@ async function insertWorkspace(userId: string, name: string) {
       createdAt: new Date(),
     });
   });
+  return id;
 }
 
 /**
@@ -126,17 +127,35 @@ export async function renameWorkspace(
 }
 
 /**
- * A fresh workspace for someone who has none, because they deleted theirs or
- * left the team they were in. Returns whether one was made.
+ * How many workspaces of their own a person has (ones they own, as opposed to
+ * ones they were invited into).
+ */
+export async function ownedWorkspaceCount(userId: string) {
+  const [row] = await db
+    .select({ n: count() })
+    .from(member)
+    .where(and(eq(member.userId, userId), eq(member.role, "owner")));
+  return row?.n ?? 0;
+}
+
+/**
+ * A workspace of one's own for someone who is already signed in: their first
+ * after deleting the last one, or one alongside workspaces they were invited
+ * into (an invitation doesn't stop them having their own). Everyone gets one:
+ * a second would be a second free tier. Returns the new workspace's id so the
+ * caller can open it.
  */
 export async function createWorkspaceFor(
   user: { id: string; name: string },
   rawName?: unknown,
 ) {
-  if (await hasWorkspace(user.id)) return false;
-  await insertWorkspace(
+  if ((await ownedWorkspaceCount(user.id)) > 0) {
+    throw new Error(
+      "You already have a workspace of your own. Delete it to make a new one.",
+    );
+  }
+  return insertWorkspace(
     user.id,
     cleanWorkspaceName(rawName) ?? workspaceNameFor(user.name),
   );
-  return true;
 }

@@ -8,17 +8,21 @@ import { authClient } from "@/lib/auth-client";
 export function AcceptInvitation({ invitationId }: { invitationId: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState<"accept" | "decline" | null>(null);
 
-  async function accept() {
+  async function respond(action: "accept" | "decline") {
     setError(null);
-    setPending(true);
-    const result = await authClient.organization.acceptInvitation({
-      invitationId,
-    });
+    setPending(action);
+    const result =
+      action === "accept"
+        ? await authClient.organization.acceptInvitation({ invitationId })
+        : await authClient.organization.rejectInvitation({ invitationId });
     if (result.error) {
-      setError(result.error.message ?? "Could not accept the invitation.");
-      setPending(false);
+      setError(
+        result.error.message ??
+          `Could not ${action === "accept" ? "accept" : "decline"} the invitation.`,
+      );
+      setPending(null);
       return;
     }
     router.push("/");
@@ -32,9 +36,22 @@ export function AcceptInvitation({ invitationId }: { invitationId: string }) {
           {error}
         </p>
       )}
-      <Button className="w-full" disabled={pending} onClick={accept}>
-        {pending ? "Joining…" : "Accept invitation"}
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          className="flex-1"
+          disabled={pending !== null}
+          onClick={() => respond("accept")}
+        >
+          {pending === "accept" ? "Joining…" : "Accept invitation"}
+        </Button>
+        <Button
+          variant="outline"
+          disabled={pending !== null}
+          onClick={() => respond("decline")}
+        >
+          {pending === "decline" ? "Declining…" : "Decline"}
+        </Button>
+      </div>
     </div>
   );
 }

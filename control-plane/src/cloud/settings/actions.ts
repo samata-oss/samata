@@ -16,7 +16,7 @@ import { DeleteBlockedError, deleteAccount, deleteWorkspace } from "./service";
 
 type Result = { ok: true } | { ok: false; error: string };
 
-function failure(err: unknown, fallback: string): Result {
+function failure(err: unknown, fallback: string): { ok: false; error: string } {
   if (err instanceof DeleteBlockedError)
     return { ok: false, error: err.message };
   console.error("[settings]", fallback, err);
@@ -83,16 +83,18 @@ export async function deleteAccountAction(
   return { ok: true };
 }
 
-/** For someone with no workspace left: start a new one. */
-export async function createWorkspaceAction(name: string): Promise<Result> {
+/** Start a new workspace, for someone with none or with some already. */
+export async function createWorkspaceAction(
+  name: string,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   if (!cloudEnabled()) return { ok: false, error: "Not available." };
   const me = await getUser();
   if (!me) return { ok: false, error: "Sign in again to continue." };
   try {
-    await createWorkspaceFor({ id: me.id, name: me.name }, name);
+    const id = await createWorkspaceFor({ id: me.id, name: me.name }, name);
+    revalidatePath("/", "layout");
+    return { ok: true, id };
   } catch (err) {
     return failure(err, "Could not create the workspace.");
   }
-  revalidatePath("/", "layout");
-  return { ok: true };
 }

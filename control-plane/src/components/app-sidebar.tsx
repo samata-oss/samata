@@ -1,16 +1,13 @@
 import type * as React from "react";
-import { LogoMark } from "@/components/logo-mark";
 import { NavMain } from "@/components/nav-main";
 import type { NavGroup } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
+import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
 
@@ -43,21 +40,11 @@ export function AppSidebar({
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<a href="/assistants" />}>
-              <LogoMark />
-              <div className="grid flex-1 text-left leading-tight">
-                <span className="truncate text-sm font-semibold tracking-tight">
-                  Samata
-                </span>
-                <span className="truncate font-mono text-[11px] text-sidebar-foreground/50">
-                  {workspaceName}
-                </span>
-              </div>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <WorkspaceSwitcher
+          workspaceName={workspaceName}
+          workspaceId={workspaceId}
+          workspaces={workspaces}
+        />
       </SidebarHeader>
       <SidebarContent>
         <NavMain groups={groups} />
@@ -83,8 +70,6 @@ export function AppSidebar({
           name={user.name}
           email={user.email}
           workspaceName={workspaceName}
-          workspaceId={workspaceId}
-          workspaces={workspaces}
         />
       </SidebarFooter>
       <SidebarRail />

@@ -94,11 +94,16 @@ export function TeamManager({
   }
 
   async function cancel(invitationId: string) {
+    if (
+      !window.confirm("Revoke this invitation? The link will stop working.")
+    ) {
+      return;
+    }
     const result = await authClient.organization.cancelInvitation({
       invitationId,
     });
     if (result.error) {
-      toast.error(result.error.message ?? "Could not cancel the invitation.");
+      toast.error(result.error.message ?? "Could not revoke the invitation.");
       return;
     }
     router.refresh();
@@ -258,7 +263,7 @@ export function TeamManager({
                             size="sm"
                             onClick={() => cancel(i.id)}
                           >
-                            Cancel
+                            Revoke
                           </Button>
                         </div>
                       )}

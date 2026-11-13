@@ -5,7 +5,6 @@ import { cache } from "react";
 import { db } from "@/db";
 import { member, organization } from "@/db/schema";
 import { auth } from "@/server/auth";
-import { pendingInvitationFor } from "@/server/invitations";
 
 export type WorkspaceSession = {
   user: { id: string; name: string; email: string };
@@ -75,10 +74,9 @@ export const requireWorkspaceSession = cache(
   async (): Promise<WorkspaceSession> => {
     const found = await lookupSession(await headers());
     if (found.kind === "anonymous") redirect("/sign-in");
-    if (found.kind === "no-workspace") {
-      const invite = await pendingInvitationFor(found.user.email);
-      redirect(invite ? `/accept-invitation/${invite.id}` : "/no-workspace");
-    }
+    // That page lists any invitations waiting for the account, and on the
+    // managed cloud offers a workspace of its own.
+    if (found.kind === "no-workspace") redirect("/no-workspace");
     return found.session;
   },
 );

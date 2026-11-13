@@ -6,17 +6,20 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { authClient } from "@/lib/auth-client";
 import { createWorkspaceAction } from "./actions";
 
-/** For an account with no workspace left: name a new one and carry on. */
+/**
+ * Name and create a workspace, then open it. Used on the no-workspace page and
+ * in Settings, where it adds another workspace for someone who has one.
+ */
 export function CreateWorkspaceForm({
   placeholder,
-  children,
+  autoFocus = false,
 }: {
   /** What a blank name becomes, e.g. "Ada's workspace". */
   placeholder: string;
-  /** Extra buttons beside "Create", e.g. sign out. */
-  children?: React.ReactNode;
+  autoFocus?: boolean;
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -30,13 +33,21 @@ export function CreateWorkspaceForm({
         toast.error(res.error);
         return;
       }
+      // Sessions open in the first workspace; move this one into the new one.
+      const switched = await authClient.organization.setActive({
+        organizationId: res.id,
+      });
+      if (switched.error) {
+        toast.error(switched.error.message ?? "Could not open the workspace.");
+      }
+      setName("");
       router.push("/");
       router.refresh();
     });
   }
 
   return (
-    <form onSubmit={create} className="grid gap-4">
+    <form onSubmit={create} className="grid gap-3">
       <div className="grid gap-1.5">
         <Label
           htmlFor="new-workspace-name"
@@ -46,7 +57,7 @@ export function CreateWorkspaceForm({
         </Label>
         <Input
           id="new-workspace-name"
-          autoFocus
+          autoFocus={autoFocus}
           autoComplete="organization"
           maxLength={60}
           value={name}
@@ -54,11 +65,10 @@ export function CreateWorkspaceForm({
           placeholder={placeholder}
         />
       </div>
-      <div className="flex gap-2">
+      <div>
         <Button type="submit" disabled={pending}>
           {pending ? "Creating…" : "Create workspace"}
         </Button>
-        {children}
       </div>
     </form>
   );
