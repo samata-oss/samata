@@ -71,6 +71,13 @@
       "when": 1794526763867,
       "tag": "0009_billing_cancel_at",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794554509022,
+      "tag": "0010_pending_workspace",
+      "breakpoints": true
     }
   ]
 }

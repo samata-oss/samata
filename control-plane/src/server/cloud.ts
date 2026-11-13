@@ -53,16 +53,25 @@ export const requireEmailVerification = cloudEnabled;
  * once the address is confirmed, so unconfirmed sign-ups cost nothing. Returns
  * true if the cloud handled the account, so the caller skips the self-hosted
  * behaviour (the first account claiming the default workspace).
+ *
+ * `workspaceName` is what the person typed at sign-up, if anything. It is kept
+ * until the address is confirmed and the workspace gets made.
  */
-export async function provisionWorkspace(user: {
-  id: string;
-  name: string;
-  email: string;
-  emailVerified: boolean;
-}) {
+export async function provisionWorkspace(
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    emailVerified: boolean;
+  },
+  workspaceName?: unknown,
+) {
   if (!cloudEnabled()) return false;
+  const { createPersonalWorkspace, rememberWorkspaceName } = await import(
+    "@/cloud/accounts"
+  );
+  await rememberWorkspaceName(user.id, workspaceName);
   if (!user.emailVerified) return true;
-  const { createPersonalWorkspace } = await import("@/cloud/accounts");
   await createPersonalWorkspace(user);
   return true;
 }

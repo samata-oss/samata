@@ -3,12 +3,16 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { member, organization } from "@/db/schema";
 import { pendingInvitationFor } from "@/server/invitations";
+import { pendingWorkspace } from "./schema";
 
 /**
  * Self-serve accounts for the managed cloud. A self-hosted install has one
  * workspace and closed sign-ups; here anyone can sign up and gets a workspace
- * of their own, which they own.
+ * of their own, which they own. They can name it at sign-up; otherwise it is
+ * named after them.
  */
+
+const MAX_NAME = 60;
 
 const slugify = (text: string) =>
   text
@@ -17,10 +21,67 @@ const slugify = (text: string) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 40) || "workspace";
 
+/** A typed workspace name, tidied up. Undefined when there is nothing usable. */
+export function cleanWorkspaceName(raw: unknown) {
+  if (typeof raw !== "string") return undefined;
+  return raw.replace(/\s+/g, " ").trim().slice(0, MAX_NAME) || undefined;
+}
+
 /** "Ada Lovelace" -> "Ada's workspace". */
 function workspaceNameFor(userName: string) {
   const first = userName.trim().split(/\s+/)[0]?.slice(0, 40);
   return first ? `${first}'s workspace` : "My workspace";
+}
+
+async function hasWorkspace(userId: string) {
+  const [existing] = await db
+    .select({ id: member.id })
+    .from(member)
+    .where(eq(member.userId, userId))
+    .limit(1);
+  return existing !== undefined;
+}
+
+async function insertWorkspace(userId: string, name: string) {
+  const id = randomUUID();
+  await db.transaction(async (tx) => {
+    await tx.insert(organization).values({
+      id,
+      name,
+      // The suffix keeps slugs unique without a lookup.
+      slug: `${slugify(name)}-${id.slice(0, 8)}`,
+      createdAt: new Date(),
+    });
+    await tx.insert(member).values({
+      id: randomUUID(),
+      organizationId: id,
+      userId,
+      role: "owner",
+      createdAt: new Date(),
+    });
+  });
+}
+
+/**
+ * Hold the name someone typed at sign-up until their workspace is made (which
+ * waits for a confirmed email address).
+ */
+export async function rememberWorkspaceName(userId: string, raw: unknown) {
+  const name = cleanWorkspaceName(raw);
+  if (!name) return;
+  await db
+    .insert(pendingWorkspace)
+    .values({ userId, name })
+    .onConflictDoUpdate({ target: pendingWorkspace.userId, set: { name } });
+}
+
+/** The remembered name, removed so it is only used once. */
+async function takeWorkspaceName(userId: string) {
+  const [row] = await db
+    .delete(pendingWorkspace)
+    .where(eq(pendingWorkspace.userId, userId))
+    .returning({ name: pendingWorkspace.name });
+  return row?.name;
 }
 
 /**
@@ -35,32 +96,47 @@ export async function createPersonalWorkspace(user: {
   name: string;
   email: string;
 }) {
+  // Taken first in every case, so a name that isn't used doesn't linger.
+  const chosen = await takeWorkspaceName(user.id);
+
   if (await pendingInvitationFor(user.email)) return false;
 
   // Never a second one for the same account (a retried sign-up hook).
-  const [existing] = await db
-    .select({ id: member.id })
-    .from(member)
-    .where(eq(member.userId, user.id))
-    .limit(1);
-  if (existing) return false;
+  if (await hasWorkspace(user.id)) return false;
 
-  const id = randomUUID();
-  await db.transaction(async (tx) => {
-    await tx.insert(organization).values({
-      id,
-      name: workspaceNameFor(user.name),
-      // The suffix keeps slugs unique without a lookup.
-      slug: `${slugify(user.name)}-${id.slice(0, 8)}`,
-      createdAt: new Date(),
-    });
-    await tx.insert(member).values({
-      id: randomUUID(),
-      organizationId: id,
-      userId: user.id,
-      role: "owner",
-      createdAt: new Date(),
-    });
-  });
+  await insertWorkspace(user.id, chosen ?? workspaceNameFor(user.name));
+  return true;
+}
+
+/**
+ * Rename a workspace. The slug stays as it was, so nothing that points at it
+ * changes. Returns the tidied name, or null if there was nothing usable.
+ */
+export async function renameWorkspace(
+  organizationId: string,
+  rawName: unknown,
+) {
+  const name = cleanWorkspaceName(rawName);
+  if (!name) return null;
+  await db
+    .update(organization)
+    .set({ name })
+    .where(eq(organization.id, organizationId));
+  return name;
+}
+
+/**
+ * A fresh workspace for someone who has none, because they deleted theirs or
+ * left the team they were in. Returns whether one was made.
+ */
+export async function createWorkspaceFor(
+  user: { id: string; name: string },
+  rawName?: unknown,
+) {
+  if (await hasWorkspace(user.id)) return false;
+  await insertWorkspace(
+    user.id,
+    cleanWorkspaceName(rawName) ?? workspaceNameFor(user.name),
+  );
   return true;
 }

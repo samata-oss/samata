@@ -146,8 +146,9 @@ export const auth = betterAuth({
             context?.body as Record<string, unknown> | undefined,
           );
         },
-        after: async (user) => {
-          if (await provisionWorkspace(user)) return;
+        after: async (user, context) => {
+          const body = context?.body as Record<string, unknown> | undefined;
+          if (await provisionWorkspace(user, body?.workspaceName)) return;
           await claimDefaultWorkspace(user.id);
         },
       },

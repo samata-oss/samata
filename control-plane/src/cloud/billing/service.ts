@@ -85,7 +85,7 @@ async function accountOf(organizationId: string) {
 }
 
 /** Calls this workspace has running right now. */
-async function activeCallCount(organizationId: string) {
+export async function activeCallCount(organizationId: string) {
   const [row] = await db
     .select({ n: count() })
     .from(callLog)
@@ -210,6 +210,32 @@ export async function createPortalUrl(who: {
     return_url: `${who.baseUrl}/billing`,
   });
   return session.url;
+}
+
+/**
+ * End the workspace's subscription now, because the workspace is being
+ * deleted. Nothing to cancel is fine. A live subscription we can't cancel
+ * (Stripe is down or not configured) throws, so the caller stops before it
+ * deletes the data and leaves someone being charged for a workspace that is
+ * gone. No refund: the current period was used.
+ */
+export async function cancelSubscription(organizationId: string) {
+  const account = await accountOf(organizationId);
+  if (!account?.stripeSubscriptionId) return;
+  if (account.subscriptionStatus === "canceled") return;
+
+  const { stripe } = requireStripe();
+  try {
+    const current = await stripe.subscriptions.retrieve(
+      account.stripeSubscriptionId,
+    );
+    if (current.status === "canceled") return;
+    await stripe.subscriptions.cancel(current.id);
+  } catch (err) {
+    // Already gone on Stripe's side is what we want.
+    if ((err as { code?: string })?.code === "resource_missing") return;
+    throw err;
+  }
 }
 
 // --- Stripe webhooks ---------------------------------------------------------

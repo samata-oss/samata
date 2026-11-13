@@ -44,6 +44,7 @@ export function SignInForm({
     firstRun || invitation !== null ? "sign-up" : "sign-in",
   );
   const [name, setName] = useState("");
+  const [workspaceName, setWorkspaceName] = useState("");
   const [email, setEmail] = useState(invitation?.email ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +55,12 @@ export function SignInForm({
   );
 
   const signingUp = mode === "sign-up";
+  // Open sign-up (the managed cloud) gives every account a workspace of its
+  // own, so ask what to call it. Invitees join someone else's instead.
+  const asksWorkspaceName = signingUp && openSignUp && invitation === null;
+  // What the server will call it if left blank: it names the account after
+  // what was typed, or the start of the email address.
+  const firstName = (name.trim() || email.split("@")[0]).split(/\s+/)[0];
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,6 +76,9 @@ export function SignInForm({
             callbackURL: next,
             // Proves the invitee holds the link. See `assertMaySignUp`.
             ...(invitation && { invitationId: invitation.id }),
+            // What to call the workspace made for this account (the cloud).
+            ...(asksWorkspaceName &&
+              workspaceName.trim() && { workspaceName: workspaceName.trim() }),
           } as Parameters<typeof authClient.signUp.email>[0])
         : await authClient.signIn.email({ email, password, callbackURL: next });
       if (result.error) {
@@ -159,6 +169,30 @@ export function SignInForm({
               onChange={(e) => setName(e.target.value)}
               placeholder="Ada Lovelace"
             />
+          </div>
+        )}
+        {asksWorkspaceName && (
+          <div className="grid gap-1.5">
+            <Label
+              htmlFor="workspace-name"
+              className="text-xs text-muted-foreground"
+            >
+              Workspace name
+            </Label>
+            <Input
+              id="workspace-name"
+              autoComplete="organization"
+              maxLength={60}
+              value={workspaceName}
+              onChange={(e) => setWorkspaceName(e.target.value)}
+              placeholder={
+                firstName ? `${firstName}'s workspace` : "Acme Voice Agents"
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              Your assistants, keys and billing live here. Leave blank to use
+              the suggestion.
+            </p>
           </div>
         )}
         <div className="grid gap-1.5">

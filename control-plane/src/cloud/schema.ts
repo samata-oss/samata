@@ -1,6 +1,19 @@
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 // Relative, not `@/`: drizzle-kit loads this file without the path aliases.
-import { organization } from "../db/auth-schema";
+import { organization, user } from "../db/auth-schema";
+
+/**
+ * The workspace name someone typed at sign-up. The workspace itself is only
+ * made once the address is confirmed, which is a later request, so the name
+ * waits here and is deleted when the workspace is made.
+ */
+export const pendingWorkspace = pgTable("pending_workspace", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 
 /**
  * A workspace's Stripe customer and subscription. Created the first time the

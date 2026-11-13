@@ -7,6 +7,7 @@ import {
   KeyRoundIcon,
   PhoneIcon,
   ScrollTextIcon,
+  SettingsIcon,
   UsersIcon,
   WrenchIcon,
 } from "lucide-react";
@@ -49,7 +50,10 @@ export const navGroups = ({ cloud }: { cloud: boolean }): NavGroup[] => [
     items: [
       { title: "Team", url: "/team", icon: <UsersIcon /> },
       ...(cloud
-        ? [{ title: "Billing", url: "/billing", icon: <CreditCardIcon /> }]
+        ? [
+            { title: "Billing", url: "/billing", icon: <CreditCardIcon /> },
+            { title: "Settings", url: "/settings", icon: <SettingsIcon /> },
+          ]
         : []),
     ],
   },
