@@ -29,6 +29,13 @@ export default async function HomePage() {
         <h2 className="max-w-xl text-lg font-medium tracking-tight sm:text-xl">
           What is Samata?
         </h2>
+        <p className="mt-3 text-[13px] leading-[1.8] text-zinc-500">
+          <span lang="hi" className="text-zinc-300">
+            समता
+          </span>{" "}
+          (Samatā), Hindi for equality, impartiality and equanimity: staying
+          balanced in joy and sorrow alike.
+        </p>
         <p className="mt-3 text-[13px] leading-[1.8] text-zinc-400">
           Samata is the modern, open source voice orchestration platform for
           building AI voice agents - powered by LiveKit. Skip the platform fees
