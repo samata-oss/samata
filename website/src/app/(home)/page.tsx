@@ -33,8 +33,8 @@ export default async function HomePage() {
           <span lang="hi" className="text-zinc-300">
             समता
           </span>{" "}
-          (Samatā), Hindi for equality, impartiality and equanimity: staying
-          balanced in joy and sorrow alike.
+          (Samatā):  Hindi for equality, impartiality, and equanimity - viewing all beings and phenomena
+          with unbiased understanding.
         </p>
         <p className="mt-3 text-[13px] leading-[1.8] text-zinc-400">
           Samata is the modern, open source voice orchestration platform for
