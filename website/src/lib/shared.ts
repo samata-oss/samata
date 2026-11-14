@@ -22,9 +22,16 @@ export const sponsorUrl =
   process.env.NEXT_PUBLIC_SPONSOR_URL ??
   `https://github.com/sponsors/${gitConfig.user}`;
 
-/** The hosted Samata Cloud. Override with `NEXT_PUBLIC_CLOUD_URL`. */
-export const cloudUrl =
-  process.env.NEXT_PUBLIC_CLOUD_URL ?? "https://cloud.samata.dev";
+/** True when `ENV=LOCAL` is set in the website's `.env`. */
+export const isLocal = process.env.NEXT_PUBLIC_ENV === "LOCAL";
+
+/**
+ * The hosted Samata Cloud. Points at the local app (localhost:3000) when
+ * `ENV=LOCAL`. Otherwise override with `NEXT_PUBLIC_CLOUD_URL`.
+ */
+export const cloudUrl = isLocal
+  ? "http://localhost:3000"
+  : (process.env.NEXT_PUBLIC_CLOUD_URL ?? "https://cloud.samata.dev");
 
 const getContentUrl = createGetUrl(docsContentRoute);
 
