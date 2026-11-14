@@ -21,7 +21,7 @@ from typing import Any
 
 import aiohttp
 from dotenv import load_dotenv
-from livekit import rtc
+from livekit import api, rtc
 from livekit.agents import (
     Agent,
     AgentServer,
@@ -110,13 +110,15 @@ def _remote_tool(spec: ToolConfig, cp: ControlPlane, call_id: str):
 
 
 class SamataAgent(Agent):
-    def __init__(self, config: AssistantConfig, tools: list) -> None:
+    def __init__(self, config: AssistantConfig, tools: list, *, greet: bool = True) -> None:
         super().__init__(instructions=config.model.system_prompt, tools=tools)
         self._first_message = config.first_message
+        self._greet = greet
 
     async def on_enter(self) -> None:
         # Like Vapi: speak the first message if set, otherwise wait for the caller.
-        if self._first_message:
+        # Outbound calls hold it until the customer answers (`greet=False`).
+        if self._greet and self._first_message:
             self.session.say(self._first_message)
 
 
@@ -203,18 +205,102 @@ def _trace_llm_timing(session: AgentSession) -> None:
     session.on("close", lambda _ev: lag_task.cancel())
 
 
+class DialTarget:
+    """An outbound call to place, as the control plane set it in the job metadata."""
+
+    def __init__(self, to_number: str, trunk_id: str, from_number: str | None) -> None:
+        self.to_number = to_number
+        self.trunk_id = trunk_id
+        self.from_number = from_number
+
+    @classmethod
+    def from_metadata(cls, meta: dict[str, Any]) -> "DialTarget | None":
+        if meta.get("callType") != "outbound":
+            return None
+        to_number, trunk_id = meta.get("dialTo"), meta.get("trunkId")
+        if not isinstance(to_number, str) or not isinstance(trunk_id, str):
+            return None
+        from_number = meta.get("fromNumber")
+        return cls(to_number, trunk_id, from_number if isinstance(from_number, str) else None)
+
+
+def _dial_failure_reason(err: api.TwirpError) -> str:
+    """Map LiveKit's SIP failure to an endedReason, by the SIP status the far end sent."""
+    status = str((err.metadata or {}).get("sip_status_code", ""))
+    if status in ("486", "600"):
+        return "customer-busy"
+    if status in ("480", "408", "487"):
+        return "customer-did-not-answer"
+    if status == "603":
+        return "customer-declined"
+    return "dial-failed"
+
+
+async def _dial(ctx: JobContext, target: DialTarget, identity: str) -> None:
+    """Ring the customer through the trunk and return once they answer.
+
+    Raises `api.TwirpError` if the call isn't answered (busy, no answer, declined,
+    or the trunk or carrier refused it).
+    """
+    await ctx.api.sip.create_sip_participant(
+        api.CreateSIPParticipantRequest(
+            room_name=ctx.room.name,
+            sip_trunk_id=target.trunk_id,
+            sip_call_to=target.to_number,
+            participant_identity=identity,
+            participant_name=target.to_number,
+            wait_until_answered=True,
+        )
+    )
+
+
+async def _abort_call(
+    ctx: JobContext,
+    cp: ControlPlane,
+    http: aiohttp.ClientSession,
+    *,
+    call_id: str,
+    started_at: float,
+    reason: str,
+    shutdown_reason: str,
+) -> None:
+    """End a call that never got going: report it, so it isn't left "in progress"."""
+    try:
+        await cp.end_of_call_report(
+            {
+                "type": "end-of-call-report",
+                "call": {"id": call_id},
+                "endedReason": reason,
+                "startedAt": started_at,
+                "endedAt": time.time(),
+            }
+        )
+    except Exception:
+        logger.exception("failed to report failed call %s", call_id)
+    finally:
+        await http.close()
+        # Deleting the room hangs up a phone leg instead of leaving dead air.
+        await ctx.delete_room()
+        ctx.shutdown(reason=shutdown_reason)
+
+
 @server.rtc_session(agent_name=AGENT_NAME)
 async def entrypoint(ctx: JobContext) -> None:
     await ctx.connect()
-    participant = await ctx.wait_for_participant()
+    job_meta = _json(ctx.job.metadata)
+    room_meta = _json(ctx.room.metadata)
+
+    # An outbound call (placed through the API) has nobody to wait for: we ring
+    # the customer ourselves once the pipeline is ready. Inbound and browser
+    # calls start when the caller joins.
+    dial = DialTarget.from_metadata(job_meta)
+    participant = None if dial else await ctx.wait_for_participant()
     started_at = time.time()
 
     # Routing hints: explicit agent id from dispatch or room metadata, else
     # the dialed number on inbound SIP.
-    job_meta = _json(ctx.job.metadata)
-    room_meta = _json(ctx.room.metadata)
-    is_sip = participant.kind == rtc.ParticipantKind.PARTICIPANT_KIND_SIP
-    attrs = participant.attributes
+    is_sip = participant is not None and participant.kind == rtc.ParticipantKind.PARTICIPANT_KIND_SIP
+    attrs = participant.attributes if participant else {}
 
     http = aiohttp.ClientSession()
     cp = ControlPlane(http)
@@ -223,9 +309,10 @@ async def entrypoint(ctx: JobContext) -> None:
             room_name=ctx.room.name,
             call_type=job_meta.get("callType") or ("inbound" if is_sip else "web"),
             agent_id=job_meta.get("agentId") or room_meta.get("agentId"),
+            call_id=job_meta.get("callId"),
             metadata={**room_meta, **job_meta},
-            dialed_number=attrs.get("sip.trunkPhoneNumber"),
-            customer_number=attrs.get("sip.phoneNumber"),
+            dialed_number=attrs.get("sip.trunkPhoneNumber") or (dial.from_number if dial else None),
+            customer_number=attrs.get("sip.phoneNumber") or (dial.to_number if dial else None),
         )
     except (AssistantRejected, aiohttp.ClientError, asyncio.TimeoutError) as err:
         logger.warning("no assistant for room %s: %s", ctx.room.name, err)
@@ -252,22 +339,15 @@ async def entrypoint(ctx: JobContext) -> None:
             logger.error("call %s cannot start: %s", call_id, err)
         else:
             logger.exception("call %s cannot start", call_id)
-        try:
-            await cp.end_of_call_report(
-                {
-                    "type": "end-of-call-report",
-                    "call": {"id": call_id},
-                    "endedReason": "error",
-                    "startedAt": started_at,
-                    "endedAt": time.time(),
-                }
-            )
-        except Exception:
-            logger.exception("failed to report failed call %s", call_id)
-        finally:
-            await http.close()
-            await ctx.delete_room()
-            ctx.shutdown(reason="provider-config-error")
+        await _abort_call(
+            ctx,
+            cp,
+            http,
+            call_id=call_id,
+            started_at=started_at,
+            reason="error",
+            shutdown_reason="provider-config-error",
+        )
         return
 
     _trace_llm_timing(session)
@@ -292,12 +372,19 @@ async def entrypoint(ctx: JobContext) -> None:
         )
         session.shutdown()
 
-    timer = asyncio.create_task(enforce_max_duration())
     rtt_sampler = RttSampler(ctx.room)
-    rtt_sampler.start()
+    timer: asyncio.Task | None = None
+
+    def begin_call() -> None:
+        """The conversation is live: start the clock, the time limit and the report."""
+        nonlocal timer
+        timer = asyncio.create_task(enforce_max_duration())
+        rtt_sampler.start()
+        ctx.add_shutdown_callback(send_report)
 
     async def send_report() -> None:
-        timer.cancel()
+        if timer:
+            timer.cancel()
         rtt_sampler.stop()
         try:
             # Make sure the history is final if the job ended first.
@@ -316,9 +403,42 @@ async def entrypoint(ctx: JobContext) -> None:
         finally:
             await http.close()
 
-    ctx.add_shutdown_callback(send_report)
+    if dial is None:
+        begin_call()
+        await session.start(agent=SamataAgent(config, tools), room=ctx.room)
+        return
 
-    await session.start(agent=SamataAgent(config, tools), room=ctx.room)
+    # Outbound: have the agent ready, ring the customer, and speak only once
+    # they pick up. The report callback is registered after the answer, so a
+    # call that never connects is reported by `_abort_call` instead.
+    session_started = asyncio.create_task(
+        session.start(agent=SamataAgent(config, tools, greet=False), room=ctx.room)
+    )
+    logger.info("call %s dialing %s", call_id, dial.to_number)
+    try:
+        await _dial(ctx, dial, identity=f"phone-{call_id[:8]}")
+    except api.TwirpError as err:
+        reason = _dial_failure_reason(err)
+        logger.warning("call %s to %s not connected (%s): %s", call_id, dial.to_number, reason, err.message)
+        session_started.cancel()
+        now = time.time()
+        await _abort_call(
+            ctx,
+            cp,
+            http,
+            call_id=call_id,
+            started_at=now,
+            reason=reason,
+            shutdown_reason=reason,
+        )
+        return
+
+    await session_started
+    # Talk time starts at the answer, not at the first ring.
+    started_at = time.time()
+    begin_call()
+    if config.first_message:
+        session.say(config.first_message)
 
 
 if __name__ == "__main__":

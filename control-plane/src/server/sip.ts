@@ -67,6 +67,30 @@ function allowedAddresses(providerDefaults: string[]) {
 }
 
 /**
+ * Delete leftovers of an earlier import of `number`: trunks (and their dispatch
+ * rules) that Samata created (named `samata <number>`) but no longer records,
+ * e.g. after a database reset. LiveKit rejects a second inbound trunk for the
+ * same number, so they'd block the import. Trunks with other names are left
+ * alone.
+ */
+async function removeStaleInboundRoutes(sip: SipClient, number: string) {
+  const name = `samata ${number}`;
+  const stale = (await sip.listSipInboundTrunk()).filter(
+    (t) => t.name === name,
+  );
+  if (!stale.length) return;
+  const ids = new Set(stale.map((t) => t.sipTrunkId));
+
+  const rules = await sip.listSipDispatchRule();
+  for (const rule of rules) {
+    if (rule.trunkIds.some((id) => ids.has(id))) {
+      await sip.deleteSipDispatchRule(rule.sipDispatchRuleId);
+    }
+  }
+  for (const id of ids) await sip.deleteSipTrunk(id);
+}
+
+/**
  * Create the trunk and dispatch rule for `number` (E.164).
  * `providerAddresses` are the carrier's signaling IPs.
  */
@@ -79,6 +103,8 @@ export async function createInboundRoute(
   // (see `routeTelnyxNumber`), but matching both costs nothing.
   const numbers = [number, number.slice(1)];
   const addresses = allowedAddresses(providerAddresses);
+
+  await removeStaleInboundRoutes(sip, number);
 
   const trunk = await sip.createSipInboundTrunk(
     `samata ${number}`,
@@ -115,4 +141,47 @@ export async function deleteInboundRoute(route: LivekitRoute) {
   ]);
   const failed = results.find((r) => r.status === "rejected");
   if (failed) throw failed.reason;
+}
+
+/**
+ * Outbound calls go the other way: the worker asks LiveKit's SIP server to dial
+ * a number through an outbound trunk, which logs in to the carrier. One trunk
+ * per imported number, so the number is the caller ID.
+ */
+
+/** `SIP_TRANSPORT_AUTO`: let LiveKit and the carrier agree (UDP, TCP or TLS). */
+const TRANSPORT_AUTO = 0;
+
+/** Create an outbound trunk for `number` (E.164) that dials via `address`. */
+export async function createOutboundTrunk(
+  number: string,
+  carrier: { address: string; username: string; password: string },
+): Promise<string> {
+  const trunk = await client().createSipOutboundTrunk(
+    `samata ${number}`,
+    carrier.address,
+    [number],
+    {
+      transport: TRANSPORT_AUTO,
+      authUsername: carrier.username,
+      authPassword: carrier.password,
+    },
+  );
+  return trunk.sipTrunkId;
+}
+
+/** Whether LiveKit still has the trunk (a reset LiveKit loses them). */
+export async function outboundTrunkExists(trunkId: string) {
+  const trunks = await client().listSipOutboundTrunk({ trunkIds: [trunkId] });
+  return trunks.some((t) => t.sipTrunkId === trunkId);
+}
+
+/** Delete an outbound trunk. Already gone is done. */
+export async function deleteOutboundTrunk(trunkId: string) {
+  try {
+    await client().deleteSipTrunk(trunkId);
+  } catch (err) {
+    const e = err as { status?: number; code?: string };
+    if (e.status !== 404 && e.code !== "not_found") throw err;
+  }
 }

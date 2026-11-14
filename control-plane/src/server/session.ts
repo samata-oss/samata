@@ -30,14 +30,14 @@ export type StartedSession = {
 
 export class SessionError extends Error {
   constructor(
-    readonly status: 402 | 404 | 422 | 500 | 502,
+    readonly status: 400 | 402 | 404 | 422 | 500 | 502,
     message: string,
   ) {
     super(message);
   }
 }
 
-function livekit() {
+export function livekit() {
   const {
     LIVEKIT_URL: url,
     LIVEKIT_API_KEY: key,
@@ -50,6 +50,51 @@ function livekit() {
     );
   }
   return { url, key, secret };
+}
+
+/**
+ * The checks every call needs before a room is created, so the person starting
+ * it sees why it can't, rather than after the worker joins and fails:
+ *
+ *   - the assistant exists in this workspace (404),
+ *   - the workspace may start a call; managed cloud only, refused over the
+ *     plan's concurrent-call limit (402),
+ *   - the provider keys its model, transcriber and voice need are set (422).
+ */
+export async function prepareCall(
+  assistantRef: string,
+  organizationId: string,
+) {
+  const [row] = await db
+    .select({
+      id: agent.id,
+      phoneNumber: agent.phoneNumber,
+      config: agent.config,
+    })
+    .from(agent)
+    .where(inWorkspace(organizationId, assistantRef));
+  if (!row) throw new SessionError(404, "Assistant not found.");
+
+  try {
+    await assertMayStartCall(organizationId);
+  } catch (err) {
+    if (err instanceof CallBlockedError) {
+      throw new SessionError(402, err.message);
+    }
+    throw err;
+  }
+
+  try {
+    await resolveCredentials(
+      organizationId,
+      agentConfigSchema.parse(row.config),
+    );
+  } catch (err) {
+    if (err instanceof MissingKeysError)
+      throw new SessionError(422, err.message);
+    throw err;
+  }
+  return row;
 }
 
 /**
@@ -69,34 +114,7 @@ export async function startSession(
   assistantRef: string,
   organizationId: string,
 ): Promise<StartedSession> {
-  const [row] = await db
-    .select({ id: agent.id, config: agent.config })
-    .from(agent)
-    .where(inWorkspace(organizationId, assistantRef));
-  if (!row) throw new SessionError(404, "Assistant not found.");
-
-  // Managed cloud only: refuse a call over the plan's concurrent-call limit.
-  try {
-    await assertMayStartCall(organizationId);
-  } catch (err) {
-    if (err instanceof CallBlockedError) {
-      throw new SessionError(402, err.message);
-    }
-    throw err;
-  }
-
-  // Fail here, where the person testing sees why, rather than after the
-  // worker joins and finds it can't authenticate with a provider.
-  try {
-    await resolveCredentials(
-      organizationId,
-      agentConfigSchema.parse(row.config),
-    );
-  } catch (err) {
-    if (err instanceof MissingKeysError)
-      throw new SessionError(422, err.message);
-    throw err;
-  }
+  const row = await prepareCall(assistantRef, organizationId);
 
   const { url, key, secret } = livekit();
   const roomName = `call_${randomUUID().replaceAll("-", "").slice(0, 12)}`;

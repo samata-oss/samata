@@ -8,7 +8,7 @@ import {
   user,
 } from "@/db/schema";
 import { DEFAULT_ORGANIZATION_ID } from "@/lib/workspace";
-import { disconnectNumber } from "@/server/numbers";
+import { disconnectNumber, removeOutbound } from "@/server/numbers";
 import { activeCallCount, cancelSubscription } from "../billing/service";
 
 /**
@@ -46,7 +46,10 @@ async function releaseNumbers(organizationId: string) {
     .where(eq(importedNumber.organizationId, organizationId));
   // `force`: a revoked provider key or a number that left Telnyx must not
   // keep the workspace from being deleted.
-  for (const row of numbers) await disconnectNumber(row, { force: true });
+  for (const row of numbers) {
+    await disconnectNumber(row, { force: true });
+    await removeOutbound(row, { force: true });
+  }
 }
 
 async function removeWorkspace(organizationId: string) {

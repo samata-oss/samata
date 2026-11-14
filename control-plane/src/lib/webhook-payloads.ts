@@ -16,6 +16,11 @@ export const assistantRequestSchema = z.object({
       type: z.enum(["inbound", "outbound", "web"]).default("web"),
       /** Agent id or slug, from dispatch / room metadata. */
       agentId: z.string().optional(),
+      /**
+       * An id minted before the worker joined (outbound calls), so the API
+       * could return it. The call's log row is created under it.
+       */
+      callId: z.uuid().optional(),
       metadata: z.record(z.string(), z.unknown()).optional(),
     }),
     /** The number that was dialed (SIP `sip.trunkPhoneNumber`). */

@@ -1,0 +1,1 @@
+ALTER TABLE "phone_number" ADD COLUMN "outbound" jsonb;

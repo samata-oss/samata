@@ -249,7 +249,7 @@ export function AssistantTab({
           </div>
         </section>
 
-        <div className="space-y-3 xl:sticky xl:top-32 xl:max-h-[calc(100svh-10rem)] xl:overflow-y-auto xl:pr-1">
+        <div className="space-y-3">
           <div className="px-0.5">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold whitespace-nowrap">

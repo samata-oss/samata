@@ -1,14 +1,20 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { importedNumber } from "@/db/schema";
 import { decryptSecret } from "@/server/secrets";
 import {
   createInboundRoute,
+  createOutboundTrunk,
   deleteInboundRoute,
+  deleteOutboundTrunk,
+  outboundTrunkExists,
   sipTarget,
 } from "@/server/sip";
 import {
+  createTelnyxOutbound,
+  deleteTelnyxOutbound,
   routeTelnyxNumber,
+  TELNYX_SIP_ADDRESS,
   telnyxSignalingAddresses,
   unrouteTelnyxNumber,
 } from "@/server/telnyx";
@@ -166,6 +172,142 @@ export async function disconnectNumber(
   await db
     .update(importedNumber)
     .set({ routing: null })
+    .where(eq(importedNumber.id, row.id));
+  return { ok: true };
+}
+
+/**
+ * Dialing out takes its own pair, independent of the inbound route above:
+ *
+ *   Telnyx   credential connection (may place calls)
+ *   LiveKit  outbound trunk that logs in to it, with the number as caller ID
+ *
+ * Built on the number's first outbound call (`ensureOutbound`) and recorded on
+ * `outbound`, so numbers imported before outbound existed need no migration of
+ * their routing. `removeOutbound` undoes it.
+ */
+
+export type OutboundOutcome =
+  | { ok: true; trunkId: string }
+  | { ok: false; error: string };
+
+export async function ensureOutbound(
+  row: NumberRecord,
+): Promise<OutboundOutcome> {
+  if (row.outbound) {
+    // A LiveKit that was reset (a dev machine, a new Cloud project) has lost
+    // the trunk. Rebuild rather than fail every call from this number.
+    let exists = true;
+    try {
+      exists = await outboundTrunkExists(row.outbound.livekitTrunkId);
+    } catch (err) {
+      return {
+        ok: false,
+        error: `Couldn't reach LiveKit to check the outbound trunk: ${describe(err)}`,
+      };
+    }
+    if (exists) return { ok: true, trunkId: row.outbound.livekitTrunkId };
+
+    const cleared = await removeOutbound(row, { force: false });
+    if (!cleared.ok) return cleared;
+    row = { ...row, outbound: null };
+  }
+
+  let apiKey: string;
+  try {
+    apiKey = decryptSecret(row.encryptedApiKey);
+  } catch {
+    return {
+      ok: false,
+      error:
+        "The stored API key can't be read (the encryption secret changed). Remove the number and import it again.",
+    };
+  }
+
+  const telnyx = await createTelnyxOutbound(apiKey, row.number);
+  if (!telnyx.ok) return { ok: false, error: telnyx.error };
+
+  let trunkId: string;
+  try {
+    trunkId = await createOutboundTrunk(row.number, {
+      address: TELNYX_SIP_ADDRESS,
+      username: telnyx.value.username,
+      password: telnyx.value.password,
+    });
+  } catch (err) {
+    await deleteTelnyxOutbound(apiKey, telnyx.value.connectionId);
+    return {
+      ok: false,
+      error: `Couldn't set up the LiveKit outbound trunk: ${describe(err)}`,
+    };
+  }
+
+  // Two first calls at once would each build a pair; only one may be recorded.
+  const [saved] = await db
+    .update(importedNumber)
+    .set({
+      outbound: {
+        livekitTrunkId: trunkId,
+        telnyxConnectionId: telnyx.value.connectionId,
+      },
+    })
+    .where(and(eq(importedNumber.id, row.id), isNull(importedNumber.outbound)))
+    .returning({ id: importedNumber.id });
+  if (saved) return { ok: true, trunkId };
+
+  await deleteOutboundTrunk(trunkId).catch(() => {});
+  await deleteTelnyxOutbound(apiKey, telnyx.value.connectionId);
+  const [winner] = await db
+    .select({ outbound: importedNumber.outbound })
+    .from(importedNumber)
+    .where(eq(importedNumber.id, row.id));
+  return winner?.outbound
+    ? { ok: true, trunkId: winner.outbound.livekitTrunkId }
+    : { ok: false, error: "The number was removed. Try again." };
+}
+
+/**
+ * Remove the Telnyx connection and LiveKit trunk and clear `outbound`. With
+ * `force`, failures are ignored so a number can always be removed.
+ */
+export async function removeOutbound(
+  row: NumberRecord,
+  { force }: { force: boolean },
+): Promise<Outcome> {
+  const { outbound } = row;
+  if (!outbound) return { ok: true };
+
+  let telnyxError: string | null = null;
+  try {
+    const res = await deleteTelnyxOutbound(
+      decryptSecret(row.encryptedApiKey),
+      outbound.telnyxConnectionId,
+    );
+    if (!res.ok) telnyxError = res.error;
+  } catch (err) {
+    telnyxError = describe(err);
+  }
+  if (telnyxError && !force) {
+    return {
+      ok: false,
+      error: `Couldn't remove the outbound connection in Telnyx: ${telnyxError}`,
+    };
+  }
+
+  try {
+    await deleteOutboundTrunk(outbound.livekitTrunkId);
+  } catch (err) {
+    if (!force) {
+      return {
+        ok: false,
+        error: `Couldn't remove the LiveKit outbound trunk: ${describe(err)}`,
+      };
+    }
+  }
+
+  await db
+    .update(importedNumber)
+    .set({ outbound: null })
     .where(eq(importedNumber.id, row.id));
   return { ok: true };
 }

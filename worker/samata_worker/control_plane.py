@@ -37,6 +37,7 @@ class ControlPlane:
         room_name: str,
         call_type: str,
         agent_id: str | None,
+        call_id: str | None = None,
         metadata: dict[str, Any],
         dialed_number: str | None,
         customer_number: str | None,
@@ -48,6 +49,9 @@ class ControlPlane:
         }
         if agent_id:
             message["call"]["agentId"] = agent_id
+        if call_id:
+            # Outbound: the id the API already returned to the caller.
+            message["call"]["callId"] = call_id
         if dialed_number:
             message["phoneNumber"] = {"number": dialed_number}
         if customer_number:

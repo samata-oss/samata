@@ -17,7 +17,11 @@ import { isKeyProvider, KEY_PROVIDERS } from "@/lib/providers";
 import { canManageTeam } from "@/lib/workspace";
 import { isUniqueViolation, restoreSecrets, uniqueSlug } from "@/server/agents";
 import { createApiKey } from "@/server/api-keys";
-import { connectNumber, disconnectNumber } from "@/server/numbers";
+import {
+  connectNumber,
+  disconnectNumber,
+  removeOutbound,
+} from "@/server/numbers";
 import { deleteProviderKey, saveProviderKey } from "@/server/provider-keys";
 import { encryptSecret } from "@/server/secrets";
 import { lookupTelnyxNumber } from "@/server/telnyx";
@@ -279,6 +283,8 @@ export async function removePhoneNumberAction(
 
   const disconnected = await disconnectNumber(existing, { force });
   if (!disconnected.ok) return { ...disconnected, canForce: true };
+  const outboundRemoved = await removeOutbound(existing, { force });
+  if (!outboundRemoved.ok) return { ...outboundRemoved, canForce: true };
 
   await db.transaction(async (tx) => {
     await tx.delete(importedNumber).where(eq(importedNumber.id, existing.id));

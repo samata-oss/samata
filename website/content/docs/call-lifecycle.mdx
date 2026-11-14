@@ -23,6 +23,17 @@ On `assistant-request`, the control plane picks the agent in this order:
 
 If nothing matches, the call is rejected and the worker hangs up.
 
+## Outbound calls
+
+`POST /api/calls` creates a room and dispatches the worker with the assistant, the
+number to dial and the outbound trunk in the job metadata, plus a pre-minted
+`callId`. The worker goes through `assistant-request` as usual (the control plane
+opens the log row under that `callId`), builds the pipeline, dials the customer
+through LiveKit SIP and waits for an answer. Only then does the assistant speak
+and the call's clock start. If the customer doesn't answer, the worker sends an
+`end-of-call-report` with `customer-did-not-answer`, `customer-busy`,
+`customer-declined` or `dial-failed` instead.
+
 ## What your server receives
 
 If an agent has a `server.url`, the control plane forwards lifecycle events to it

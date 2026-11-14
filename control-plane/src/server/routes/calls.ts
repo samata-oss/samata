@@ -1,8 +1,23 @@
 import { and, desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
+import { z } from "zod";
 import { db } from "@/db";
 import { agent, callLog } from "@/db/schema";
 import { requireWorkspace, type WorkspaceEnv } from "@/server/api-auth";
+import { startOutboundCall } from "@/server/outbound";
+import { SessionError } from "@/server/session";
+
+const createBody = z.object({
+  /** Assistant id or slug. */
+  assistantId: z.string().min(1).max(120),
+  /**
+   * The imported number to call from. Defaults to the number assigned to the
+   * assistant.
+   */
+  phoneNumberId: z.string().min(1).max(120).optional(),
+  /** Who to call. */
+  customer: z.object({ number: z.string().min(1).max(32) }),
+});
 
 export const callRoutes = new Hono<WorkspaceEnv>()
   .use(requireWorkspace)
@@ -15,6 +30,33 @@ export const callRoutes = new Hono<WorkspaceEnv>()
       .orderBy(desc(callLog.startedAt))
       .limit(limit);
     return c.json({ calls: rows });
+  })
+
+  /**
+   * Place an outbound phone call. Returns once the call is queued: the worker
+   * dials, and the call shows up in `GET /api/calls/:id` as it starts.
+   */
+  .post("/", async (c) => {
+    const parsed = createBody.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c.json({ error: z.prettifyError(parsed.error) }, 400);
+    }
+    try {
+      const call = await startOutboundCall(
+        {
+          assistantRef: parsed.data.assistantId,
+          phoneNumberId: parsed.data.phoneNumberId,
+          customerNumber: parsed.data.customer.number,
+        },
+        c.get("organizationId"),
+      );
+      return c.json(call, 201);
+    } catch (err) {
+      if (err instanceof SessionError) {
+        return c.json({ error: err.message }, err.status);
+      }
+      throw err;
+    }
   })
 
   .get("/:id", async (c) => {

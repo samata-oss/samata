@@ -18,6 +18,8 @@ import { MissingKeysError } from "@/server/provider-keys";
 import { runToolCalls } from "@/server/tools";
 import { requireWorkerSecret } from "@/server/webhook-auth";
 
+const FAILED_REASONS = new Set(["error", "dial-failed"]);
+
 async function parse<S extends z.ZodType>(req: Request, schema: S) {
   return schema.safeParse(await req.json().catch(() => null));
 }
@@ -48,6 +50,7 @@ export const webhookRoutes = new Hono()
     }
 
     const call = {
+      id: message.call.callId,
       organizationId: row.organizationId,
       agentId: row.id,
       roomName: message.call.roomName,
@@ -130,7 +133,9 @@ export const webhookRoutes = new Hono()
     const [row] = await db
       .update(callLog)
       .set({
-        status: report.endedReason === "error" ? "failed" : "ended",
+        // `dial-failed`: an outbound call that never connected for a reason
+        // other than the customer (a rejected trunk, a bad number).
+        status: FAILED_REASONS.has(report.endedReason) ? "failed" : "ended",
         endedReason: report.endedReason,
         startedAt: new Date(report.startedAt * 1000),
         endedAt: new Date(report.endedAt * 1000),

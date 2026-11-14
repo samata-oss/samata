@@ -1,10 +1,11 @@
 ---
 title: Calls
-description: List calls and fetch one with its transcript and analysis.
+description: Place an outbound phone call, list calls, and fetch one with its transcript and analysis.
 ---
 
 | Endpoint              | Does                                                                      |
 | --------------------- | ------------------------------------------------------------------------- |
+| `POST /api/calls`     | Place an outbound phone call. Returns `201` once the call is queued.       |
 | `GET /api/calls`      | Recent calls, newest first: `{ "calls": [...] }`. `limit` defaults to 50, max 200. |
 | `GET /api/calls/:id`  | One call, plus `agentName` and `agentSlug` (null once the agent is deleted). |
 
@@ -12,6 +13,65 @@ description: List calls and fetch one with its transcript and analysis.
 curl "localhost:3000/api/calls?limit=10" \
   -H "authorization: Bearer $SAMATA_API_KEY"
 ```
+
+## Place an outbound call
+
+`POST /api/calls` has an assistant ring a phone number. Calls are made from one
+of your [imported Telnyx numbers](/docs/phone-calls#outbound-calls), so Telnyx
+bills your account.
+
+```bash
+curl -X POST localhost:3000/api/calls \
+  -H "authorization: Bearer $SAMATA_API_KEY" \
+  -H "content-type: application/json" \
+  -d '{
+    "assistantId": "receptionist",
+    "customer": { "number": "+14155550123" }
+  }'
+```
+
+| Body field         | Description                                                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------------- |
+| `assistantId`      | An agent's id or slug.                                                                              |
+| `customer.number`  | Who to call, in E.164 (`+14155550123`).                                                             |
+| `phoneNumberId`    | Optional. The id of the imported number to call from. Defaults to the number assigned to the assistant. |
+
+Response, `201`:
+
+```json
+{
+  "id": "6f1c0a52-4d3e-4a52-9a43-0f6f2d6a7d11",
+  "roomName": "call_ab12cd34ef56",
+  "type": "outbound",
+  "status": "queued",
+  "agentId": "…",
+  "fromNumber": "+14155550100",
+  "customerNumber": "+14155550123"
+}
+```
+
+The response comes back as soon as the call is queued, before the phone rings.
+The worker dials, and the call's log row is created under `id` a moment later, so
+`GET /api/calls/:id` can return `404` for a second or two. Then it is
+`in-progress` and, when it finishes, `ended` with the transcript. Poll it, or
+receive the [`end-of-call-report`](/docs/api/webhooks) on the agent's `server.url`.
+
+A call that doesn't connect is still logged. Its `endedReason` says why:
+
+| `endedReason`            | Meaning                                                        |
+| ------------------------ | -------------------------------------------------------------- |
+| `customer-did-not-answer` | No answer (or the line stopped ringing).                      |
+| `customer-busy`          | The line was busy.                                             |
+| `customer-declined`      | The call was rejected.                                         |
+| `dial-failed`            | The carrier or trunk refused it, for example a destination Telnyx doesn't allow. The call's `status` is `failed`. |
+
+| Status | Meaning                                                                                |
+| ------ | -------------------------------------------------------------------------------------- |
+| `400`  | The body is invalid, or `customer.number` isn't E.164.                                 |
+| `402`  | Managed cloud: the workspace is over its plan's call limit.                            |
+| `404`  | The assistant or `phoneNumberId` isn't in your workspace.                              |
+| `422`  | No number to call from (none assigned and no `phoneNumberId`), or a provider key is missing. |
+| `502`  | LiveKit or Telnyx couldn't be reached or refused the setup.                            |
 
 ## The call object
 

@@ -194,6 +194,19 @@ export type NumberRouting = {
 };
 
 /**
+ * What was created so that Samata can place calls from an imported number,
+ * kept so it can be torn down again. Built the first time the number makes an
+ * outbound call. Independent of `NumberRouting`: a number can dial out whether
+ * or not it is connected for inbound calls.
+ */
+export type NumberOutbound = {
+  /** The LiveKit outbound trunk the worker dials through. */
+  livekitTrunkId: string;
+  /** The Telnyx credential connection that LiveKit authenticates against. */
+  telnyxConnectionId: string;
+};
+
+/**
  * A number a workspace has imported from a telephony provider. This is the
  * inventory only: which assistant answers it is `agent.phoneNumber`, the
  * column inbound routing already reads, so there is one source of truth for
@@ -222,6 +235,7 @@ export const importedNumber = pgTable(
      */
     encryptedApiKey: text("encrypted_api_key").notNull(),
     routing: jsonb("routing").$type<NumberRouting>(),
+    outbound: jsonb("outbound").$type<NumberOutbound>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [index("phone_number_organization_idx").on(table.organizationId)],

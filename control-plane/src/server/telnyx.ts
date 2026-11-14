@@ -1,11 +1,11 @@
+import { randomBytes } from "node:crypto";
 import type { NumberRouting } from "@/db/schema";
 import type { SipTarget } from "@/server/sip";
 
 const TELNYX_API = "https://api.telnyx.com/v2";
 
 type Api<T> =
-  | { ok: true; data: T }
-  | { ok: false; status: number; error: string };
+  { ok: true; data: T } | { ok: false; status: number; error: string };
 
 /** One Telnyx API call. Never throws: failures come back as `{ ok: false }`. */
 async function call<T = unknown>(
@@ -71,8 +71,7 @@ async function call<T = unknown>(
 }
 
 export type TelnyxLookup =
-  | { ok: true; id: string; status: string }
-  | { ok: false; error: string };
+  { ok: true; id: string; status: string } | { ok: false; error: string };
 
 type TelnyxNumber = {
   id: string;
@@ -161,8 +160,7 @@ export async function telnyxSignalingAddresses(): Promise<string[]> {
 
 export type TelnyxRouting = NumberRouting["telnyx"];
 export type TelnyxResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; error: string };
+  { ok: true; value: T } | { ok: false; error: string };
 
 /** Telnyx SIP connection settings shared by the FQDN and IP flavours. */
 const connectionSettings = (number: string) => ({
@@ -181,6 +179,47 @@ const connectionSettings = (number: string) => ({
     codecs: ["G711U", "G711A", "G722"],
   },
 });
+
+/**
+ * Delete connections Samata made earlier under `name` and no longer records
+ * (a database reset forgets them, and Telnyx connection names must be unique,
+ * so they'd block the next import). Only connections with both the name and
+ * the `samata` tag are touched. `endpointPath` holds the connection's FQDNs or
+ * IPs, which go first. Best effort: a failure here surfaces when the new
+ * connection is created.
+ */
+async function removeStaleConnections(
+  apiKey: string,
+  connectionPath: string,
+  endpointPath: string | null,
+  name: string,
+) {
+  const list = await call<
+    { id: string; connection_name?: string; tags?: string[] }[]
+  >(apiKey, "GET", connectionPath, undefined, {
+    "filter[connection_name][contains]": name,
+    "page[size]": "250",
+  });
+  if (!list.ok) return;
+  const stale = (list.data ?? []).filter(
+    (c) => c.connection_name === name && c.tags?.includes("samata"),
+  );
+  for (const { id } of stale) {
+    if (endpointPath) {
+      const endpoints = await call<{ id: string }[]>(
+        apiKey,
+        "GET",
+        endpointPath,
+        undefined,
+        { "filter[connection_id]": id, "page[size]": "250" },
+      );
+      for (const e of endpoints.ok ? (endpoints.data ?? []) : []) {
+        await call(apiKey, "DELETE", `${endpointPath}/${e.id}`);
+      }
+    }
+    await call(apiKey, "DELETE", `${connectionPath}/${id}`);
+  }
+}
 
 /**
  * Deliver calls to Telnyx number `phoneNumberId` to the SIP server at
@@ -202,6 +241,10 @@ export async function routeTelnyxNumber(
   const previousConnectionId = current.data.connection_id ?? null;
 
   const kind = target.isIp ? "ip" : "fqdn";
+  // Either flavour may be left over, if SAMATA_SIP_HOST changed between imports.
+  const name = connectionSettings(number).connection_name;
+  await removeStaleConnections(apiKey, "/fqdn_connections", "/fqdns", name);
+  await removeStaleConnections(apiKey, "/ip_connections", "/ips", name);
   const connection = await call<{ id: string }>(
     apiKey,
     "POST",
@@ -298,5 +341,102 @@ export async function unrouteTelnyxNumber(
     const res = await call(apiKey, "DELETE", path);
     if (!res.ok && res.status !== 404) return { ok: false, error: res.error };
   }
+  return { ok: true, value: null };
+}
+
+/** Where Telnyx accepts outbound calls from a SIP trunk. */
+export const TELNYX_SIP_ADDRESS = "sip.telnyx.com";
+
+const OUTBOUND_PROFILE_NAME = "samata";
+
+/**
+ * The Telnyx outbound voice profile that lets a connection place calls. Reuses
+ * the one Samata made earlier, else creates it. Telnyx's defaults apply, so
+ * calls to countries the profile doesn't allow are refused by Telnyx; widen
+ * "Whitelisted destinations" on the profile in the Telnyx portal to dial them.
+ */
+async function outboundVoiceProfile(
+  apiKey: string,
+): Promise<TelnyxResult<string>> {
+  const existing = await call<{ id: string; name?: string }[]>(
+    apiKey,
+    "GET",
+    "/outbound_voice_profiles",
+    undefined,
+    { "page[size]": "250" },
+  );
+  if (!existing.ok) return { ok: false, error: existing.error };
+  const found = existing.data?.find((p) => p.name === OUTBOUND_PROFILE_NAME);
+  if (found) return { ok: true, value: found.id };
+
+  const created = await call<{ id: string }>(
+    apiKey,
+    "POST",
+    "/outbound_voice_profiles",
+    { name: OUTBOUND_PROFILE_NAME },
+  );
+  if (!created.ok) return { ok: false, error: created.error };
+  return { ok: true, value: created.data.id };
+}
+
+export type TelnyxOutbound = {
+  connectionId: string;
+  username: string;
+  password: string;
+};
+
+/**
+ * Create a SIP credential connection that may place calls. LiveKit's outbound
+ * trunk logs in to it with the returned username and password (nothing stores
+ * them: they live on the trunk and the connection). Calls are billed to the
+ * Telnyx account the key belongs to.
+ */
+export async function createTelnyxOutbound(
+  apiKey: string,
+  number: string,
+): Promise<TelnyxResult<TelnyxOutbound>> {
+  const profile = await outboundVoiceProfile(apiKey);
+  if (!profile.ok) return profile;
+
+  await removeStaleConnections(
+    apiKey,
+    "/credential_connections",
+    null,
+    `samata outbound ${number}`,
+  );
+
+  const username = `samata${randomBytes(6).toString("hex")}`;
+  const password = randomBytes(16).toString("hex");
+  const connection = await call<{ id: string }>(
+    apiKey,
+    "POST",
+    "/credential_connections",
+    {
+      connection_name: `samata outbound ${number}`,
+      user_name: username,
+      password,
+      active: true,
+      tags: ["samata"],
+      outbound: { outbound_voice_profile_id: profile.value },
+    },
+  );
+  if (!connection.ok) return { ok: false, error: connection.error };
+  return {
+    ok: true,
+    value: { connectionId: connection.data.id, username, password },
+  };
+}
+
+/** Delete the connection made by `createTelnyxOutbound`. Already gone is done. */
+export async function deleteTelnyxOutbound(
+  apiKey: string,
+  connectionId: string,
+): Promise<TelnyxResult<null>> {
+  const res = await call(
+    apiKey,
+    "DELETE",
+    `/credential_connections/${connectionId}`,
+  );
+  if (!res.ok && res.status !== 404) return { ok: false, error: res.error };
   return { ok: true, value: null };
 }

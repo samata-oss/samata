@@ -1,6 +1,6 @@
 ---
 title: Phone calls (SIP)
-description: Import a Telnyx number and assign it to an assistant.
+description: Import a Telnyx number, assign it to an assistant, and place outbound calls.
 icon: Phone
 ---
 
@@ -57,6 +57,47 @@ call to an imported number with no assistant is hung up (or goes to
 If connecting fails (for example `SAMATA_SIP_HOST` isn't set yet) the number stays
 imported as **Not connected**, and **Connect** retries it. Removing a number
 undoes the Telnyx and LiveKit setup.
+
+## Outbound calls
+
+An imported number can also place calls. There is no dashboard button yet; start
+one through the API:
+
+```bash
+curl -X POST localhost:3000/api/calls \
+  -H "authorization: Bearer $SAMATA_API_KEY" \
+  -H "content-type: application/json" \
+  -d '{ "assistantId": "receptionist", "customer": { "number": "+14155550123" } }'
+```
+
+See [Calls](/docs/api/calls#place-an-outbound-call) for the fields, the response
+and the errors. The call is placed from the number assigned to the assistant, or
+from the one named by `phoneNumberId`.
+
+```text
+API ─► control plane ─► room + dispatch ─► Samata worker ─► LiveKit SIP (outbound trunk)
+    ─► Telnyx credential connection ─► the customer's phone
+```
+
+The first time a number places a call, Samata sets up the other direction for it:
+
+1. a Telnyx credential connection with its own generated login, tied to a Telnyx outbound voice profile named `samata` (created if you don't have one);
+2. a LiveKit outbound trunk for the number that logs in to `sip.telnyx.com` with that login, so the number is the caller ID.
+
+Later calls reuse both. Removing the number deletes them. If you reset LiveKit
+and lose the trunk, the next call rebuilds it.
+
+The worker starts the assistant, rings the customer, and speaks the assistant's
+first message only once they answer. Outbound calls need no `SAMATA_SIP_HOST` and
+no open ports: the SIP server dials out. They do need a LiveKit SIP service
+running (or a LiveKit Cloud project, below) and a worker.
+
+<Callout type="warn">
+Telnyx's default `samata` voice profile only allows calls within the US and
+Canada. To call other countries, add them to its whitelisted destinations in the
+Telnyx portal. You are responsible for consent and calling-hour rules (in the US,
+the TCPA) for the numbers you dial.
+</Callout>
 
 ## LiveKit Cloud
 
