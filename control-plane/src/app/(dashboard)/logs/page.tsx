@@ -51,10 +51,7 @@ export default async function LogsPage({
       .where(where)
       .orderBy(desc(callLog.startedAt))
       .limit(limit),
-    db
-      .select({ total: sql<number>`count(*)::int` })
-      .from(callLog)
-      .where(where),
+    db.select({ total: sql<number>`count(*)::int` }).from(callLog).where(where),
   ]);
 
   return (

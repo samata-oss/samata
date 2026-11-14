@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { AssistantEditor } from "@/components/assistants/assistant-editor";
 import { db } from "@/db";
-import { agent, callLog, tool } from "@/db/schema";
+import { agent, callLog, importedNumber, tool } from "@/db/schema";
 import { editorView, inWorkspace } from "@/server/agents";
 import { listProviderKeys } from "@/server/provider-keys";
 import { requireWorkspaceSession } from "@/server/workspace";
@@ -56,17 +56,33 @@ export default async function AssistantPage({
   );
 
   const assistants = await db
-    .select({ slug: agent.slug, name: agent.name })
+    .select({
+      slug: agent.slug,
+      name: agent.name,
+      phoneNumber: agent.phoneNumber,
+    })
     .from(agent)
     .where(eq(agent.organizationId, organizationId))
     .orderBy(agent.name);
+
+  // Explicit column: the encrypted API key stays on the server.
+  const imported = await db
+    .select({ number: importedNumber.number })
+    .from(importedNumber)
+    .where(eq(importedNumber.organizationId, organizationId))
+    .orderBy(importedNumber.number);
+  const numbers = imported.map((n) => ({
+    number: n.number,
+    heldBy: assistants.find((a) => a.phoneNumber === n.number)?.name ?? null,
+  }));
 
   // Keyed by id so switching assistants resets the editor's draft.
   return (
     <AssistantEditor
       key={row.id}
       agent={editorView(row)}
-      assistants={assistants}
+      assistants={assistants.map(({ slug, name }) => ({ slug, name }))}
+      numbers={numbers}
       calls={calls}
       libraryTools={libraryTools}
       configuredKeys={configuredKeys}

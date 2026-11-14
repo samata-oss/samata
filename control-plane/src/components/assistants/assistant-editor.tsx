@@ -12,6 +12,10 @@ import {
   AssistantSwitcher,
 } from "@/components/assistants/assistant-switcher";
 import { LogsTab } from "@/components/assistants/logs-tab";
+import {
+  type NumberOption,
+  NumberPicker,
+} from "@/components/assistants/number-picker";
 import { TestTab } from "@/components/assistants/test-tab";
 import {
   type LibraryToolOption,
@@ -22,7 +26,6 @@ import type {
   Draft,
   UpdateConfig,
 } from "@/components/assistants/types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { KeyProvider } from "@/lib/providers";
@@ -63,6 +66,7 @@ export function AssistantEditor({
   calls,
   libraryTools,
   configuredKeys,
+  numbers,
 }: {
   agent: EditorAgent;
   /** Every assistant in the workspace, for the switcher. */
@@ -71,6 +75,8 @@ export function AssistantEditor({
   libraryTools: LibraryToolOption[];
   /** Providers the workspace has a key for. */
   configuredKeys: KeyProvider[];
+  /** The workspace's imported phone numbers, for the number picker. */
+  numbers: NumberOption[];
 }) {
   const router = useRouter();
   const keys = useMemo(() => new Set(configuredKeys), [configuredKeys]);
@@ -188,20 +194,24 @@ export function AssistantEditor({
                 type="button"
                 onClick={copyId}
                 className="inline-flex items-center gap-1 hover:text-foreground"
-                title="Copy assistant id"
+                title={`Copy assistant id (${agent.id})`}
               >
-                {agent.id.slice(0, 8)}
+                {agent.id.slice(0, 8)}…
                 {copied ? (
                   <CheckIcon className="size-3 text-chart-4" />
                 ) : (
                   <CopyIcon className="size-3" />
                 )}
               </button>
-              {agent.phoneNumber && (
-                <Badge variant="secondary" className="font-mono">
-                  {agent.phoneNumber}
-                </Badge>
-              )}
+              <NumberPicker
+                className="ml-1"
+                numbers={numbers}
+                value={draft.phoneNumber}
+                agentName={agent.name}
+                onChange={(phoneNumber) =>
+                  setDraft((d) => ({ ...d, phoneNumber }))
+                }
+              />
             </div>
           </div>
           <div className="flex items-center gap-2">

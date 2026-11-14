@@ -110,10 +110,25 @@ export async function updateAgentAction(
     return { ok: false, error: z.prettifyError(merged.error) };
 
   try {
-    await db
-      .update(agent)
-      .set({ name, slug, phoneNumber, config: merged.data })
-      .where(owned(organizationId, id));
+    await db.transaction(async (tx) => {
+      // `agent.phone_number` is unique. Picking a number another assistant in
+      // this workspace has moves it here, as on the Phone Numbers page.
+      if (phoneNumber && phoneNumber !== existing.phoneNumber) {
+        await tx
+          .update(agent)
+          .set({ phoneNumber: null })
+          .where(
+            and(
+              eq(agent.organizationId, organizationId),
+              eq(agent.phoneNumber, phoneNumber),
+            ),
+          );
+      }
+      await tx
+        .update(agent)
+        .set({ name, slug, phoneNumber, config: merged.data })
+        .where(owned(organizationId, id));
+    });
   } catch (err) {
     if (isUniqueViolation(err)) return { ok: false, error: CONFLICT };
     throw err;

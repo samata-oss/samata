@@ -27,7 +27,11 @@ export default async function SignInPage({
 
   // Laptop quickstart: skip the form and sign in as the local account. If that
   // just failed (`local=failed`), show the form instead of looping.
-  if (!sp.invitation && sp.local !== "failed" && (await localLoginAvailable())) {
+  if (
+    !sp.invitation &&
+    sp.local !== "failed" &&
+    (await localLoginAvailable())
+  ) {
     redirect(`/api/local-login?next=${encodeURIComponent(next)}`);
   }
 
