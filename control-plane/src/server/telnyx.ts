@@ -160,7 +160,7 @@ export async function telnyxSignalingAddresses(): Promise<string[]> {
   }
 }
 
-export type TelnyxRouting = NumberRouting["telnyx"];
+export type TelnyxRouting = NonNullable<NumberRouting["telnyx"]>;
 export type TelnyxResult<T> =
   | { ok: true; value: T }
   | { ok: false; error: string };

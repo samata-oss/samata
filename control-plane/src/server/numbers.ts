@@ -1,6 +1,10 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { importedNumber } from "@/db/schema";
+import {
+  importedNumber,
+  type NumberOutbound,
+  type NumberRouting,
+} from "@/db/schema";
 import { decryptSecret } from "@/server/secrets";
 import {
   createInboundRoute,
@@ -8,6 +12,7 @@ import {
   deleteInboundRoute,
   deleteOutboundTrunk,
   outboundTrunkExists,
+  type SipTarget,
   sipTarget,
 } from "@/server/sip";
 import {
@@ -18,11 +23,21 @@ import {
   telnyxSignalingAddresses,
   unrouteTelnyxNumber,
 } from "@/server/telnyx";
+import {
+  createTwilioOutbound,
+  deleteTwilioOutbound,
+  parseTwilioCredentials,
+  routeTwilioNumber,
+  TWILIO_SIGNALING_ADDRESSES,
+  type TwilioCredentials,
+  unrouteTwilioNumber,
+} from "@/server/twilio";
 
 /**
  * Making an imported number answer calls takes two halves that must agree:
  *
- *   Telnyx   number -> SIP connection -> our SIP server (`SAMATA_SIP_HOST`)
+ *   carrier  number -> SIP connection/trunk -> our SIP server (`SAMATA_SIP_HOST`)
+ *            (Telnyx or Twilio, per the row's `provider`)
  *   LiveKit  inbound trunk (accepts the number) -> dispatch rule -> worker
  *
  * `connectNumber` builds both and records them on the row's `routing`;
@@ -35,6 +50,66 @@ export type Outcome = { ok: true } | { ok: false; error: string };
 
 const describe = (err: unknown) =>
   err instanceof Error ? err.message : String(err);
+
+const CARRIER = { telnyx: "Telnyx", twilio: "Twilio" } as const;
+
+/** The credentials stored with a number, decrypted. Throws if unreadable. */
+type Credentials =
+  | { provider: "telnyx"; apiKey: string }
+  | { provider: "twilio"; twilio: TwilioCredentials };
+
+function readCredentials(row: NumberRecord): Credentials {
+  const plaintext = decryptSecret(row.encryptedApiKey);
+  return row.provider === "twilio"
+    ? { provider: "twilio", twilio: parseTwilioCredentials(plaintext) }
+    : { provider: "telnyx", apiKey: plaintext };
+}
+
+const UNREADABLE_CREDENTIALS =
+  "The stored provider credentials can't be read (the encryption secret changed). Remove the number and import it again.";
+
+type CarrierResult<T> = { ok: true; value: T } | { ok: false; error: string };
+
+/** Point the carrier's number at `target`. */
+async function routeAtCarrier(
+  row: NumberRecord,
+  creds: Credentials,
+  providerNumberId: string,
+  target: SipTarget,
+): Promise<CarrierResult<Pick<NumberRouting, "telnyx" | "twilio">>> {
+  if (creds.provider === "twilio") {
+    const res = await routeTwilioNumber(
+      creds.twilio,
+      providerNumberId,
+      row.number,
+      target,
+    );
+    return res.ok ? { ok: true, value: { twilio: res.value } } : res;
+  }
+  const res = await routeTelnyxNumber(
+    creds.apiKey,
+    providerNumberId,
+    row.number,
+    target,
+  );
+  return res.ok ? { ok: true, value: { telnyx: res.value } } : res;
+}
+
+/** Undo `routeAtCarrier`, from what `routing` recorded. */
+async function unrouteAtCarrier(
+  creds: Credentials,
+  providerNumberId: string,
+  routing: NumberRouting,
+): Promise<CarrierResult<null>> {
+  if (creds.provider === "twilio") {
+    return routing.twilio
+      ? unrouteTwilioNumber(creds.twilio, providerNumberId, routing.twilio)
+      : { ok: true, value: null };
+  }
+  return routing.telnyx
+    ? unrouteTelnyxNumber(creds.apiKey, providerNumberId, routing.telnyx)
+    : { ok: true, value: null };
+}
 
 /** The `host:port` we tell the carrier to call. Null when not configured. */
 export function configuredSipHost() {
@@ -64,26 +139,23 @@ export async function connectNumber(row: NumberRecord): Promise<Outcome> {
   if (!row.providerNumberId) {
     return {
       ok: false,
-      error:
-        "This number is missing its Telnyx id. Remove it and import again.",
+      error: `This number is missing its ${CARRIER[row.provider]} id. Remove it and import again.`,
     };
   }
-  let apiKey: string;
+  let creds: Credentials;
   try {
-    apiKey = decryptSecret(row.encryptedApiKey);
+    creds = readCredentials(row);
   } catch {
-    return {
-      ok: false,
-      error:
-        "The stored API key can't be read (the encryption secret changed). Remove the number and import it again.",
-    };
+    return { ok: false, error: UNREADABLE_CREDENTIALS };
   }
 
   let livekit: Awaited<ReturnType<typeof createInboundRoute>>;
   try {
     livekit = await createInboundRoute(
       row.number,
-      await telnyxSignalingAddresses(),
+      row.provider === "twilio"
+        ? TWILIO_SIGNALING_ADDRESSES
+        : await telnyxSignalingAddresses(),
     );
   } catch (err) {
     return {
@@ -92,31 +164,30 @@ export async function connectNumber(row: NumberRecord): Promise<Outcome> {
     };
   }
 
-  const telnyx = await routeTelnyxNumber(
-    apiKey,
+  const carrier = await routeAtCarrier(
+    row,
+    creds,
     row.providerNumberId,
-    row.number,
     target,
   );
-  if (!telnyx.ok) {
+  if (!carrier.ok) {
     await deleteInboundRoute(livekit).catch(() => {});
-    return { ok: false, error: telnyx.error };
+    return { ok: false, error: carrier.error };
   }
 
+  const routing: NumberRouting = {
+    host: `${target.host}:${target.port}`,
+    livekit,
+    ...carrier.value,
+  };
   try {
     await db
       .update(importedNumber)
-      .set({
-        routing: {
-          host: `${target.host}:${target.port}`,
-          livekit,
-          telnyx: telnyx.value,
-        },
-      })
+      .set({ routing })
       .where(eq(importedNumber.id, row.id));
   } catch (err) {
     // Don't leave a live route nothing records.
-    await unrouteTelnyxNumber(apiKey, row.providerNumberId, telnyx.value);
+    await unrouteAtCarrier(creds, row.providerNumberId, routing);
     await deleteInboundRoute(livekit).catch(() => {});
     throw err;
   }
@@ -124,9 +195,9 @@ export async function connectNumber(row: NumberRecord): Promise<Outcome> {
 }
 
 /**
- * Remove the Telnyx and LiveKit halves and clear `routing`. With `force`,
- * failures are ignored (the key was revoked, the number left Telnyx, ...) so a
- * number can always be removed.
+ * Remove the carrier and LiveKit halves and clear `routing`. With `force`,
+ * failures are ignored (the key was revoked, the number left the carrier, ...)
+ * so a number can always be removed.
  */
 export async function disconnectNumber(
   row: NumberRecord,
@@ -135,22 +206,22 @@ export async function disconnectNumber(
   const { routing } = row;
   if (!routing) return { ok: true };
 
-  let telnyxError: string | null = null;
+  let carrierError: string | null = null;
   try {
-    if (!row.providerNumberId) throw new Error("missing Telnyx id");
-    const res = await unrouteTelnyxNumber(
-      decryptSecret(row.encryptedApiKey),
+    if (!row.providerNumberId) throw new Error("missing provider id");
+    const res = await unrouteAtCarrier(
+      readCredentials(row),
       row.providerNumberId,
-      routing.telnyx,
+      routing,
     );
-    if (!res.ok) telnyxError = res.error;
+    if (!res.ok) carrierError = res.error;
   } catch (err) {
-    telnyxError = describe(err);
+    carrierError = describe(err);
   }
-  if (telnyxError && !force) {
+  if (carrierError && !force) {
     return {
       ok: false,
-      error: `Couldn't disconnect the number in Telnyx: ${telnyxError}`,
+      error: `Couldn't disconnect the number in ${CARRIER[row.provider]}: ${carrierError}`,
     };
   }
 
@@ -179,7 +250,8 @@ export async function disconnectNumber(
 /**
  * Dialing out takes its own pair, independent of the inbound route above:
  *
- *   Telnyx   credential connection (may place calls)
+ *   carrier  Telnyx credential connection / Twilio termination trunk
+ *            (may place calls)
  *   LiveKit  outbound trunk that logs in to it, with the number as caller ID
  *
  * Built on the number's first outbound call (`ensureOutbound`) and recorded on
@@ -190,6 +262,46 @@ export async function disconnectNumber(
 export type OutboundOutcome =
   | { ok: true; trunkId: string }
   | { ok: false; error: string };
+
+type CarrierOutbound =
+  | {
+      ok: true;
+      /** What the LiveKit outbound trunk dials and logs in with. */
+      login: { address: string; username: string; password: string };
+      /** What to keep on `outbound` to tear this down later. */
+      record: Omit<NumberOutbound, "livekitTrunkId">;
+      undo: () => Promise<unknown>;
+    }
+  | { ok: false; error: string };
+
+/** The carrier's half of dialing out: somewhere LiveKit can log in and call. */
+async function createCarrierOutbound(
+  creds: Credentials,
+  number: string,
+): Promise<CarrierOutbound> {
+  if (creds.provider === "twilio") {
+    const res = await createTwilioOutbound(creds.twilio, number);
+    if (!res.ok) return res;
+    const { trunkSid, credentialListSid, domain, username, password } =
+      res.value;
+    return {
+      ok: true,
+      login: { address: domain, username, password },
+      record: { twilio: { trunkSid, credentialListSid } },
+      undo: () =>
+        deleteTwilioOutbound(creds.twilio, { trunkSid, credentialListSid }),
+    };
+  }
+  const res = await createTelnyxOutbound(creds.apiKey, number);
+  if (!res.ok) return res;
+  const { connectionId, username, password } = res.value;
+  return {
+    ok: true,
+    login: { address: TELNYX_SIP_ADDRESS, username, password },
+    record: { telnyxConnectionId: connectionId },
+    undo: () => deleteTelnyxOutbound(creds.apiKey, connectionId),
+  };
+}
 
 export async function ensureOutbound(
   row: NumberRecord,
@@ -213,29 +325,21 @@ export async function ensureOutbound(
     row = { ...row, outbound: null };
   }
 
-  let apiKey: string;
+  let creds: Credentials;
   try {
-    apiKey = decryptSecret(row.encryptedApiKey);
+    creds = readCredentials(row);
   } catch {
-    return {
-      ok: false,
-      error:
-        "The stored API key can't be read (the encryption secret changed). Remove the number and import it again.",
-    };
+    return { ok: false, error: UNREADABLE_CREDENTIALS };
   }
 
-  const telnyx = await createTelnyxOutbound(apiKey, row.number);
-  if (!telnyx.ok) return { ok: false, error: telnyx.error };
+  const carrier = await createCarrierOutbound(creds, row.number);
+  if (!carrier.ok) return carrier;
 
   let trunkId: string;
   try {
-    trunkId = await createOutboundTrunk(row.number, {
-      address: TELNYX_SIP_ADDRESS,
-      username: telnyx.value.username,
-      password: telnyx.value.password,
-    });
+    trunkId = await createOutboundTrunk(row.number, carrier.login);
   } catch (err) {
-    await deleteTelnyxOutbound(apiKey, telnyx.value.connectionId);
+    await carrier.undo();
     return {
       ok: false,
       error: `Couldn't set up the LiveKit outbound trunk: ${describe(err)}`,
@@ -245,18 +349,13 @@ export async function ensureOutbound(
   // Two first calls at once would each build a pair; only one may be recorded.
   const [saved] = await db
     .update(importedNumber)
-    .set({
-      outbound: {
-        livekitTrunkId: trunkId,
-        telnyxConnectionId: telnyx.value.connectionId,
-      },
-    })
+    .set({ outbound: { livekitTrunkId: trunkId, ...carrier.record } })
     .where(and(eq(importedNumber.id, row.id), isNull(importedNumber.outbound)))
     .returning({ id: importedNumber.id });
   if (saved) return { ok: true, trunkId };
 
   await deleteOutboundTrunk(trunkId).catch(() => {});
-  await deleteTelnyxOutbound(apiKey, telnyx.value.connectionId);
+  await carrier.undo();
   const [winner] = await db
     .select({ outbound: importedNumber.outbound })
     .from(importedNumber)
@@ -267,7 +366,7 @@ export async function ensureOutbound(
 }
 
 /**
- * Remove the Telnyx connection and LiveKit trunk and clear `outbound`. With
+ * Remove the carrier connection and LiveKit trunk and clear `outbound`. With
  * `force`, failures are ignored so a number can always be removed.
  */
 export async function removeOutbound(
@@ -277,20 +376,26 @@ export async function removeOutbound(
   const { outbound } = row;
   if (!outbound) return { ok: true };
 
-  let telnyxError: string | null = null;
+  let carrierError: string | null = null;
   try {
-    const res = await deleteTelnyxOutbound(
-      decryptSecret(row.encryptedApiKey),
-      outbound.telnyxConnectionId,
-    );
-    if (!res.ok) telnyxError = res.error;
+    const creds = readCredentials(row);
+    let res: CarrierResult<null> = { ok: true, value: null };
+    if (creds.provider === "twilio" && outbound.twilio) {
+      res = await deleteTwilioOutbound(creds.twilio, outbound.twilio);
+    } else if (creds.provider === "telnyx" && outbound.telnyxConnectionId) {
+      res = await deleteTelnyxOutbound(
+        creds.apiKey,
+        outbound.telnyxConnectionId,
+      );
+    }
+    if (!res.ok) carrierError = res.error;
   } catch (err) {
-    telnyxError = describe(err);
+    carrierError = describe(err);
   }
-  if (telnyxError && !force) {
+  if (carrierError && !force) {
     return {
       ok: false,
-      error: `Couldn't remove the outbound connection in Telnyx: ${telnyxError}`,
+      error: `Couldn't remove the outbound connection in ${CARRIER[row.provider]}: ${carrierError}`,
     };
   }
 

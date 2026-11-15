@@ -17,8 +17,8 @@ curl "localhost:3000/api/calls?limit=10" \
 ## Place an outbound call
 
 `POST /api/calls` has an assistant ring a phone number. Calls are made from one
-of your [imported Telnyx numbers](/docs/phone-calls#outbound-calls), so Telnyx
-bills your account.
+of your [imported Telnyx or Twilio numbers](/docs/phone-calls#outbound-calls), so
+your carrier bills your account.
 
 ```bash
 curl -X POST localhost:3000/api/calls \
@@ -63,7 +63,7 @@ A call that doesn't connect is still logged. Its `endedReason` says why:
 | `customer-did-not-answer` | No answer (or the line stopped ringing).                      |
 | `customer-busy`          | The line was busy.                                             |
 | `customer-declined`      | The call was rejected.                                         |
-| `dial-failed`            | The carrier or trunk refused it, for example a destination Telnyx doesn't allow. The call's `status` is `failed`. |
+| `dial-failed`            | The carrier or trunk refused it, for example a destination your carrier doesn't allow. The call's `status` is `failed`. |
 
 | Status | Meaning                                                                                |
 | ------ | -------------------------------------------------------------------------------------- |
@@ -71,7 +71,7 @@ A call that doesn't connect is still logged. Its `endedReason` says why:
 | `402`  | Managed cloud: the workspace is over its plan's call limit.                            |
 | `404`  | The assistant or `phoneNumberId` isn't in your workspace.                              |
 | `422`  | No number to call from (none assigned and no `phoneNumberId`), or a provider key is missing. |
-| `502`  | LiveKit or Telnyx couldn't be reached or refused the setup.                            |
+| `502`  | LiveKit or your carrier couldn't be reached or refused the setup.                            |
 
 ## The call object
 

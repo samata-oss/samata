@@ -4,7 +4,10 @@ import { DownloadIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { importPhoneNumberAction } from "@/app/actions";
+import {
+  importPhoneNumberAction,
+  listTwilioNumbersAction,
+} from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,15 +20,52 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+type Provider = "telnyx" | "twilio";
+
+type TwilioNumber = { number: string; name: string | null; imported: boolean };
+
+/** Report one import: connected, or imported but not yet connected. */
+function reportImport(res: { number: string; routingError?: string }) {
+  if (res.routingError) {
+    // Imported, but calls can't reach it yet. It can be connected later.
+    toast.warning(`Imported ${res.number}, but it isn't connected yet`, {
+      description: res.routingError,
+      duration: 15_000,
+    });
+  } else {
+    toast.success(`Imported and connected ${res.number}`);
+  }
+}
 
 export function ImportNumberDialog() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [apiKey, setApiKey] = useState("");
-  const [number, setNumber] = useState("");
+  const [provider, setProvider] = useState<Provider>("telnyx");
   const [pending, startTransition] = useTransition();
 
-  function submit(e: React.FormEvent) {
+  // Telnyx
+  const [apiKey, setApiKey] = useState("");
+  const [number, setNumber] = useState("");
+
+  // Twilio: credentials first, then the numbers on the account to pick from.
+  const [accountSid, setAccountSid] = useState("");
+  const [authToken, setAuthToken] = useState("");
+  const [available, setAvailable] = useState<TwilioNumber[] | null>(null);
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+
+  /** Don't leave pasted secrets sitting in state behind a closed dialog. */
+  function reset() {
+    setApiKey("");
+    setNumber("");
+    setAccountSid("");
+    setAuthToken("");
+    setAvailable(null);
+    setSelected(new Set());
+  }
+
+  function submitTelnyx(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
       const res = await importPhoneNumberAction({
@@ -37,29 +77,92 @@ export function ImportNumberDialog() {
         toast.error(res.error);
         return;
       }
-      if (res.routingError) {
-        // Imported, but calls can't reach it yet. It can be connected later.
-        toast.warning(`Imported ${res.number}, but it isn't connected yet`, {
-          description: res.routingError,
-          duration: 15_000,
-        });
-      } else {
-        toast.success(`Imported and connected ${res.number}`);
-      }
+      reportImport(res);
       setOpen(false);
-      setApiKey("");
-      setNumber("");
+      reset();
       router.refresh();
     });
   }
+
+  function findTwilioNumbers(e: React.FormEvent) {
+    e.preventDefault();
+    startTransition(async () => {
+      const res = await listTwilioNumbersAction({ accountSid, authToken });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      if (!res.numbers.length) {
+        toast.error("That Twilio account has no voice phone numbers.");
+        return;
+      }
+      setAvailable(res.numbers);
+      // A lone number is the obvious choice.
+      const importable = res.numbers.filter((n) => !n.imported);
+      setSelected(
+        new Set(importable.length === 1 ? [importable[0].number] : []),
+      );
+    });
+  }
+
+  function importTwilioNumbers(e: React.FormEvent) {
+    e.preventDefault();
+    startTransition(async () => {
+      // One at a time: each sets up its own trunks, and a failure on one
+      // shouldn't hide the others.
+      const failed: string[] = [];
+      let imported = 0;
+      for (const n of selected) {
+        const res = await importPhoneNumberAction({
+          provider: "twilio",
+          accountSid,
+          authToken,
+          number: n,
+        });
+        if (!res.ok) {
+          failed.push(n);
+          toast.error(`Couldn't import ${n}`, { description: res.error });
+          continue;
+        }
+        imported++;
+        reportImport(res);
+      }
+      if (imported) router.refresh();
+      if (failed.length) {
+        // Stay open, with only the failures left selected, to retry.
+        setAvailable(
+          (list) =>
+            list?.map((a) =>
+              selected.has(a.number) && !failed.includes(a.number)
+                ? { ...a, imported: true }
+                : a,
+            ) ?? null,
+        );
+        setSelected(new Set(failed));
+        return;
+      }
+      setOpen(false);
+      reset();
+    });
+  }
+
+  function toggle(n: string, on: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(n);
+      else next.delete(n);
+      return next;
+    });
+  }
+
+  const importable = available?.filter((n) => !n.imported) ?? [];
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        // Don't leave a pasted API key sitting in state behind a closed dialog.
-        if (!next) setApiKey("");
+        if (!next) reset();
       }}
     >
       <DialogTrigger render={<Button />}>
@@ -67,51 +170,175 @@ export function ImportNumberDialog() {
         Import number
       </DialogTrigger>
       <DialogContent>
-        <form onSubmit={submit} className="grid gap-4" autoComplete="off">
-          <DialogHeader>
-            <DialogTitle>Import from Telnyx</DialogTitle>
-            <DialogDescription>
-              Enter the number you set up in Telnyx and an API key from the same
-              account. Samata checks the key owns the number, stores the key
-              encrypted, and points the number at your SIP server so calls to it
-              reach your assistants.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-2">
-            <Label htmlFor="telnyx-api-key">Telnyx API key</Label>
-            <Input
-              id="telnyx-api-key"
-              type="password"
-              autoFocus
-              required
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="KEY0123…"
-              className="font-mono"
-              spellCheck={false}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="telnyx-number">Phone number</Label>
-            <Input
-              id="telnyx-number"
-              type="tel"
-              required
-              value={number}
-              onChange={(e) => setNumber(e.target.value)}
-              placeholder="+14155550123"
-              className="font-mono"
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              disabled={pending || !apiKey.trim() || !number.trim()}
-            >
-              {pending ? "Verifying…" : "Import"}
-            </Button>
-          </DialogFooter>
-        </form>
+        <DialogHeader>
+          <DialogTitle>Import a number</DialogTitle>
+          <DialogDescription>
+            Samata checks your credentials own the number, stores them
+            encrypted, and points the number at your SIP server so calls to it
+            reach your assistants.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Tabs
+          value={provider}
+          onValueChange={(v) => {
+            setProvider(v as Provider);
+            reset();
+          }}
+        >
+          <TabsList>
+            <TabsTrigger value="telnyx">Telnyx</TabsTrigger>
+            <TabsTrigger value="twilio">Twilio</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {provider === "telnyx" && (
+          <form
+            onSubmit={submitTelnyx}
+            className="grid gap-4"
+            autoComplete="off"
+          >
+            <div className="grid gap-2">
+              <Label htmlFor="telnyx-api-key">Telnyx API key</Label>
+              <Input
+                id="telnyx-api-key"
+                type="password"
+                autoFocus
+                required
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="KEY0123…"
+                className="font-mono"
+                spellCheck={false}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="telnyx-number">Phone number</Label>
+              <Input
+                id="telnyx-number"
+                type="tel"
+                required
+                value={number}
+                onChange={(e) => setNumber(e.target.value)}
+                placeholder="+14155550123"
+                className="font-mono"
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="submit"
+                disabled={pending || !apiKey.trim() || !number.trim()}
+              >
+                {pending ? "Verifying…" : "Import"}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+
+        {provider === "twilio" && !available && (
+          <form
+            onSubmit={findTwilioNumbers}
+            className="grid gap-4"
+            autoComplete="off"
+          >
+            <div className="grid gap-2">
+              <Label htmlFor="twilio-account-sid">Account SID</Label>
+              <Input
+                id="twilio-account-sid"
+                autoFocus
+                required
+                value={accountSid}
+                onChange={(e) => setAccountSid(e.target.value)}
+                placeholder="AC0123…"
+                className="font-mono"
+                spellCheck={false}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="twilio-auth-token">Auth Token</Label>
+              <Input
+                id="twilio-auth-token"
+                type="password"
+                required
+                value={authToken}
+                onChange={(e) => setAuthToken(e.target.value)}
+                className="font-mono"
+                spellCheck={false}
+              />
+              <p className="text-xs text-muted-foreground">
+                Both are on the home page of the Twilio Console.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button
+                type="submit"
+                disabled={pending || !accountSid.trim() || !authToken.trim()}
+              >
+                {pending ? "Checking…" : "Find numbers"}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+
+        {provider === "twilio" && available && (
+          <form onSubmit={importTwilioNumbers} className="grid gap-4">
+            <fieldset className="grid max-h-64 gap-1 overflow-y-auto">
+              <legend className="mb-2 text-sm font-medium">
+                Numbers on this account
+              </legend>
+              {available.map((n) => (
+                <label
+                  key={n.number}
+                  className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-muted has-disabled:cursor-not-allowed has-disabled:opacity-50"
+                >
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-primary"
+                    disabled={n.imported || pending}
+                    checked={selected.has(n.number)}
+                    onChange={(e) => toggle(n.number, e.target.checked)}
+                  />
+                  <span className="font-mono">{n.number}</span>
+                  {n.name && (
+                    <span className="truncate text-muted-foreground">
+                      {n.name}
+                    </span>
+                  )}
+                  {n.imported && (
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      Already imported
+                    </span>
+                  )}
+                </label>
+              ))}
+            </fieldset>
+            {importable.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                Every number on this account is already imported.
+              </p>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={pending}
+                onClick={() => {
+                  setAvailable(null);
+                  setSelected(new Set());
+                }}
+              >
+                Back
+              </Button>
+              <Button type="submit" disabled={pending || selected.size === 0}>
+                {pending
+                  ? "Importing…"
+                  : selected.size > 1
+                    ? `Import ${selected.size} numbers`
+                    : "Import"}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );

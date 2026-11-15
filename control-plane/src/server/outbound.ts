@@ -35,7 +35,7 @@ export type StartedOutboundCall = {
  *   1. Check the assistant, the plan and the provider keys, like a browser
  *      call (`prepareCall`).
  *   2. Pick the imported number to call from: `phoneNumberId`, else the number
- *      assigned to the assistant. Its owner's Telnyx account pays for the call.
+ *      assigned to the assistant. Its owner's carrier account pays for the call.
  *   3. Make sure that number can dial out (`ensureOutbound`).
  *   4. Create a room and dispatch the worker into it. The job metadata says
  *      who to dial and through which trunk.

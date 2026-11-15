@@ -29,7 +29,7 @@ export type AssistantOption = {
 
 export type NumberRow = {
   id: string;
-  provider: "telnyx";
+  provider: "telnyx" | "twilio";
   number: string;
   agentId: string | null;
   /** Whether calls to the number reach this install's SIP server. */
@@ -38,7 +38,7 @@ export type NumberRow = {
 
 type ManualNumber = { number: string; agentName: string; agentSlug: string };
 
-const PROVIDER_LABEL = { telnyx: "Telnyx" } as const;
+const PROVIDER_LABEL = { telnyx: "Telnyx", twilio: "Twilio" } as const;
 
 export function PhoneNumbersManager({
   sipConfigured,
@@ -64,7 +64,7 @@ export function PhoneNumbersManager({
       )}
       {rows.length === 0 && manual.length === 0 ? (
         <EmptyState title="No phone numbers yet">
-          Use Import number to bring in a number from Telnyx.
+          Use Import number to bring in a number from Telnyx or Twilio.
         </EmptyState>
       ) : (
         <div className="overflow-hidden rounded-lg border">
@@ -162,7 +162,7 @@ function NumberRowView({
   function remove() {
     if (
       !window.confirm(
-        `Remove ${row.number}? It will be disconnected from Telnyx and stop answering calls.`,
+        `Remove ${row.number}? It will be disconnected from ${PROVIDER_LABEL[row.provider]} and stop answering calls.`,
       )
     )
       return;
@@ -172,7 +172,7 @@ function NumberRowView({
         !res.ok &&
         "canForce" in res &&
         window.confirm(
-          `${res.error}\n\nRemove it from Samata anyway? You may need to clean up the Telnyx connection yourself.`,
+          `${res.error}\n\nRemove it from Samata anyway? You may need to clean up the ${PROVIDER_LABEL[row.provider]} setup yourself.`,
         )
       ) {
         res = await removePhoneNumberAction(row.id, true);

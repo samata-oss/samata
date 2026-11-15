@@ -171,7 +171,7 @@ export const providerKey = pgTable(
   (table) => [primaryKey({ columns: [table.organizationId, table.provider] })],
 );
 
-export const PHONE_PROVIDERS = ["telnyx"] as const;
+export const PHONE_PROVIDERS = ["telnyx", "twilio"] as const;
 export type PhoneProvider = (typeof PHONE_PROVIDERS)[number];
 
 /**
@@ -182,7 +182,8 @@ export type NumberRouting = {
   /** `SAMATA_SIP_HOST` when connected. A different value means it is stale. */
   host: string;
   livekit: { trunkId: string; dispatchRuleId: string };
-  telnyx: {
+  /** Set for Telnyx numbers. */
+  telnyx?: {
     /** The Telnyx SIP connection that delivers the number's calls to `host`. */
     connectionId: string;
     kind: "fqdn" | "ip";
@@ -190,6 +191,18 @@ export type NumberRouting = {
     endpointId: string;
     /** What the number pointed at before; restored on disconnect. */
     previousConnectionId: string | null;
+  };
+  /** Set for Twilio numbers. */
+  twilio?: {
+    /** The Twilio SIP trunk whose origination URL is `host`. */
+    trunkSid: string;
+    /** What the number was set to before; restored on disconnect. */
+    previous: {
+      trunkSid: string | null;
+      voiceUrl: string | null;
+      voiceMethod: string | null;
+      voiceApplicationSid: string | null;
+    };
   };
 };
 
@@ -202,8 +215,10 @@ export type NumberRouting = {
 export type NumberOutbound = {
   /** The LiveKit outbound trunk the worker dials through. */
   livekitTrunkId: string;
-  /** The Telnyx credential connection that LiveKit authenticates against. */
-  telnyxConnectionId: string;
+  /** Telnyx: the credential connection that LiveKit authenticates against. */
+  telnyxConnectionId?: string;
+  /** Twilio: the trunk (and its credential list) LiveKit authenticates against. */
+  twilio?: { trunkSid: string; credentialListSid: string };
 };
 
 /**
@@ -227,11 +242,12 @@ export const importedNumber = pgTable(
      * number belongs to exactly one workspace.
      */
     number: text("number").notNull().unique(),
-    /** The provider's id for this number (Telnyx phone number id). */
+    /** The provider's id for this number (Telnyx phone number id, Twilio PN sid). */
     providerNumberId: text("provider_number_id"),
     /**
-     * The provider API key, encrypted (`server/secrets.ts`). Never sent to the
-     * browser.
+     * The provider credentials, encrypted (`server/secrets.ts`): the API key
+     * for Telnyx, JSON of the Account SID and Auth Token for Twilio. Never
+     * sent to the browser.
      */
     encryptedApiKey: text("encrypted_api_key").notNull(),
     routing: jsonb("routing").$type<NumberRouting>(),

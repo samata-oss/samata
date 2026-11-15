@@ -1,18 +1,18 @@
 ---
 title: Phone calls (SIP)
-description: Import a Telnyx number, assign it to an assistant, and place outbound calls.
+description: Import a Telnyx or Twilio number, assign it to an assistant, and place outbound calls.
 icon: Phone
 ---
 
 Inbound calls reach an assistant like this:
 
 ```text
-caller ─► Telnyx number ─► Telnyx SIP connection ─► your SIP server (LiveKit SIP, :5060)
+caller ─► Telnyx/Twilio number ─► SIP connection/trunk ─► your SIP server (LiveKit SIP, :5060)
        ─► LiveKit inbound trunk + dispatch rule ─► room ─► Samata worker
        ─► control plane picks the assistant assigned to the dialed number
 ```
 
-The production compose runs the SIP server (`sip`) alongside LiveKit. Telnyx has
+The production compose runs the SIP server (`sip`) alongside LiveKit. Your carrier has
 to be able to reach it, so it needs a public address.
 
 ## Set up
@@ -37,26 +37,31 @@ Set it on the control plane to that address: a hostname, `host:port`, or IPv4.
 
 ### Import the number
 
-On the **Phone Numbers** page choose **Import number**, enter a Telnyx API key and
-a number from the same Telnyx account (E.164, for example `+14155550123`).
+On the **Phone Numbers** page choose **Import number**, then pick your carrier:
+
+- **Telnyx**: enter an API key and a number from the same account (E.164, for
+  example `+14155550123`).
+- **Twilio**: enter your Account SID and Auth Token, both on the home page of the
+  Twilio Console. Samata lists the voice numbers on the account and you choose
+  which to import.
 
 </Step>
 </Steps>
 
 When you import a number, Samata:
 
-1. checks with Telnyx that the key is valid and the number is active on it, and stores the key encrypted;
-2. creates a LiveKit inbound trunk for the number that accepts calls only from Telnyx's published signaling addresses (override with `SAMATA_SIP_ALLOWED_ADDRESSES`), and a dispatch rule that gives each caller their own room and dispatches the worker;
-3. creates a Telnyx SIP connection pointing at `SAMATA_SIP_HOST` and attaches the number to it. If the number was on another connection, it is put back there when you remove the number.
+1. checks with the carrier that the credentials are valid and own the number (and, on Telnyx, that it is active), and stores them encrypted;
+2. creates a LiveKit inbound trunk for the number that accepts calls only from the carrier's published signaling addresses (override with `SAMATA_SIP_ALLOWED_ADDRESSES`), and a dispatch rule that gives each caller their own room and dispatches the worker;
+3. points the number at `SAMATA_SIP_HOST`. On Telnyx that is a SIP connection; on Twilio it is an Elastic SIP Trunk named `samata <number>` whose origination URL is your SIP server. If the number was on another connection (Telnyx), or another trunk or voice webhook (Twilio), it is put back there when you remove the number.
 
 Choose the assistant for the number in the same table. Reassigning only changes
-which assistant answers, so it's instant and never touches Telnyx or LiveKit. A
+which assistant answers, so it's instant and never touches your carrier or LiveKit. A
 call to an imported number with no assistant is hung up (or goes to
 `SAMATA_DEFAULT_AGENT` if set).
 
 If connecting fails (for example `SAMATA_SIP_HOST` isn't set yet) the number stays
 imported as **Not connected**, and **Connect** retries it. Removing a number
-undoes the Telnyx and LiveKit setup.
+undoes the carrier and LiveKit setup.
 
 ## Outbound calls
 
@@ -76,13 +81,13 @@ from the one named by `phoneNumberId`.
 
 ```text
 API ─► control plane ─► room + dispatch ─► Samata worker ─► LiveKit SIP (outbound trunk)
-    ─► Telnyx credential connection ─► the customer's phone
+    ─► Telnyx credential connection / Twilio termination trunk ─► the customer's phone
 ```
 
 The first time a number places a call, Samata sets up the other direction for it:
 
-1. a Telnyx credential connection with its own generated login, tied to a Telnyx outbound voice profile named `samata` (created if you don't have one);
-2. a LiveKit outbound trunk for the number that logs in to `sip.telnyx.com` with that login, so the number is the caller ID.
+1. on Telnyx, a credential connection with its own generated login, tied to an outbound voice profile named `samata` (created if you don't have one); on Twilio, an Elastic SIP Trunk named `samata outbound <number>` with a `*.pstn.twilio.com` termination domain and a credential list holding a generated login;
+2. a LiveKit outbound trunk for the number that logs in to `sip.telnyx.com` (Telnyx) or the trunk's termination domain (Twilio) with that login, so the number is the caller ID.
 
 The trunk offers only G.711 (PCMU, then PCMA). By default LiveKit offers G.722
 first, and Telnyx takes the first codec it supports on calls we place, so audio
@@ -99,7 +104,8 @@ running (or a LiveKit Cloud project, below) and a worker.
 <Callout type="warn">
 Telnyx's default `samata` voice profile only allows calls within the US and
 Canada. To call other countries, add them to its whitelisted destinations in the
-Telnyx portal. You are responsible for consent and calling-hour rules (in the US,
+Telnyx portal. On Twilio, outbound calls are limited by the account's Voice
+Geographic Permissions, so enable the countries you dial there. You are responsible for consent and calling-hour rules (in the US,
 the TCPA) for the numbers you dial.
 </Callout>
 

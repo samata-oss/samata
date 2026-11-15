@@ -168,7 +168,7 @@ block), modeled on Vapi's:
 | ------------------ | ------------------------------------------------------------------------------------------------------------- |
 | Assistants         | Edit an agent's model, voice, transcriber, prompt, tools, VAD and analysis plan. Talk to it from the browser. |
 | Tools              | The tool server, the workspace tool library (pushed from code), and which assistants use each tool.           |
-| Phone Numbers      | Import a number from Telnyx (API key + number), then assign it to any assistant.                              |
+| Phone Numbers      | Import a number from Telnyx or Twilio, then assign it to any assistant.                                      |
 | Logs               | Every call, with transcript, summary, structured data and latency.                                            |
 | Structured Outputs | Data extracted by each assistant's analysis plan.                                                             |
 | Metrics            | Call volume and the latency breakdown (end of turn, STT, LLM, TTS).                                           |
@@ -426,13 +426,13 @@ Which server gets a call, most specific first:
 Inbound calls reach an assistant like this:
 
 ```
-caller ─► Telnyx number ─► Telnyx SIP connection ─► your SIP server (LiveKit SIP, :5060)
+caller ─► Telnyx/Twilio number ─► SIP connection/trunk ─► your SIP server (LiveKit SIP, :5060)
        ─► LiveKit inbound trunk + dispatch rule ─► room ─► Samata worker
        ─► control plane picks the assistant assigned to the dialed number
 ```
 
-`docker compose up -d` runs the SIP server (`sip`) alongside LiveKit. Telnyx
-has to be able to reach it, so it needs a public address:
+`docker compose up -d` runs the SIP server (`sip`) alongside LiveKit. Your
+carrier (Telnyx or Twilio) has to be able to reach it, so it needs a public address:
 
 1. Open 5060/tcp, 5060/udp and 10000-10100/udp on the machine running it (the
    production compose already points DNS and `SAMATA_SIP_HOST` at
@@ -442,26 +442,34 @@ has to be able to reach it, so it needs a public address:
 2. Set `SAMATA_SIP_HOST` on the control plane to that address: a hostname,
    `host:port`, or IPv4.
 
-Then on the Phone Numbers page choose **Import number**, enter a Telnyx API key
-and a number from the same Telnyx account (E.164, e.g. `+14155550123`). Samata:
+Then on the Phone Numbers page choose **Import number**:
 
-1. checks with Telnyx that the key is valid and the number is active on it, and
-   stores the key encrypted (AES-256-GCM, keyed from `SAMATA_ENCRYPTION_KEY`,
+- **Telnyx**: enter an API key and a number from the same account (E.164, e.g.
+  `+14155550123`).
+- **Twilio**: enter your Account SID and Auth Token (both on the Twilio Console
+  home page). Samata lists the voice numbers on the account and you pick which
+  to import.
+
+For each number Samata:
+
+1. checks with the carrier that the credentials are valid and own the number,
+   and stores them encrypted (AES-256-GCM, keyed from `SAMATA_ENCRYPTION_KEY`,
    falling back to `BETTER_AUTH_SECRET`);
 2. creates a LiveKit inbound trunk for the number that accepts calls only from
-   Telnyx's published signaling addresses (override with
+   the carrier's published signaling addresses (override with
    `SAMATA_SIP_ALLOWED_ADDRESSES`), and a dispatch rule that gives each caller
    their own room and dispatches the worker;
-3. creates a Telnyx SIP connection pointing at `SAMATA_SIP_HOST` and attaches
-   the number to it. If the number was on another connection, it is put back
-   there when you remove the number.
+3. points the number at `SAMATA_SIP_HOST`: a SIP connection on Telnyx, or an
+   Elastic SIP Trunk with that origination URL on Twilio. If the number was on
+   another connection, trunk or voice webhook, it is put back there when you
+   remove the number.
 
 Choose the assistant for the number in the same table. Reassigning only changes
-which assistant answers, so it's instant and never touches Telnyx or LiveKit.
+which assistant answers, so it's instant and never touches your carrier or LiveKit.
 A call to an imported number with no assistant is hung up (or goes to
 `SAMATA_DEFAULT_AGENT` if set). If connecting fails (for example
 `SAMATA_SIP_HOST` isn't set yet) the number stays imported as "Not connected",
-and **Connect** retries it. Removing a number undoes the Telnyx and LiveKit
+and **Connect** retries it. Removing a number undoes the carrier and LiveKit
 setup.
 
 ### Testing phone calls from your laptop

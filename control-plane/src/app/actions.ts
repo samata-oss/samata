@@ -1,17 +1,10 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
-import {
-  agent,
-  apiKey,
-  importedNumber,
-  PHONE_PROVIDERS,
-  tool,
-  toolServer,
-} from "@/db/schema";
+import { agent, apiKey, importedNumber, tool, toolServer } from "@/db/schema";
 import { agentConfigSchema } from "@/lib/agent-config";
 import { isKeyProvider, KEY_PROVIDERS } from "@/lib/providers";
 import { canManageTeam } from "@/lib/workspace";
@@ -25,6 +18,12 @@ import {
 import { deleteProviderKey, saveProviderKey } from "@/server/provider-keys";
 import { encryptSecret } from "@/server/secrets";
 import { lookupTelnyxNumber } from "@/server/telnyx";
+import {
+  ACCOUNT_SID,
+  listTwilioNumbers,
+  lookupTwilioNumber,
+  serializeTwilioCredentials,
+} from "@/server/twilio";
 import { requireWorkspaceSession } from "@/server/workspace";
 
 /**
@@ -148,21 +147,77 @@ export async function deleteAgentAction(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
-const importSchema = z.object({
-  provider: z.enum(PHONE_PROVIDERS),
-  apiKey: z.string().trim().min(1, "Enter your Telnyx API key."),
-  // Forgive pasted formatting: "+1 (415) 555-0123" is the same number.
-  number: z
+// Forgive pasted formatting: "+1 (415) 555-0123" is the same number.
+const numberField = z
+  .string()
+  .transform((v) => v.replace(/[\s().-]/g, ""))
+  .pipe(phoneSchema);
+
+const twilioCredentialsSchema = z.object({
+  accountSid: z
     .string()
-    .transform((v) => v.replace(/[\s().-]/g, ""))
-    .pipe(phoneSchema),
+    .trim()
+    .regex(ACCOUNT_SID, "Enter your Twilio Account SID (starts with AC)."),
+  authToken: z.string().trim().min(1, "Enter your Twilio Auth Token."),
 });
+
+const importSchema = z.discriminatedUnion("provider", [
+  z.object({
+    provider: z.literal("telnyx"),
+    apiKey: z.string().trim().min(1, "Enter your Telnyx API key."),
+    number: numberField,
+  }),
+  twilioCredentialsSchema.extend({
+    provider: z.literal("twilio"),
+    number: numberField,
+  }),
+]);
+
+/**
+ * The voice numbers on a Twilio account, for choosing which to import. This
+ * also validates the credentials. Numbers already imported are flagged.
+ */
+export async function listTwilioNumbersAction(
+  input: z.input<typeof twilioCredentialsSchema>,
+): Promise<
+  ActionResult<{
+    numbers: { number: string; name: string | null; imported: boolean }[];
+  }>
+> {
+  await requireWorkspaceSession();
+  const parsed = twilioCredentialsSchema.safeParse(input);
+  if (!parsed.success)
+    return { ok: false, error: parsed.error.issues[0].message };
+
+  const found = await listTwilioNumbers(parsed.data);
+  if (!found.ok) return found;
+
+  const taken = found.numbers.length
+    ? await db
+        .select({ number: importedNumber.number })
+        .from(importedNumber)
+        .where(
+          inArray(
+            importedNumber.number,
+            found.numbers.map((n) => n.number),
+          ),
+        )
+    : [];
+  const takenSet = new Set(taken.map((t) => t.number));
+  return {
+    ok: true,
+    numbers: found.numbers.map((n) => ({
+      ...n,
+      imported: takenSet.has(n.number),
+    })),
+  };
+}
 
 /**
  * Import a number from a provider, then connect it so calls reach Samata. The
- * key is checked against the provider's API (it must be valid and own the
- * number) before anything is stored. If connecting fails the number stays
- * imported, with `routingError` saying why, and can be connected again.
+ * credentials are checked against the provider's API (they must be valid and
+ * own the number) before anything is stored. If connecting fails the number
+ * stays imported, with `routingError` saying why, and can be connected again.
  */
 export async function importPhoneNumberAction(
   input: z.input<typeof importSchema>,
@@ -171,10 +226,25 @@ export async function importPhoneNumberAction(
   const parsed = importSchema.safeParse(input);
   if (!parsed.success)
     return { ok: false, error: parsed.error.issues[0].message };
-  const { apiKey, number } = parsed.data;
+  const { number } = parsed.data;
 
-  const found = await lookupTelnyxNumber(apiKey, number);
-  if (!found.ok) return found;
+  let providerNumberId: string;
+  let secret: string;
+  if (parsed.data.provider === "twilio") {
+    const credentials = {
+      accountSid: parsed.data.accountSid,
+      authToken: parsed.data.authToken,
+    };
+    const found = await lookupTwilioNumber(credentials, number);
+    if (!found.ok) return found;
+    providerNumberId = found.id;
+    secret = serializeTwilioCredentials(credentials);
+  } else {
+    const found = await lookupTelnyxNumber(parsed.data.apiKey, number);
+    if (!found.ok) return found;
+    providerNumberId = found.id;
+    secret = parsed.data.apiKey;
+  }
 
   let row: typeof importedNumber.$inferSelect;
   try {
@@ -184,8 +254,8 @@ export async function importPhoneNumberAction(
         organizationId,
         provider: parsed.data.provider,
         number,
-        providerNumberId: found.id,
-        encryptedApiKey: encryptSecret(apiKey),
+        providerNumberId,
+        encryptedApiKey: encryptSecret(secret),
       })
       .returning();
   } catch (err) {
@@ -273,10 +343,10 @@ export async function assignPhoneNumberAction(
 }
 
 /**
- * Forget an imported number: disconnect it from Telnyx and LiveKit, then drop
- * it and unassign it. If disconnecting fails the number is kept and
+ * Forget an imported number: disconnect it from its carrier and LiveKit, then
+ * drop it and unassign it. If disconnecting fails the number is kept and
  * `canForce` is set; retry with `force` to remove it regardless (e.g. the
- * Telnyx key was revoked).
+ * carrier key was revoked).
  */
 export async function removePhoneNumberAction(
   importedId: string,
