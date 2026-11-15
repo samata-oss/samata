@@ -53,9 +53,9 @@ function SavedCredential({
   onChange: () => void;
 }) {
   return (
-    <div className="grid gap-2">
+    <div className="grid min-w-0 grid-cols-1 gap-2">
       <Label>{label}</Label>
-      <div className="flex h-10 items-center gap-2.5 rounded-md border border-input bg-muted/30 pr-1 pl-2.5">
+      <div className="flex h-10 min-w-0 items-center gap-2.5 overflow-hidden rounded-md border border-input bg-muted/30 pr-1 pl-2.5">
         <KeyRoundIcon className="size-4 shrink-0 text-muted-foreground" />
         <span className="min-w-0 flex-1 truncate font-mono text-sm tracking-tight">
           {hint}
@@ -218,7 +218,8 @@ export function ImportNumberDialog({ saved }: { saved: SavedHints }) {
         <DownloadIcon />
         Import number
       </DialogTrigger>
-      <DialogContent>
+      {/* grid-cols-1: a long value (a Twilio SID) must not widen the dialog. */}
+      <DialogContent className="grid-cols-1">
         <DialogHeader>
           <DialogTitle>Import a number</DialogTitle>
           <DialogDescription>
@@ -244,7 +245,7 @@ export function ImportNumberDialog({ saved }: { saved: SavedHints }) {
         {provider === "telnyx" && (
           <form
             onSubmit={submitTelnyx}
-            className="grid gap-4"
+            className="grid grid-cols-1 gap-4"
             autoComplete="off"
           >
             {useSavedTelnyx ? (
@@ -301,7 +302,7 @@ export function ImportNumberDialog({ saved }: { saved: SavedHints }) {
         {provider === "twilio" && !available && (
           <form
             onSubmit={findTwilioNumbers}
-            className="grid gap-4"
+            className="grid grid-cols-1 gap-4"
             autoComplete="off"
           >
             {useSavedTwilio ? (
@@ -358,7 +359,10 @@ export function ImportNumberDialog({ saved }: { saved: SavedHints }) {
         )}
 
         {provider === "twilio" && available && (
-          <form onSubmit={importTwilioNumbers} className="grid gap-4">
+          <form
+            onSubmit={importTwilioNumbers}
+            className="grid grid-cols-1 gap-4"
+          >
             <fieldset className="grid max-h-64 gap-1 overflow-y-auto">
               <legend className="mb-2 text-sm font-medium">
                 Numbers on this account
