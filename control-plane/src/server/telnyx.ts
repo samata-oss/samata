@@ -5,7 +5,8 @@ import type { SipTarget } from "@/server/sip";
 const TELNYX_API = "https://api.telnyx.com/v2";
 
 type Api<T> =
-  { ok: true; data: T } | { ok: false; status: number; error: string };
+  | { ok: true; data: T }
+  | { ok: false; status: number; error: string };
 
 /** One Telnyx API call. Never throws: failures come back as `{ ok: false }`. */
 async function call<T = unknown>(
@@ -71,7 +72,8 @@ async function call<T = unknown>(
 }
 
 export type TelnyxLookup =
-  { ok: true; id: string; status: string } | { ok: false; error: string };
+  | { ok: true; id: string; status: string }
+  | { ok: false; error: string };
 
 type TelnyxNumber = {
   id: string;
@@ -160,7 +162,11 @@ export async function telnyxSignalingAddresses(): Promise<string[]> {
 
 export type TelnyxRouting = NumberRouting["telnyx"];
 export type TelnyxResult<T> =
-  { ok: true; value: T } | { ok: false; error: string };
+  | { ok: true; value: T }
+  | { ok: false; error: string };
+
+/** The codecs LiveKit SIP speaks. Telnyx's default list adds G729, which it can't. */
+const CODECS = ["G711U", "G711A", "G722"];
 
 /** Telnyx SIP connection settings shared by the FQDN and IP flavours. */
 const connectionSettings = (number: string) => ({
@@ -175,8 +181,7 @@ const connectionSettings = (number: string) => ({
     // `agent.phoneNumber` match against.
     ani_number_format: "+E.164",
     dnis_number_format: "+e164",
-    // The codecs LiveKit SIP speaks.
-    codecs: ["G711U", "G711A", "G722"],
+    codecs: CODECS,
   },
 });
 
@@ -417,6 +422,7 @@ export async function createTelnyxOutbound(
       password,
       active: true,
       tags: ["samata"],
+      inbound: { codecs: CODECS },
       outbound: { outbound_voice_profile_id: profile.value },
     },
   );

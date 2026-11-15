@@ -1,3 +1,4 @@
+import { SIPCodec, SIPMediaConfig } from "@livekit/protocol";
 import {
   RoomAgentDispatch,
   RoomConfiguration,
@@ -152,6 +153,33 @@ export async function deleteInboundRoute(route: LivekitRoute) {
 /** `SIP_TRANSPORT_AUTO`: let LiveKit and the carrier agree (UDP, TCP or TLS). */
 const TRANSPORT_AUTO = 0;
 
+/**
+ * ISO country LiveKit Cloud should route calls from this number through, so
+ * the call leaves from a nearby region rather than a default one (extra
+ * distance is extra audio jitter). Only +1 is mapped: it is a hint, and
+ * leaving it out is always valid.
+ */
+function destinationCountry(number: string) {
+  return number.startsWith("+1") ? "US" : undefined;
+}
+
+/**
+ * Offer phone-network codecs only. Left alone, LiveKit offers G.722 first and
+ * Telnyx accepts the first codec it supports for a call placed by us (its own
+ * codec list only governs calls it sends us), so every outbound call ran on
+ * G.722 and was converted to G.711 for the phone. That sounded choppy; G.711
+ * (PCMU, then PCMA) passes through untouched. Inbound is unaffected: there
+ * Telnyx's list decides, and puts G.711 first.
+ */
+export const outboundMedia = () =>
+  new SIPMediaConfig({
+    onlyListedCodecs: true,
+    codecs: [
+      new SIPCodec({ name: "PCMU", rate: 8000 }),
+      new SIPCodec({ name: "PCMA", rate: 8000 }),
+    ],
+  });
+
 /** Create an outbound trunk for `number` (E.164) that dials via `address`. */
 export async function createOutboundTrunk(
   number: string,
@@ -163,6 +191,8 @@ export async function createOutboundTrunk(
     [number],
     {
       transport: TRANSPORT_AUTO,
+      media: outboundMedia(),
+      destinationCountry: destinationCountry(number),
       authUsername: carrier.username,
       authPassword: carrier.password,
     },

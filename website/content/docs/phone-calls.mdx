@@ -84,6 +84,10 @@ The first time a number places a call, Samata sets up the other direction for it
 1. a Telnyx credential connection with its own generated login, tied to a Telnyx outbound voice profile named `samata` (created if you don't have one);
 2. a LiveKit outbound trunk for the number that logs in to `sip.telnyx.com` with that login, so the number is the caller ID.
 
+The trunk offers only G.711 (PCMU, then PCMA). By default LiveKit offers G.722
+first, and Telnyx takes the first codec it supports on calls we place, so audio
+was converted to G.711 for the phone and came out choppy.
+
 Later calls reuse both. Removing the number deletes them. If you reset LiveKit
 and lose the trunk, the next call rebuilds it.
 
