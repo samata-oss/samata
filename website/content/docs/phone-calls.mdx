@@ -54,8 +54,9 @@ When you import a number, Samata:
 2. creates a LiveKit inbound trunk for the number that accepts calls only from the carrier's published signaling addresses (override with `SAMATA_SIP_ALLOWED_ADDRESSES`), and a dispatch rule that gives each caller their own room and dispatches the worker;
 3. points the number at `SAMATA_SIP_HOST`. On Telnyx that is a SIP connection; on Twilio it is an Elastic SIP Trunk named `samata <number>` whose origination URL is your SIP server. If the number was on another connection (Telnyx), or another trunk or voice webhook (Twilio), it is put back there when you remove the number.
 
-Choose the assistant for the number in the same table. Reassigning only changes
-which assistant answers, so it's instant and never touches your carrier or LiveKit. A
+Choose the assistant for the number in the same table. One assistant can answer
+several numbers (pick it for each of them), but a number answers only one
+assistant. Reassigning only changes which assistant answers, so it's instant and never touches your carrier or LiveKit. A
 call to an imported number with no assistant is hung up (or goes to
 `SAMATA_DEFAULT_AGENT` if set).
 
@@ -76,8 +77,9 @@ curl -X POST localhost:3000/api/calls \
 ```
 
 See [Calls](/docs/api/calls#place-an-outbound-call) for the fields, the response
-and the errors. The call is placed from the number assigned to the assistant, or
-from the one named by `phoneNumberId`.
+and the errors. The call is placed from the assistant's first imported number, or
+from the one named by `phoneNumberId`. Use `phoneNumberId` when an assistant has
+several numbers and you want a particular one as the caller ID.
 
 ```text
 API ─► control plane ─► room + dispatch ─► Samata worker ─► LiveKit SIP (outbound trunk)

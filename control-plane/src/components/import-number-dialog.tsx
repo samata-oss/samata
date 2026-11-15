@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { SavedHints } from "@/server/saved-credentials";
 
 type Provider = "telnyx" | "twilio";
 
@@ -39,11 +40,43 @@ function reportImport(res: { number: string; routingError?: string }) {
   }
 }
 
-export function ImportNumberDialog() {
+/** A saved credential: shown by its hint, with a way to enter another. */
+function SavedCredential({
+  label,
+  hint,
+  action,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  action: string;
+  onChange: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
+      <div className="grid min-w-0">
+        <span className="text-xs text-muted-foreground">{label}</span>
+        <span className="truncate font-mono">{hint}</span>
+      </div>
+      <Button type="button" variant="ghost" size="sm" onClick={onChange}>
+        {action}
+      </Button>
+    </div>
+  );
+}
+
+export function ImportNumberDialog({ saved }: { saved: SavedHints }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [provider, setProvider] = useState<Provider>("telnyx");
   const [pending, startTransition] = useTransition();
+
+  // Credentials from an earlier import are used unless the user opts to enter
+  // different ones. They stay on the server; only a hint reaches here.
+  const [replaceTelnyx, setReplaceTelnyx] = useState(false);
+  const [replaceTwilio, setReplaceTwilio] = useState(false);
+  const useSavedTelnyx = saved.telnyx !== null && !replaceTelnyx;
+  const useSavedTwilio = saved.twilio !== null && !replaceTwilio;
 
   // Telnyx
   const [apiKey, setApiKey] = useState("");
@@ -61,6 +94,8 @@ export function ImportNumberDialog() {
     setNumber("");
     setAccountSid("");
     setAuthToken("");
+    setReplaceTelnyx(false);
+    setReplaceTwilio(false);
     setAvailable(null);
     setSelected(new Set());
   }
@@ -68,11 +103,11 @@ export function ImportNumberDialog() {
   function submitTelnyx(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      const res = await importPhoneNumberAction({
-        provider: "telnyx",
-        apiKey,
-        number,
-      });
+      const res = await importPhoneNumberAction(
+        useSavedTelnyx
+          ? { provider: "telnyx", useSaved: true, number }
+          : { provider: "telnyx", apiKey, number },
+      );
       if (!res.ok) {
         toast.error(res.error);
         return;
@@ -87,7 +122,9 @@ export function ImportNumberDialog() {
   function findTwilioNumbers(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      const res = await listTwilioNumbersAction({ accountSid, authToken });
+      const res = await listTwilioNumbersAction(
+        useSavedTwilio ? { useSaved: true } : { accountSid, authToken },
+      );
       if (!res.ok) {
         toast.error(res.error);
         return;
@@ -113,12 +150,11 @@ export function ImportNumberDialog() {
       const failed: string[] = [];
       let imported = 0;
       for (const n of selected) {
-        const res = await importPhoneNumberAction({
-          provider: "twilio",
-          accountSid,
-          authToken,
-          number: n,
-        });
+        const res = await importPhoneNumberAction(
+          useSavedTwilio
+            ? { provider: "twilio", useSaved: true, number: n }
+            : { provider: "twilio", accountSid, authToken, number: n },
+        );
         if (!res.ok) {
           failed.push(n);
           toast.error(`Couldn't import ${n}`, { description: res.error });
@@ -198,25 +234,35 @@ export function ImportNumberDialog() {
             className="grid gap-4"
             autoComplete="off"
           >
-            <div className="grid gap-2">
-              <Label htmlFor="telnyx-api-key">Telnyx API key</Label>
-              <Input
-                id="telnyx-api-key"
-                type="password"
-                autoFocus
-                required
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="KEY0123…"
-                className="font-mono"
-                spellCheck={false}
+            {useSavedTelnyx ? (
+              <SavedCredential
+                label="Telnyx API key (saved)"
+                hint={saved.telnyx ?? ""}
+                action="Use a different key"
+                onChange={() => setReplaceTelnyx(true)}
               />
-            </div>
+            ) : (
+              <div className="grid gap-2">
+                <Label htmlFor="telnyx-api-key">Telnyx API key</Label>
+                <Input
+                  id="telnyx-api-key"
+                  type="password"
+                  autoFocus
+                  required
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="KEY0123…"
+                  className="font-mono"
+                  spellCheck={false}
+                />
+              </div>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="telnyx-number">Phone number</Label>
               <Input
                 id="telnyx-number"
                 type="tel"
+                autoFocus={useSavedTelnyx}
                 required
                 value={number}
                 onChange={(e) => setNumber(e.target.value)}
@@ -227,7 +273,11 @@ export function ImportNumberDialog() {
             <DialogFooter>
               <Button
                 type="submit"
-                disabled={pending || !apiKey.trim() || !number.trim()}
+                disabled={
+                  pending ||
+                  (!useSavedTelnyx && !apiKey.trim()) ||
+                  !number.trim()
+                }
               >
                 {pending ? "Verifying…" : "Import"}
               </Button>
@@ -241,38 +291,52 @@ export function ImportNumberDialog() {
             className="grid gap-4"
             autoComplete="off"
           >
-            <div className="grid gap-2">
-              <Label htmlFor="twilio-account-sid">Account SID</Label>
-              <Input
-                id="twilio-account-sid"
-                autoFocus
-                required
-                value={accountSid}
-                onChange={(e) => setAccountSid(e.target.value)}
-                placeholder="AC0123…"
-                className="font-mono"
-                spellCheck={false}
+            {useSavedTwilio ? (
+              <SavedCredential
+                label="Twilio account (saved)"
+                hint={saved.twilio ?? ""}
+                action="Use a different account"
+                onChange={() => setReplaceTwilio(true)}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="twilio-auth-token">Auth Token</Label>
-              <Input
-                id="twilio-auth-token"
-                type="password"
-                required
-                value={authToken}
-                onChange={(e) => setAuthToken(e.target.value)}
-                className="font-mono"
-                spellCheck={false}
-              />
-              <p className="text-xs text-muted-foreground">
-                Both are on the home page of the Twilio Console.
-              </p>
-            </div>
+            ) : (
+              <>
+                <div className="grid gap-2">
+                  <Label htmlFor="twilio-account-sid">Account SID</Label>
+                  <Input
+                    id="twilio-account-sid"
+                    autoFocus
+                    required
+                    value={accountSid}
+                    onChange={(e) => setAccountSid(e.target.value)}
+                    placeholder="AC0123…"
+                    className="font-mono"
+                    spellCheck={false}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="twilio-auth-token">Auth Token</Label>
+                  <Input
+                    id="twilio-auth-token"
+                    type="password"
+                    required
+                    value={authToken}
+                    onChange={(e) => setAuthToken(e.target.value)}
+                    className="font-mono"
+                    spellCheck={false}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Both are on the home page of the Twilio Console.
+                  </p>
+                </div>
+              </>
+            )}
             <DialogFooter>
               <Button
                 type="submit"
-                disabled={pending || !accountSid.trim() || !authToken.trim()}
+                disabled={
+                  pending ||
+                  (!useSavedTwilio && (!accountSid.trim() || !authToken.trim()))
+                }
               >
                 {pending ? "Checking…" : "Find numbers"}
               </Button>

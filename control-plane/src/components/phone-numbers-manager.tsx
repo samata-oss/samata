@@ -24,7 +24,6 @@ import {
 export type AssistantOption = {
   id: string;
   name: string;
-  phoneNumber: string | null;
 };
 
 export type NumberRow = {
@@ -207,9 +206,6 @@ function NumberRowView({
           {assistants.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name}
-              {a.phoneNumber && a.phoneNumber !== row.number
-                ? ` (replaces ${a.phoneNumber})`
-                : ""}
             </option>
           ))}
         </select>

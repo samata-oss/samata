@@ -18,7 +18,7 @@ envelopes. Every request carries `x-samata-secret: $SAMATA_WEBHOOK_SECRET`.
 On `assistant-request`, the control plane picks the agent in this order:
 
 1. `agentId` (an id or a slug) from the dispatch metadata or the room metadata
-2. The dialed number (`sip.trunkPhoneNumber`), matched against `agent.phone_number`
+2. The dialed number (`sip.trunkPhoneNumber`), matched against the numbers assigned to each agent (`agent_number`)
 3. `SAMATA_DEFAULT_AGENT`
 
 If nothing matches, the call is rejected and the worker hangs up.

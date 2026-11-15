@@ -17,11 +17,11 @@ export type AssistantCall = {
   usage: Record<string, unknown>[] | null;
 };
 
-/** The editable state of an assistant. `phoneNumber` is "" when unassigned. */
+/** The editable state of an assistant. `phoneNumbers` is empty for web only. */
 export type Draft = {
   name: string;
   slug: string;
-  phoneNumber: string;
+  phoneNumbers: string[];
   config: AgentConfig;
 };
 

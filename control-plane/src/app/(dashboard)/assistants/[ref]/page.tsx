@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AssistantEditor } from "@/components/assistants/assistant-editor";
 import { db } from "@/db";
 import { agent, callLog, importedNumber, tool } from "@/db/schema";
+import { numbersByAgent, workspaceNumbers } from "@/server/agent-numbers";
 import { editorView, inWorkspace } from "@/server/agents";
 import { listProviderKeys } from "@/server/provider-keys";
 import { requireWorkspaceSession } from "@/server/workspace";
@@ -57,9 +58,9 @@ export default async function AssistantPage({
 
   const assistants = await db
     .select({
+      id: agent.id,
       slug: agent.slug,
       name: agent.name,
-      phoneNumber: agent.phoneNumber,
     })
     .from(agent)
     .where(eq(agent.organizationId, organizationId))
@@ -71,16 +72,28 @@ export default async function AssistantPage({
     .from(importedNumber)
     .where(eq(importedNumber.organizationId, organizationId))
     .orderBy(importedNumber.number);
-  const numbers = imported.map((n) => ({
-    number: n.number,
-    heldBy: assistants.find((a) => a.phoneNumber === n.number)?.name ?? null,
-  }));
+  const holders = new Map(
+    (await workspaceNumbers(organizationId)).map((n) => [n.number, n.agentId]),
+  );
+  // Only another assistant "holds" a number from this one's point of view:
+  // the picker warns that choosing it moves it.
+  const numbers = imported.map((n) => {
+    const holder = holders.get(n.number);
+    return {
+      number: n.number,
+      heldBy:
+        holder && holder !== row.id
+          ? (assistants.find((a) => a.id === holder)?.name ?? null)
+          : null,
+    };
+  });
+  const phoneNumbers = (await numbersByAgent([row.id])).get(row.id) ?? [];
 
   // Keyed by id so switching assistants resets the editor's draft.
   return (
     <AssistantEditor
       key={row.id}
-      agent={editorView(row)}
+      agent={editorView(row, phoneNumbers)}
       assistants={assistants.map(({ slug, name }) => ({ slug, name }))}
       numbers={numbers}
       calls={calls}

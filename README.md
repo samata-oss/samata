@@ -286,7 +286,7 @@ envelopes. Every request carries `x-samata-secret: $SAMATA_WEBHOOK_SECRET`.
 
 **Choosing the agent** (`assistant-request`), in order:
 1. `agentId` (an id or a slug) from the dispatch metadata or the room metadata
-2. The dialed number (`sip.trunkPhoneNumber`), matched against `agent.phone_number`
+2. The dialed number (`sip.trunkPhoneNumber`), matched against the numbers assigned to each agent (`agent_number`)
 3. `SAMATA_DEFAULT_AGENT`
 
 ## Agent config
@@ -296,7 +296,7 @@ and the worker mirrors it in `worker/samata_worker/config.py`.
 
 | Endpoint                  | Does                                                                                                                                               |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /api/agents`        | Create. `201` with the agent and its `id`; `409` if the slug or phone number is taken. `slug` is optional and defaults to one derived from `name`. |
+| `POST /api/agents`        | Create. `201` with the agent and its `id`; `409` if the slug is taken or a phone number is already assigned to another agent. `slug` is optional and defaults to one derived from `name`. |
 | `PATCH /api/agents/:ref`  | Partial update. Top-level keys of `config` you send replace the stored ones; the rest are kept.                                                    |
 | `PUT /api/agents`         | Create or replace by slug (idempotent, good for config-as-code).                                                                                   |
 | `GET /api/agents[/:ref]`  | List / fetch. `:ref` is an id or slug.                                                                                                             |
@@ -308,7 +308,7 @@ To create an agent:
 curl -X POST localhost:3000/api/agents \
   -H "authorization: Bearer dev-api-key-change-me" -H "content-type: application/json" \
   -d '{
-    "slug": "support", "name": "Support", "phoneNumber": "+14155550100",
+    "slug": "support", "name": "Support", "phoneNumbers": ["+14155550100", "+14155550101"],
     "config": {
       "firstMessage": "Hi! How can I help?",
       "model": { "model": "gpt-4.1-mini", "systemPrompt": "You are a concise support agent." },
@@ -464,8 +464,9 @@ For each number Samata:
    another connection, trunk or voice webhook, it is put back there when you
    remove the number.
 
-Choose the assistant for the number in the same table. Reassigning only changes
-which assistant answers, so it's instant and never touches your carrier or LiveKit.
+Choose the assistant for the number in the same table. An assistant can answer
+several numbers (pick it for each of them), but a number answers only one
+assistant. Reassigning only changes which assistant answers, so it's instant and never touches your carrier or LiveKit.
 A call to an imported number with no assistant is hung up (or goes to
 `SAMATA_DEFAULT_AGENT` if set). If connecting fails (for example
 `SAMATA_SIP_HOST` isn't set yet) the number stays imported as "Not connected",

@@ -15,7 +15,7 @@ leave out gets a default. The full schema is in the
 curl -X POST localhost:3000/api/agents \
   -H "authorization: Bearer $SAMATA_API_KEY" -H "content-type: application/json" \
   -d '{
-    "slug": "support", "name": "Support", "phoneNumber": "+14155550100",
+    "slug": "support", "name": "Support", "phoneNumbers": ["+14155550100"],
     "config": {
       "firstMessage": "Hi! How can I help?",
       "model": { "model": "gpt-4.1-mini", "systemPrompt": "You are a concise support agent." },

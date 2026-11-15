@@ -1,7 +1,8 @@
 "use client";
 
+import { XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { deleteAgentAction } from "@/app/actions";
 import {
@@ -16,6 +17,92 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { MIN_VAD_SILENCE } from "@/lib/agent-config";
+
+const E164 = /^\+[1-9]\d{6,14}$/;
+
+/** A list of E.164 numbers: each can be removed, and more typed in. */
+function PhoneNumbersInput({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string[];
+  onChange: (numbers: string[]) => void;
+}) {
+  const [text, setText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  function add() {
+    // Forgive pasted formatting and several numbers at once.
+    const entered = text
+      .split(/[,;\n]+/)
+      .map((n) => n.replace(/[\s().-]/g, ""))
+      .filter(Boolean);
+    if (!entered.length) return;
+    const bad = entered.find((n) => !E164.test(n));
+    if (bad) {
+      setError(`${bad} isn't E.164, e.g. +14155550123.`);
+      return;
+    }
+    onChange([...new Set([...value, ...entered])]);
+    setText("");
+    setError(null);
+  }
+
+  return (
+    <div className="grid gap-2">
+      {value.length > 0 && (
+        <ul className="flex flex-wrap gap-1.5">
+          {value.map((n) => (
+            <li
+              key={n}
+              className="inline-flex items-center gap-1 rounded-md border bg-muted/50 py-0.5 pr-0.5 pl-2 font-mono text-xs"
+            >
+              {n}
+              <button
+                type="button"
+                aria-label={`Remove ${n}`}
+                onClick={() => onChange(value.filter((v) => v !== n))}
+                className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+              >
+                <XIcon className="size-3" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex gap-2">
+        <Input
+          id={id}
+          className="font-mono"
+          placeholder="+14155550123"
+          value={text}
+          aria-invalid={Boolean(error)}
+          onChange={(e) => {
+            setText(e.target.value);
+            setError(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add();
+            }
+          }}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!text.trim()}
+          onClick={add}
+        >
+          Add
+        </Button>
+      </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  );
+}
 
 export function AdvancedTab({
   agentId,
@@ -76,16 +163,15 @@ export function AdvancedTab({
           </Field>
         </div>
         <Field
-          label="Phone number"
+          label="Phone numbers"
           htmlFor="agent-phone"
-          hint="E.164. Inbound SIP calls to this number are answered by this assistant. Leave empty for web only."
+          hint="E.164. Inbound SIP calls to any of these numbers are answered by this assistant. Leave empty for web only."
         >
-          <Input
+          <PhoneNumbersInput
             id="agent-phone"
-            placeholder="+14155550123"
-            value={draft.phoneNumber}
-            onChange={(e) =>
-              setDraft((d) => ({ ...d, phoneNumber: e.target.value }))
+            value={draft.phoneNumbers}
+            onChange={(phoneNumbers) =>
+              setDraft((d) => ({ ...d, phoneNumbers }))
             }
           />
         </Field>

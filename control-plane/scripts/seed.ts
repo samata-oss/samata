@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { db } from "../src/db";
-import { agent, tool, toolServer } from "../src/db/schema";
+import { agent, agentNumber, tool, toolServer } from "../src/db/schema";
 import {
   type AgentConfigInput,
   agentConfigSchema,
@@ -96,16 +96,24 @@ async function main() {
       .values({ organizationId: DEFAULT_ORGANIZATION_ID, ...t })
       .onConflictDoNothing();
   }
-  await db
+  const [seeded] = await db
     .insert(agent)
     .values({
       organizationId: DEFAULT_ORGANIZATION_ID,
       slug: "receptionist",
       name: "Acme Receptionist",
-      phoneNumber: "+15555550100",
       config: parsed,
     })
-    .onConflictDoUpdate({ target: agent.slug, set: { config: parsed } });
+    .onConflictDoUpdate({ target: agent.slug, set: { config: parsed } })
+    .returning({ id: agent.id });
+  await db
+    .insert(agentNumber)
+    .values({
+      number: "+15555550100",
+      agentId: seeded.id,
+      organizationId: DEFAULT_ORGANIZATION_ID,
+    })
+    .onConflictDoNothing();
 
   console.log("Seeded agent 'receptionist' in the default workspace.");
   process.exit(0);

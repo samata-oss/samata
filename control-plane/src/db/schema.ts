@@ -41,12 +41,6 @@ export const agent = pgTable(
      */
     slug: text("slug").notNull().unique(),
     name: text("name").notNull(),
-    /**
-     * E.164 number that routes inbound SIP calls to this agent (matched against
-     * the `sip.trunkPhoneNumber` participant attribute). Null for web-only agents.
-     * Unique across the install: a dialed number maps to exactly one agent.
-     */
-    phoneNumber: text("phone_number").unique(),
     config: jsonb("config").$type<AgentConfig>().notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
@@ -55,6 +49,35 @@ export const agent = pgTable(
       .notNull(),
   },
   (table) => [index("agent_organization_idx").on(table.organizationId)],
+);
+
+/**
+ * The phone numbers an agent answers. An agent can have any number of them;
+ * a number belongs to exactly one agent. The number is E.164 and is matched
+ * against the dialed number (`sip.trunkPhoneNumber`) of an inbound SIP call.
+ * Unique across the install, because the worker resolves a call without
+ * knowing the workspace. An agent with no rows is web only.
+ *
+ * A number need not be imported (`importedNumber`): ones typed into an
+ * assistant's settings still route calls.
+ */
+export const agentNumber = pgTable(
+  "agent_number",
+  {
+    number: text("number").primaryKey(),
+    agentId: text("agent_id")
+      .notNull()
+      .references(() => agent.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    /** Orders an agent's numbers; the oldest is the one outbound calls use. */
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("agent_number_agent_idx").on(table.agentId),
+    index("agent_number_organization_idx").on(table.organizationId),
+  ],
 );
 
 /** A webhook target: where Samata POSTs a Vapi-style `{ message }`. */
@@ -223,8 +246,8 @@ export type NumberOutbound = {
 
 /**
  * A number a workspace has imported from a telephony provider. This is the
- * inventory only: which assistant answers it is `agent.phoneNumber`, the
- * column inbound routing already reads, so there is one source of truth for
+ * inventory only: which assistant answers it is `agentNumber`, the table
+ * inbound routing already reads, so there is one source of truth for
  * assignment.
  */
 export const importedNumber = pgTable(
@@ -238,7 +261,7 @@ export const importedNumber = pgTable(
       .references(() => organization.id, { onDelete: "cascade" }),
     provider: text("provider").$type<PhoneProvider>().notNull(),
     /**
-     * E.164. Unique across the install, like `agent.phoneNumber`: a dialed
+     * E.164. Unique across the install, like `agentNumber.number`: a dialed
      * number belongs to exactly one workspace.
      */
     number: text("number").notNull().unique(),

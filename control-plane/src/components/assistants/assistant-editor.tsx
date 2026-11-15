@@ -50,7 +50,7 @@ function toDraft(agent: EditorAgent): Draft {
   return {
     name: agent.name,
     slug: agent.slug,
-    phoneNumber: agent.phoneNumber ?? "",
+    phoneNumbers: agent.phoneNumbers,
     config: agent.config,
   };
 }
@@ -127,7 +127,7 @@ export function AssistantEditor({
       const res = await updateAgentAction(agent.id, {
         name: draft.name,
         slug: draft.slug,
-        phoneNumber: draft.phoneNumber.trim() || null,
+        phoneNumbers: draft.phoneNumbers,
         config: draft.config,
       });
       if (!res.ok) {
@@ -206,10 +206,9 @@ export function AssistantEditor({
               <NumberPicker
                 className="ml-1"
                 numbers={numbers}
-                value={draft.phoneNumber}
-                agentName={agent.name}
-                onChange={(phoneNumber) =>
-                  setDraft((d) => ({ ...d, phoneNumber }))
+                value={draft.phoneNumbers}
+                onChange={(phoneNumbers) =>
+                  setDraft((d) => ({ ...d, phoneNumbers }))
                 }
               />
             </div>

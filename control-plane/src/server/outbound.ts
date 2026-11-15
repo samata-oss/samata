@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { AgentDispatchClient, RoomServiceClient } from "livekit-server-sdk";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { importedNumber } from "@/db/schema";
+import { agentNumber, importedNumber } from "@/db/schema";
 import { ensureOutbound } from "@/server/numbers";
 import {
   livekit,
@@ -34,8 +34,9 @@ export type StartedOutboundCall = {
  *
  *   1. Check the assistant, the plan and the provider keys, like a browser
  *      call (`prepareCall`).
- *   2. Pick the imported number to call from: `phoneNumberId`, else the number
- *      assigned to the assistant. Its owner's carrier account pays for the call.
+ *   2. Pick the imported number to call from: `phoneNumberId`, else the
+ *      assistant's first imported number (oldest assignment). Its owner's
+ *      carrier account pays for the call.
  *   3. Make sure that number can dial out (`ensureOutbound`).
  *   4. Create a room and dispatch the worker into it. The job metadata says
  *      who to dial and through which trunk.
@@ -66,17 +67,33 @@ export async function startOutboundCall(
 
   const assistant = await prepareCall(input.assistantRef, organizationId);
 
-  const [from] = await db
-    .select()
-    .from(importedNumber)
-    .where(
-      and(
-        eq(importedNumber.organizationId, organizationId),
-        input.phoneNumberId
-          ? eq(importedNumber.id, input.phoneNumberId)
-          : eq(importedNumber.number, assistant.phoneNumber ?? ""),
-      ),
-    );
+  const [from] = input.phoneNumberId
+    ? await db
+        .select()
+        .from(importedNumber)
+        .where(
+          and(
+            eq(importedNumber.organizationId, organizationId),
+            eq(importedNumber.id, input.phoneNumberId),
+          ),
+        )
+    : (
+        await db
+          .select({ number: importedNumber })
+          .from(agentNumber)
+          .innerJoin(
+            importedNumber,
+            eq(importedNumber.number, agentNumber.number),
+          )
+          .where(
+            and(
+              eq(agentNumber.agentId, assistant.id),
+              eq(importedNumber.organizationId, organizationId),
+            ),
+          )
+          .orderBy(asc(agentNumber.createdAt), asc(agentNumber.number))
+          .limit(1)
+      ).map((r) => r.number);
   if (!from) {
     throw input.phoneNumberId
       ? new SessionError(404, "Phone number not found.")

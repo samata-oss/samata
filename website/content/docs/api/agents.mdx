@@ -14,7 +14,7 @@ An agent looks like this:
   "id": "…",
   "slug": "support",
   "name": "Support",
-  "phoneNumber": "+14155550100",
+  "phoneNumbers": ["+14155550100", "+14155550101"],
   "config": { "…": "…" },
   "createdAt": "2026-01-01T00:00:00.000Z",
   "updatedAt": "2026-01-01T00:00:00.000Z"
@@ -24,7 +24,7 @@ An agent looks like this:
 | Endpoint                         | Does                                                                                                                                              |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /api/agents`                | List agents in the workspace, newest first: `{ "agents": [...] }`.                                                                                |
-| `POST /api/agents`               | Create. `201` with the agent; `409` if the slug or phone number is taken. `slug` is optional and defaults to one derived from `name`.             |
+| `POST /api/agents`               | Create. `201` with the agent; `409` if the slug is taken or a phone number is already assigned to another agent. `slug` is optional and defaults to one derived from `name`.             |
 | `PUT /api/agents`                | Create or replace by `slug` (idempotent, good for config-as-code). `409` if the slug belongs to another workspace.                                |
 | `GET /api/agents/:ref`           | Fetch one.                                                                                                                                        |
 | `PATCH /api/agents/:ref`         | Partial update. Top-level keys of `config` you send replace the stored ones; the rest are kept. The merged config is validated in full.           |
@@ -37,5 +37,7 @@ An agent looks like this:
 | ------------- | ------ | --------------------------------------------------------------- |
 | `slug`        | string | Lowercase letters, digits and `-`, 1 to 64 characters.          |
 | `name`        | string | 1 to 120 characters.                                            |
-| `phoneNumber` | string | Optional, E.164 like `+14155550123`. `null` clears it.          |
+| `phoneNumbers` | string[] | Optional. Every number the agent answers, E.164 like `+14155550123`. A number belongs to one agent. On `PATCH` it replaces the list; `[]` clears it. |
 | `config`      | object | The [agent config](/docs/agent-config).                         |
+
+An agent used to have a single `phoneNumber`. It is still accepted (it means `phoneNumbers: [number]`, and `null` means `[]`) and still returned, as the first of `phoneNumbers`, but new code should use `phoneNumbers`.

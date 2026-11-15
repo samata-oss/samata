@@ -15,6 +15,7 @@ import {
 import { db } from "@/db";
 import { agent, callLog } from "@/db/schema";
 import { agentConfigSchema } from "@/lib/agent-config";
+import { numbersByAgent } from "@/server/agent-numbers";
 import { fmtDateTime } from "@/lib/format";
 import { requireWorkspaceSession } from "@/server/workspace";
 
@@ -37,6 +38,7 @@ export default async function AssistantsIndex() {
       .groupBy(callLog.agentId),
   ]);
   const byAgent = new Map(stats.map((s) => [s.agentId, s]));
+  const numbers = await numbersByAgent(rows.map((r) => r.id));
 
   return (
     <PageShell
@@ -62,7 +64,7 @@ export default async function AssistantsIndex() {
               <TableRow className="hover:bg-transparent">
                 <TableHead>Name</TableHead>
                 <TableHead>Pipeline</TableHead>
-                <TableHead>Number</TableHead>
+                <TableHead>Numbers</TableHead>
                 <TableHead className="text-right">Calls</TableHead>
                 <TableHead>Last call</TableHead>
                 <TableHead className="w-8" />
@@ -103,7 +105,9 @@ export default async function AssistantsIndex() {
                       </div>
                     </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">
-                      {row.phoneNumber ?? "—"}
+                      {numbers
+                        .get(row.id)
+                        ?.map((n) => <div key={n}>{n}</div>) ?? "—"}
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums">
                       {s?.calls ?? 0}

@@ -68,7 +68,6 @@ export async function prepareCall(
   const [row] = await db
     .select({
       id: agent.id,
-      phoneNumber: agent.phoneNumber,
       config: agent.config,
     })
     .from(agent)

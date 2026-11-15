@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, or } from "drizzle-orm";
 import { db } from "@/db";
-import { agent } from "@/db/schema";
+import { agent, agentNumber } from "@/db/schema";
 import {
   type AgentConfig,
   type AgentConfigInput,
@@ -49,12 +49,13 @@ export async function resolveAgent(
   }
   const dialed = normalizeDialed(message.phoneNumber?.number);
   if (dialed) {
-    const [row] = await db
-      .select()
-      .from(agent)
-      .where(eq(agent.phoneNumber, dialed))
+    const [held] = await db
+      .select({ agent })
+      .from(agentNumber)
+      .innerJoin(agent, eq(agent.id, agentNumber.agentId))
+      .where(eq(agentNumber.number, dialed))
       .limit(1);
-    if (row) return row;
+    if (held) return held.agent;
   }
   const fallback = process.env.SAMATA_DEFAULT_AGENT;
   return fallback ? ((await findByRef(fallback)) ?? null) : null;
@@ -106,13 +107,18 @@ export async function workerConfig(row: AgentRow) {
   };
 }
 
-/** The full agent, for the management API. */
-export function agentView(row: AgentRow) {
+/**
+ * The full agent, for the management API. `phoneNumbers` are the numbers it
+ * answers; `phoneNumber` is the first of them, kept for clients written when
+ * an agent could have only one.
+ */
+export function agentView(row: AgentRow, phoneNumbers: string[]) {
   return {
     id: row.id,
     slug: row.slug,
     name: row.name,
-    phoneNumber: row.phoneNumber,
+    phoneNumbers,
+    phoneNumber: phoneNumbers[0] ?? null,
     config: agentConfigSchema.parse(row.config),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -151,18 +157,19 @@ export type EditorAgent = {
   id: string;
   slug: string;
   name: string;
-  phoneNumber: string | null;
+  /** E.164 numbers this assistant answers; empty for web only. */
+  phoneNumbers: string[];
   config: AgentConfig;
   secretsSet: { server: boolean; tools: string[] };
 };
 
-export function editorView(row: AgentRow): EditorAgent {
+export function editorView(row: AgentRow, phoneNumbers: string[]): EditorAgent {
   const config = agentConfigSchema.parse(row.config);
   return {
     id: row.id,
     slug: row.slug,
     name: row.name,
-    phoneNumber: row.phoneNumber,
+    phoneNumbers,
     config: {
       ...config,
       server: config.server && { ...config.server, secret: undefined },

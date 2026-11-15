@@ -34,7 +34,7 @@ curl -X POST localhost:3000/api/calls \
 | ------------------ | --------------------------------------------------------------------------------------------------- |
 | `assistantId`      | An agent's id or slug.                                                                              |
 | `customer.number`  | Who to call, in E.164 (`+14155550123`).                                                             |
-| `phoneNumberId`    | Optional. The id of the imported number to call from. Defaults to the number assigned to the assistant. |
+| `phoneNumberId`    | Optional. The id of the imported number to call from. Defaults to the assistant's first imported number. |
 
 Response, `201`:
 

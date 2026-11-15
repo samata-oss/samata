@@ -4,10 +4,18 @@ import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
-import { agent, apiKey, importedNumber, tool, toolServer } from "@/db/schema";
+import {
+  agent,
+  agentNumber,
+  apiKey,
+  importedNumber,
+  tool,
+  toolServer,
+} from "@/db/schema";
 import { agentConfigSchema } from "@/lib/agent-config";
 import { isKeyProvider, KEY_PROVIDERS } from "@/lib/providers";
 import { canManageTeam } from "@/lib/workspace";
+import { setAgentNumbers } from "@/server/agent-numbers";
 import { isUniqueViolation, restoreSecrets, uniqueSlug } from "@/server/agents";
 import { createApiKey } from "@/server/api-keys";
 import {
@@ -16,6 +24,7 @@ import {
   removeOutbound,
 } from "@/server/numbers";
 import { deleteProviderKey, saveProviderKey } from "@/server/provider-keys";
+import { loadSavedCredentials } from "@/server/saved-credentials";
 import { encryptSecret } from "@/server/secrets";
 import { lookupTelnyxNumber } from "@/server/telnyx";
 import {
@@ -46,11 +55,12 @@ const updateSchema = z.object({
   slug: z
     .string()
     .regex(/^[a-z0-9-]{1,64}$/, "Use lowercase letters, digits and dashes"),
-  phoneNumber: phoneSchema.nullable(),
+  phoneNumbers: z.array(phoneSchema).max(50),
   config: z.unknown(),
 });
 
-const CONFLICT = "An agent with this slug or phone number already exists";
+const CONFLICT =
+  "An agent with this slug already exists, or a phone number is already assigned";
 
 function refresh() {
   revalidatePath("/", "layout");
@@ -98,7 +108,7 @@ export async function updateAgentAction(
     .where(owned(organizationId, id));
   if (!existing) return { ok: false, error: "Assistant not found." };
 
-  const { name, slug, phoneNumber } = parsed.data;
+  const { name, slug, phoneNumbers } = parsed.data;
   const merged = agentConfigSchema.safeParse(
     restoreSecrets(
       agentConfigSchema.parse(existing.config),
@@ -110,23 +120,18 @@ export async function updateAgentAction(
 
   try {
     await db.transaction(async (tx) => {
-      // `agent.phone_number` is unique. Picking a number another assistant in
-      // this workspace has moves it here, as on the Phone Numbers page.
-      if (phoneNumber && phoneNumber !== existing.phoneNumber) {
-        await tx
-          .update(agent)
-          .set({ phoneNumber: null })
-          .where(
-            and(
-              eq(agent.organizationId, organizationId),
-              eq(agent.phoneNumber, phoneNumber),
-            ),
-          );
-      }
       await tx
         .update(agent)
-        .set({ name, slug, phoneNumber, config: merged.data })
+        .set({ name, slug, config: merged.data })
         .where(owned(organizationId, id));
+      // A number is answered by one assistant. Picking one another assistant
+      // in this workspace has moves it here, as on the Phone Numbers page.
+      await setAgentNumbers(tx, {
+        organizationId,
+        agentId: id,
+        numbers: phoneNumbers,
+        move: true,
+      });
     });
   } catch (err) {
     if (isUniqueViolation(err)) return { ok: false, error: CONFLICT };
@@ -174,17 +179,31 @@ const importSchema = z.discriminatedUnion("provider", [
 ]);
 
 /**
+ * Ask to use the credentials the workspace already saved from an earlier
+ * import, instead of sending them again.
+ */
+type UseSaved = { useSaved: true };
+
+const NO_SAVED_CREDENTIALS =
+  "No saved credentials for this provider. Enter them again.";
+
+/**
  * The voice numbers on a Twilio account, for choosing which to import. This
  * also validates the credentials. Numbers already imported are flagged.
  */
 export async function listTwilioNumbersAction(
-  input: z.input<typeof twilioCredentialsSchema>,
+  input: z.input<typeof twilioCredentialsSchema> | UseSaved,
 ): Promise<
   ActionResult<{
     numbers: { number: string; name: string | null; imported: boolean }[];
   }>
 > {
-  await requireWorkspaceSession();
+  const { organizationId } = await requireWorkspaceSession();
+  if ("useSaved" in input) {
+    const { twilio } = await loadSavedCredentials(organizationId);
+    if (!twilio) return { ok: false, error: NO_SAVED_CREDENTIALS };
+    input = twilio;
+  }
   const parsed = twilioCredentialsSchema.safeParse(input);
   if (!parsed.success)
     return { ok: false, error: parsed.error.issues[0].message };
@@ -220,9 +239,25 @@ export async function listTwilioNumbersAction(
  * stays imported, with `routingError` saying why, and can be connected again.
  */
 export async function importPhoneNumberAction(
-  input: z.input<typeof importSchema>,
+  input:
+    | z.input<typeof importSchema>
+    | (UseSaved & { provider: "telnyx" | "twilio"; number: string }),
 ): Promise<ActionResult<{ number: string; routingError?: string }>> {
   const { organizationId } = await requireWorkspaceSession();
+  if ("useSaved" in input) {
+    const saved = await loadSavedCredentials(organizationId);
+    if (input.provider === "twilio") {
+      if (!saved.twilio) return { ok: false, error: NO_SAVED_CREDENTIALS };
+      input = { provider: "twilio", ...saved.twilio, number: input.number };
+    } else {
+      if (!saved.telnyx) return { ok: false, error: NO_SAVED_CREDENTIALS };
+      input = {
+        provider: "telnyx",
+        apiKey: saved.telnyx.apiKey,
+        number: input.number,
+      };
+    }
+  }
   const parsed = importSchema.safeParse(input);
   if (!parsed.success)
     return { ok: false, error: parsed.error.issues[0].message };
@@ -294,7 +329,8 @@ export async function connectPhoneNumberAction(
 
 /**
  * Point an imported number at an assistant, or at nobody (`agentId` null).
- * An assistant answers one number, so this replaces whatever it had before.
+ * A number is answered by one assistant, so this moves it off whichever had
+ * it. The assistant keeps any other numbers it has.
  */
 export async function assignPhoneNumberAction(
   importedId: string,
@@ -321,21 +357,19 @@ export async function assignPhoneNumberAction(
   }
 
   await db.transaction(async (tx) => {
-    // `agent.phone_number` is unique: free it from its current holder first.
+    // `agent_number.number` is the key: drop the current holder's row first.
     await tx
-      .update(agent)
-      .set({ phoneNumber: null })
+      .delete(agentNumber)
       .where(
         and(
-          eq(agent.organizationId, organizationId),
-          eq(agent.phoneNumber, row.number),
+          eq(agentNumber.organizationId, organizationId),
+          eq(agentNumber.number, row.number),
         ),
       );
     if (agentId) {
       await tx
-        .update(agent)
-        .set({ phoneNumber: row.number })
-        .where(owned(organizationId, agentId));
+        .insert(agentNumber)
+        .values({ number: row.number, agentId, organizationId });
     }
   });
   refresh();
@@ -374,12 +408,11 @@ export async function removePhoneNumberAction(
   await db.transaction(async (tx) => {
     await tx.delete(importedNumber).where(eq(importedNumber.id, existing.id));
     await tx
-      .update(agent)
-      .set({ phoneNumber: null })
+      .delete(agentNumber)
       .where(
         and(
-          eq(agent.organizationId, organizationId),
-          eq(agent.phoneNumber, existing.number),
+          eq(agentNumber.organizationId, organizationId),
+          eq(agentNumber.number, existing.number),
         ),
       );
   });

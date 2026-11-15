@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { agent } from "@/db/schema";
 import { agentConfigSchema } from "@/lib/agent-config";
+import { numbersByAgent, setAgentNumbers } from "@/server/agent-numbers";
 import {
   agentView,
   inWorkspace,
@@ -13,15 +14,30 @@ import {
 import { requireWorkspace, type WorkspaceEnv } from "@/server/api-auth";
 import { SessionError, startSession } from "@/server/session";
 
+const phone = z.string().regex(/^\+[1-9]\d{6,14}$/, "E.164, e.g. +14155550123");
+
 const agentBody = z.object({
   slug: z.string().regex(/^[a-z0-9-]{1,64}$/),
   name: z.string().min(1).max(120),
-  phoneNumber: z
-    .string()
-    .regex(/^\+[1-9]\d{6,14}$/, "E.164, e.g. +14155550123")
-    .nullish(),
+  /** Every number the agent answers. Replaces the list when present. */
+  phoneNumbers: z.array(phone).max(50).optional(),
+  /** Legacy single-number form: the same as `phoneNumbers: [number]`. */
+  phoneNumber: phone.nullish(),
   config: agentConfigSchema,
 });
+
+/**
+ * The numbers a body asks for: `phoneNumbers`, else the legacy `phoneNumber`,
+ * else undefined (the body says nothing about numbers).
+ */
+function requestedNumbers(body: {
+  phoneNumbers?: string[];
+  phoneNumber?: string | null;
+}) {
+  if (body.phoneNumbers !== undefined) return body.phoneNumbers;
+  if (body.phoneNumber === undefined) return undefined;
+  return body.phoneNumber ? [body.phoneNumber] : [];
+}
 
 /** POST body: like `agentBody`, but `slug` is optional (derived from `name`). */
 const createBody = agentBody.extend({
@@ -36,9 +52,13 @@ const createBody = agentBody.extend({
 const patchBody = z.object({
   slug: agentBody.shape.slug.optional(),
   name: agentBody.shape.name.optional(),
+  phoneNumbers: agentBody.shape.phoneNumbers,
   phoneNumber: agentBody.shape.phoneNumber,
   config: z.record(z.string(), z.unknown()).optional(),
 });
+
+const currentNumbers = async (agentId: string) =>
+  (await numbersByAgent([agentId])).get(agentId) ?? [];
 
 export const agentRoutes = new Hono<WorkspaceEnv>()
   .use(requireWorkspace)
@@ -48,7 +68,10 @@ export const agentRoutes = new Hono<WorkspaceEnv>()
       .from(agent)
       .where(eq(agent.organizationId, c.get("organizationId")))
       .orderBy(desc(agent.createdAt));
-    return c.json({ agents: rows.map(agentView) });
+    const numbers = await numbersByAgent(rows.map((r) => r.id));
+    return c.json({
+      agents: rows.map((r) => agentView(r, numbers.get(r.id) ?? [])),
+    });
   })
 
   /**
@@ -61,24 +84,31 @@ export const agentRoutes = new Hono<WorkspaceEnv>()
     if (!parsed.success) {
       return c.json({ error: z.prettifyError(parsed.error) }, 400);
     }
-    const { name, phoneNumber, config } = parsed.data;
+    const { name, config } = parsed.data;
+    const numbers = requestedNumbers(parsed.data) ?? [];
+    const organizationId = c.get("organizationId");
     const slug = parsed.data.slug ?? (await uniqueSlug(name));
     try {
-      const [row] = await db
-        .insert(agent)
-        .values({
-          organizationId: c.get("organizationId"),
-          slug,
-          name,
-          phoneNumber: phoneNumber ?? null,
-          config,
-        })
-        .returning();
-      return c.json(agentView(row), 201);
+      const row = await db.transaction(async (tx) => {
+        const [created] = await tx
+          .insert(agent)
+          .values({ organizationId, slug, name, config })
+          .returning();
+        await setAgentNumbers(tx, {
+          organizationId,
+          agentId: created.id,
+          numbers,
+        });
+        return created;
+      });
+      return c.json(agentView(row, await currentNumbers(row.id)), 201);
     } catch (err) {
       if (isUniqueViolation(err)) {
         return c.json(
-          { error: "An agent with this slug or phone number already exists" },
+          {
+            error:
+              "An agent with this slug already exists, or a phone number is already assigned",
+          },
           409,
         );
       }
@@ -98,7 +128,9 @@ export const agentRoutes = new Hono<WorkspaceEnv>()
       .where(inWorkspace(c.get("organizationId"), c.req.param("ref")));
     if (!existing) return c.json({ error: "Not found" }, 404);
 
-    const { slug, name, phoneNumber, config } = parsed.data;
+    const { slug, name, config } = parsed.data;
+    const numbers = requestedNumbers(parsed.data);
+    const organizationId = c.get("organizationId");
     const merged = config
       ? agentConfigSchema.safeParse({
           ...agentConfigSchema.parse(existing.config),
@@ -110,26 +142,38 @@ export const agentRoutes = new Hono<WorkspaceEnv>()
     }
 
     try {
-      const [row] = await db
-        .update(agent)
-        .set({
-          ...(slug !== undefined && { slug }),
-          ...(name !== undefined && { name }),
-          ...(phoneNumber !== undefined && { phoneNumber }),
-          ...(merged?.success && { config: merged.data }),
-        })
-        .where(
-          and(
-            eq(agent.id, existing.id),
-            eq(agent.organizationId, c.get("organizationId")),
-          ),
-        )
-        .returning();
-      return c.json(agentView(row));
+      const row = await db.transaction(async (tx) => {
+        const [updated] = await tx
+          .update(agent)
+          .set({
+            ...(slug !== undefined && { slug }),
+            ...(name !== undefined && { name }),
+            ...(merged?.success && { config: merged.data }),
+          })
+          .where(
+            and(
+              eq(agent.id, existing.id),
+              eq(agent.organizationId, organizationId),
+            ),
+          )
+          .returning();
+        if (numbers) {
+          await setAgentNumbers(tx, {
+            organizationId,
+            agentId: existing.id,
+            numbers,
+          });
+        }
+        return updated;
+      });
+      return c.json(agentView(row, await currentNumbers(row.id)));
     } catch (err) {
       if (isUniqueViolation(err)) {
         return c.json(
-          { error: "An agent with this slug or phone number already exists" },
+          {
+            error:
+              "An agent with this slug already exists, or a phone number is already assigned",
+          },
           409,
         );
       }
@@ -142,7 +186,9 @@ export const agentRoutes = new Hono<WorkspaceEnv>()
       .select()
       .from(agent)
       .where(inWorkspace(c.get("organizationId"), c.req.param("ref")));
-    return row ? c.json(agentView(row)) : c.json({ error: "Not found" }, 404);
+    return row
+      ? c.json(agentView(row, await currentNumbers(row.id)))
+      : c.json({ error: "Not found" }, 404);
   })
 
   /** Create or replace by slug: agents are declarative, so PUT is the API. */
@@ -151,34 +197,42 @@ export const agentRoutes = new Hono<WorkspaceEnv>()
     if (!parsed.success) {
       return c.json({ error: z.prettifyError(parsed.error) }, 400);
     }
-    const { slug, name, phoneNumber, config } = parsed.data;
+    const { slug, name, config } = parsed.data;
+    // PUT replaces the agent, so a body that names no numbers means none.
+    const numbers = requestedNumbers(parsed.data) ?? [];
     const organizationId = c.get("organizationId");
     try {
-      const [row] = await db
-        .insert(agent)
-        .values({
+      const row = await db.transaction(async (tx) => {
+        const [upserted] = await tx
+          .insert(agent)
+          .values({ organizationId, slug, name, config })
+          .onConflictDoUpdate({
+            target: agent.slug,
+            set: { name, config },
+            // A slug is unique across the install, so it may belong to
+            // another workspace. Never overwrite that: report a conflict.
+            setWhere: eq(agent.organizationId, organizationId),
+          })
+          .returning();
+        if (!upserted) return null;
+        await setAgentNumbers(tx, {
           organizationId,
-          slug,
-          name,
-          phoneNumber: phoneNumber ?? null,
-          config,
-        })
-        .onConflictDoUpdate({
-          target: agent.slug,
-          set: { name, phoneNumber: phoneNumber ?? null, config },
-          // A slug is unique across the install, so it may belong to another
-          // workspace. Never overwrite that: report a conflict instead.
-          setWhere: eq(agent.organizationId, organizationId),
-        })
-        .returning();
+          agentId: upserted.id,
+          numbers,
+        });
+        return upserted;
+      });
       if (!row) {
         return c.json({ error: "An agent with this slug already exists" }, 409);
       }
-      return c.json(agentView(row));
+      return c.json(agentView(row, await currentNumbers(row.id)));
     } catch (err) {
       if (isUniqueViolation(err)) {
         return c.json(
-          { error: "An agent with this slug or phone number already exists" },
+          {
+            error:
+              "An agent with this slug already exists, or a phone number is already assigned",
+          },
           409,
         );
       }
