@@ -20,7 +20,7 @@ export type SavedCredentials = {
 
 /** What the dashboard may show to identify saved credentials. */
 export type SavedHints = {
-  /** The last characters of the Telnyx API key. */
+  /** The last 4 characters of the Telnyx API key. */
   telnyx: string | null;
   /** The Twilio Account SID (an identifier, not a secret). */
   twilio: string | null;
@@ -57,7 +57,7 @@ export async function loadSavedCredentials(
 
 export function savedHints(saved: SavedCredentials): SavedHints {
   return {
-    telnyx: saved.telnyx ? `…${saved.telnyx.apiKey.slice(-4)}` : null,
+    telnyx: saved.telnyx ? saved.telnyx.apiKey.slice(-4) : null,
     twilio: saved.twilio?.accountSid ?? null,
   };
 }

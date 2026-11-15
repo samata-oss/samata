@@ -1,6 +1,6 @@
 "use client";
 
-import { DownloadIcon } from "lucide-react";
+import { CheckIcon, DownloadIcon, KeyRoundIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -53,14 +53,27 @@ function SavedCredential({
   onChange: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
-      <div className="grid min-w-0">
-        <span className="text-xs text-muted-foreground">{label}</span>
-        <span className="truncate font-mono">{hint}</span>
+    <div className="grid gap-2">
+      <Label>{label}</Label>
+      <div className="flex h-10 items-center gap-2.5 rounded-md border border-input bg-muted/30 pr-1 pl-2.5">
+        <KeyRoundIcon className="size-4 shrink-0 text-muted-foreground" />
+        <span className="min-w-0 flex-1 truncate font-mono text-sm tracking-tight">
+          {hint}
+        </span>
+        <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-500">
+          <CheckIcon className="size-3" />
+          Saved
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground hover:text-foreground"
+          onClick={onChange}
+        >
+          {action}
+        </Button>
       </div>
-      <Button type="button" variant="ghost" size="sm" onClick={onChange}>
-        {action}
-      </Button>
     </div>
   );
 }
@@ -236,9 +249,9 @@ export function ImportNumberDialog({ saved }: { saved: SavedHints }) {
           >
             {useSavedTelnyx ? (
               <SavedCredential
-                label="Telnyx API key (saved)"
-                hint={saved.telnyx ?? ""}
-                action="Use a different key"
+                label="Telnyx API key"
+                hint={`••••••••••${saved.telnyx ?? ""}`}
+                action="Change"
                 onChange={() => setReplaceTelnyx(true)}
               />
             ) : (
@@ -293,9 +306,9 @@ export function ImportNumberDialog({ saved }: { saved: SavedHints }) {
           >
             {useSavedTwilio ? (
               <SavedCredential
-                label="Twilio account (saved)"
+                label="Twilio account"
                 hint={saved.twilio ?? ""}
-                action="Use a different account"
+                action="Change"
                 onChange={() => setReplaceTwilio(true)}
               />
             ) : (
