@@ -462,7 +462,7 @@ export function renderSummary({
     "",
     bold("Next"),
     `  1. Open the dashboard and sign up now: ${bold("the first account owns the install")}.`,
-    "  2. Provider Keys: add your OpenAI (or Deepgram + Cartesia) key.",
+    "  2. Provider Keys: add your Speko key (one key covers the model, transcriber and voice), or OpenAI, or Deepgram + Cartesia.",
     "  3. Create an assistant and talk to it from its Test tab.",
   ];
   if (usingSslip) {

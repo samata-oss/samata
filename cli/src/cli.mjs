@@ -9,11 +9,15 @@ import {
   LIVEKIT_PORTS,
   LOCAL_EMAIL,
   LOCAL_PASSWORD,
+  SPEKO_KEYS_URL,
+  checkSpekoKey,
   composeUrl,
   findFreePort,
   generateEnv,
   getEnvVar,
   isPortFree,
+  pickTestStack,
+  looksLikeSpekoKey,
   productionComposeUrl,
   setEnvVar,
   versionAtLeast,
@@ -23,13 +27,17 @@ import { deploy } from "./deploy.mjs";
 import {
   CMD,
   CliError,
+  askSecret,
+  askYesNo,
   bold,
+  canPrompt,
   dim,
   green,
   note,
   red,
   run,
   step,
+  warn,
 } from "./ui.mjs";
 
 /** `name:` in the compose file needs Compose 2.20; `--wait` needs 2.1. */
@@ -46,8 +54,13 @@ ${bold("Usage")}
 
 ${bold("Options for init")}
   --port <n>                   Dashboard port on this machine (default ${DEFAULT_PORT})
+  --test                       A throwaway copy that can run next to one you already have:
+                               its own containers and database, on free ports
+                               (docker compose down -v removes it)
   --no-start                   Write docker-compose.yml and .env, but don't start anything
   --no-open                    Don't open the dashboard in your browser
+  --speko-key <key>            Your Speko key, instead of being asked for it. One key covers
+                               speech-to-text, the model and text-to-speech
   --force                      Re-download docker-compose.yml even if it already exists
 
 ${bold("Options for deploy")}
@@ -95,8 +108,10 @@ export async function main(argv) {
       allowPositionals: true,
       options: {
         port: { type: "string" },
+        test: { type: "boolean", default: false },
         "no-start": { type: "boolean", default: false },
         "no-open": { type: "boolean", default: false },
+        "speko-key": { type: "string" },
         force: { type: "boolean", default: false },
         ref: { type: "string" },
         compose: { type: "string" },
@@ -184,8 +199,10 @@ export async function main(argv) {
   await init({
     dir: path.resolve(dir ?? "samata"),
     port,
+    test: values.test,
     start: !values["no-start"],
     open: !values["no-open"],
+    spekoKey: values["speko-key"]?.trim(),
     force: values.force,
     compose:
       values.compose ??
@@ -196,9 +213,10 @@ export async function main(argv) {
   });
 }
 
-async function init({ dir, port, start, open, force, compose }) {
+async function init({ dir, port, test, start, open, spekoKey, force, compose }) {
   console.log(`\n${bold("Samata")} quickstart\n`);
 
+  if (spekoKey !== undefined) await checkGivenSpekoKey(spekoKey);
   if (start) await checkDocker();
 
   const composePath = path.join(dir, "docker-compose.yml");
@@ -209,7 +227,8 @@ async function init({ dir, port, start, open, force, compose }) {
   // install's secrets. Fresh secrets would lock you out of it (the first
   // account owns the install and sign-up is invitation-only afterwards), so
   // refuse rather than quietly start a stack that can't read its own data.
-  if (!hasEnv && start) {
+  // (A --test stack gets a project name of its own, so it can't find one.)
+  if (!hasEnv && start && !test) {
     const volume = `${COMPOSE_PROJECT}_postgres-data`;
     if ((await run("docker", ["volume", "inspect", volume])).code === 0) {
       throw new CliError(
@@ -241,17 +260,36 @@ async function init({ dir, port, start, open, force, compose }) {
 
   if (hasEnv) {
     step(`Using existing ${bold(".env")}`);
-    if (port !== undefined) {
-      const current = await readFile(envPath, "utf8");
-      await writeFile(envPath, setEnvVar(current, "SAMATA_PORT", port));
-    }
+    let current = await readFile(envPath, "utf8");
+    const before = current;
+    if (port !== undefined) current = setEnvVar(current, "SAMATA_PORT", port);
+    if (spekoKey) current = setEnvVar(current, "SPEKO_API_KEY", spekoKey);
+    if (current !== before) await writeFile(envPath, current);
+    if (test) note("--test only applies to a new folder: using the ports already in .env.");
   } else {
+    // Ask before writing, so there's one .env write and the key is never
+    // left in a file with looser permissions.
+    const key = spekoKey || (await askForSpekoKey());
+    const stack = test ? await pickTestStack() : undefined;
     step(`Generating secrets in ${bold(".env")}`);
-    await writeFile(envPath, generateEnv({ port }), { mode: 0o600 });
+    await writeFile(
+      envPath,
+      generateEnv({
+        port: port ?? stack?.dashboard,
+        spekoKey: key,
+        extra: stack?.env,
+      }),
+      { mode: 0o600 },
+    );
   }
-  const dashboardPort = Number(
-    getEnvVar(await readFile(envPath, "utf8"), "SAMATA_PORT") ?? DEFAULT_PORT,
-  );
+  const envText = await readFile(envPath, "utf8");
+  const hasKey = Boolean(getEnvVar(envText, "SPEKO_API_KEY"));
+  const dashboardPort = Number(getEnvVar(envText, "SAMATA_PORT") ?? DEFAULT_PORT);
+  const livekitPorts = [
+    Number(getEnvVar(envText, "SAMATA_LIVEKIT_PORT") ?? LIVEKIT_PORTS[0]),
+    Number(getEnvVar(envText, "SAMATA_LIVEKIT_TCP_PORT") ?? LIVEKIT_PORTS[1]),
+  ];
+  const testProject = getEnvVar(envText, "COMPOSE_PROJECT_NAME");
   const url = `http://localhost:${dashboardPort}`;
 
   if (!start) {
@@ -265,7 +303,7 @@ async function init({ dir, port, start, open, force, compose }) {
   // first start.
   const existing = await run("docker", ["compose", "ps", "-aq"], { cwd: dir });
   if (!existing.stdout.trim()) {
-    await checkPorts([dashboardPort, ...LIVEKIT_PORTS]);
+    await checkPorts([dashboardPort, ...livekitPorts], livekitPorts);
   }
 
   step("Starting Samata (the first run downloads the images)");
@@ -293,13 +331,24 @@ async function init({ dir, port, start, open, force, compose }) {
 ${green("✔")} ${bold("Samata is running")}
 
   Dashboard   ${bold(url)}
-  Files       ${dir}
+  Files       ${dir}${
+    testProject
+      ? `
+  Test stack  ${testProject}, LiveKit on ${livekitPorts.join(" and ")}: apart from any other Samata here`
+      : ""
+  }
 
 ${bold("Next")}
   1. Open the dashboard. You're signed in automatically as ${bold(LOCAL_EMAIL)}
      ${dim(`(password ${LOCAL_PASSWORD}, for this machine only)`)}
-  2. Provider Keys: add your OpenAI (or Deepgram + Cartesia) key.
-  3. Create an assistant and talk to it from its Test tab.
+${
+  hasKey
+    ? `  2. Create an assistant and talk to it from its Test tab. It runs on your Speko
+     key (speech-to-text, model and voice), already saved under Provider Keys.`
+    : `  2. Provider Keys: add your Speko key (${SPEKO_KEYS_URL}). One key covers
+     speech-to-text, the model and the voice. Or bring OpenAI, or Deepgram + Cartesia.
+  3. Create an assistant and talk to it from its Test tab.`
+}
 
 ${bold("Manage")}
   cd ${rel}
@@ -309,6 +358,68 @@ ${bold("Manage")}
 `);
 
   if (open && process.stdout.isTTY && !process.env.CI) openBrowser(url);
+}
+
+/**
+ * One Speko key runs the whole pipeline (transcriber, model, voice), so that's
+ * the only key we ask for. Returns undefined to skip: no terminal to ask on, or
+ * the person pressed Enter. Keys can always be added later in the dashboard.
+ */
+async function askForSpekoKey() {
+  if (!canPrompt()) return undefined;
+
+  console.log(
+    `${bold("One API key")} is all Samata needs to hold a conversation. A Speko key covers
+speech-to-text, the model and text-to-speech, and new accounts get $10 of free credit.
+${dim(`Create one at ${SPEKO_KEYS_URL}. Press Enter to skip and add keys in the dashboard later.`)}
+`,
+  );
+
+  const fromEnv = process.env.SPEKO_API_KEY?.trim();
+  if (
+    fromEnv &&
+    looksLikeSpekoKey(fromEnv) &&
+    (await askYesNo("Use the SPEKO_API_KEY from your environment?"))
+  ) {
+    if ((await checkSpekoKey(fromEnv)) !== "invalid") return fromEnv;
+    warn("Speko rejected the key in your environment.");
+  }
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const key = (await askSecret("Speko API key: ")).trim();
+    if (!key) break;
+    if (!looksLikeSpekoKey(key)) {
+      warn(
+        "That doesn't look like a Speko key (they start with sk_live_). Try again, or press Enter to skip.",
+      );
+      continue;
+    }
+    const status = await checkSpekoKey(key);
+    if (status === "invalid") {
+      warn("Speko rejected that key. Try again, or press Enter to skip.");
+      continue;
+    }
+    if (status === "unknown") {
+      note("Couldn't reach Speko to check it; using it as is.");
+    }
+    console.log("");
+    return key;
+  }
+  console.log("");
+  note("Skipped. Add a key on the dashboard's Provider Keys page.");
+  return undefined;
+}
+
+/** A key passed with `--speko-key`: reject one that is plainly wrong. */
+async function checkGivenSpekoKey(key) {
+  if (!looksLikeSpekoKey(key)) {
+    throw new CliError(
+      `--speko-key doesn't look like a Speko key (they start with sk_live_). Create one at ${SPEKO_KEYS_URL}`,
+    );
+  }
+  if ((await checkSpekoKey(key)) === "invalid") {
+    throw new CliError("Speko rejected the key given to --speko-key.");
+  }
 }
 
 /** `dir` as you'd type it: relative when it's under here, else absolute. */
@@ -345,7 +456,7 @@ async function checkDocker() {
   }
 }
 
-async function checkPorts(ports) {
+async function checkPorts(ports, livekitPorts) {
   const busy = [];
   for (const port of ports) {
     if (!(await isPortFree(port))) busy.push(port);
@@ -359,9 +470,10 @@ async function checkPorts(ports) {
       `Pick another dashboard port with:  ${CMD} init --port ${free ?? DEFAULT_PORT + 100}`,
     );
   }
-  if (busy.some((p) => LIVEKIT_PORTS.includes(p))) {
+  if (busy.some((p) => livekitPorts.includes(p))) {
     lines.push(
-      `${LIVEKIT_PORTS.join(" and ")} are LiveKit's: stop whatever is using them (another LiveKit server?) and run this again.`,
+      `${livekitPorts.join(" and ")} are LiveKit's: stop whatever is using them (another LiveKit server?) and run this again.`,
+      `Or run a separate copy that doesn't share them:  ${CMD} init --test`,
     );
   }
   throw new CliError(lines.join("\n"));

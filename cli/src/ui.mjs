@@ -52,3 +52,65 @@ export function run(cmd, args, { cwd, inherit = false, input } = {}) {
     }
   });
 }
+
+/** Whether we can ask the person questions: a terminal on both ends, not CI. */
+export const canPrompt = () =>
+  Boolean(process.stdin.isTTY && process.stdout.isTTY && !process.env.CI);
+
+/**
+ * Read one line without echoing it, showing `*` per character so a paste is
+ * visibly received. Enter submits an empty answer too; Ctrl-C quits.
+ */
+export function askSecret(question) {
+  return new Promise((resolve) => {
+    const { stdin, stdout } = process;
+    let answer = "";
+    stdout.write(question);
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding("utf8");
+
+    const finish = () => {
+      stdin.off("data", onData);
+      stdin.setRawMode(false);
+      stdin.pause();
+      stdout.write("\n");
+      resolve(answer);
+    };
+    const onData = (chunk) => {
+      // Arrow keys and friends arrive as an escape sequence: ignore them.
+      if (chunk.startsWith("\u001b") && chunk.length < 8) return;
+      for (const ch of chunk) {
+        if (ch === "\r" || ch === "\n") return finish();
+        if (ch === "\u0003") {
+          stdin.setRawMode(false);
+          stdout.write("\n");
+          process.exit(130);
+        }
+        if (ch === "\u007f" || ch === "\b") {
+          if (answer) {
+            answer = answer.slice(0, -1);
+            stdout.write("\b \b");
+          }
+        } else if (ch >= " ") {
+          answer += ch;
+          stdout.write("*");
+        }
+      }
+    };
+    stdin.on("data", onData);
+  });
+}
+
+/** A yes/no question where Enter means yes. */
+export async function askYesNo(question) {
+  const { createInterface } = await import("node:readline/promises");
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  rl.on("SIGINT", () => process.exit(130));
+  try {
+    const answer = (await rl.question(`${question} ${dim("[Y/n]")} `)).trim();
+    return !/^n/i.test(answer);
+  } finally {
+    rl.close();
+  }
+}
