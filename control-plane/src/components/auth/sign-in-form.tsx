@@ -19,6 +19,7 @@ export function SignInForm({
   canResetPassword,
   passwordWasReset,
   googleEnabled,
+  localAccount,
   invitation,
 }: {
   next: string;
@@ -33,6 +34,11 @@ export function SignInForm({
   /** Arrived from a completed password reset. */
   passwordWasReset: boolean;
   googleEnabled: boolean;
+  /**
+   * Laptop quickstart, right after signing out: the local account's email, so
+   * you can step back in with one click. Null everywhere else.
+   */
+  localAccount: string | null;
   invitation: { id: string; email: string; workspaceName: string } | null;
 }) {
   const router = useRouter();
@@ -247,6 +253,22 @@ export function SignInForm({
           {pending ? "Please wait…" : signingUp ? "Create account" : "Sign in"}
         </Button>
       </form>
+
+      {localAccount && !signingUp && (
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={() => {
+            // A full navigation: this is a route handler that sets cookies.
+            window.location.assign(
+              `/api/local-login?next=${encodeURIComponent(next)}`,
+            );
+          }}
+        >
+          Continue as {localAccount}
+        </Button>
+      )}
 
       {googleEnabled && (
         <Button variant="outline" className="w-full" onClick={google}>

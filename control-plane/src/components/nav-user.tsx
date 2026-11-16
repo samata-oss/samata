@@ -18,7 +18,7 @@ export function NavUser({ name, email }: { name: string; email: string }) {
 
   async function signOut() {
     await authClient.signOut();
-    router.push("/sign-in");
+    router.push("/sign-in?signed_out=1");
     router.refresh();
   }
 
