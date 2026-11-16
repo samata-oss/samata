@@ -3,7 +3,8 @@
  * and no role to grant: the account with this email is one automatically.
  *
  * A superuser sees every account that has signed up (Admin > Users), can view
- * Samata as any of them, and is emailed when someone signs up.
+ * Samata as any of them, answers support tickets (Admin > Tickets), and is
+ * emailed when someone signs up or writes to support.
  */
 export const SUPERUSER_EMAIL = "gaurav@samata.dev";
 

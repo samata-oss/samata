@@ -4,7 +4,9 @@ import {
   BracesIcon,
   CpuIcon,
   CreditCardIcon,
+  InboxIcon,
   KeyRoundIcon,
+  LifeBuoyIcon,
   PhoneIcon,
   ShieldIcon,
   ScrollTextIcon,
@@ -60,6 +62,7 @@ export const navGroups = ({
         ? [
             { title: "Billing", url: "/billing", icon: <CreditCardIcon /> },
             { title: "Settings", url: "/settings", icon: <SettingsIcon /> },
+            { title: "Support", url: "/support", icon: <LifeBuoyIcon /> },
           ]
         : []),
     ],
@@ -70,6 +73,15 @@ export const navGroups = ({
           label: "Super user",
           items: [
             { title: "Users", url: "/admin/users", icon: <ShieldIcon /> },
+            ...(cloud
+              ? [
+                  {
+                    title: "Tickets",
+                    url: "/admin/tickets",
+                    icon: <InboxIcon />,
+                  },
+                ]
+              : []),
           ],
         },
       ]

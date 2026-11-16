@@ -26,6 +26,8 @@ const LABELS: Record<string, string> = {
   settings: "Settings",
   admin: "Admin",
   users: "Users",
+  tickets: "Tickets",
+  support: "Support",
 };
 
 function label(segment: string) {
