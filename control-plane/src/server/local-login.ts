@@ -1,7 +1,9 @@
-import { count, eq } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { user } from "@/db/schema";
+import { agent, user } from "@/db/schema";
+import { agentConfigSchema } from "@/lib/agent-config";
 import { DEFAULT_ORGANIZATION_ID } from "@/lib/workspace";
+import { uniqueSlug } from "@/server/agents";
 import { auth } from "@/server/auth";
 import { listProviderKeys, saveProviderKey } from "@/server/provider-keys";
 
@@ -63,6 +65,55 @@ async function seedLocalKeys() {
 }
 
 /**
+ * A receptionist that's ready to talk to, so the quickstart doesn't open on an
+ * empty list. It runs on Speko whether or not a key has been added yet: the
+ * Speko presets are the quickstart's models (Muse Voice Transcribe, DeepSeek
+ * V4.1 Flash, Inworld TTS 2), and without a key the Test tab says so.
+ *
+ * Called when the local account is first created, i.e. once per install, so
+ * deleting the assistant doesn't bring it back. Never throws.
+ */
+async function seedLocalAgent() {
+  try {
+    const [{ agents }] = await db
+      .select({ agents: count() })
+      .from(agent)
+      .where(eq(agent.organizationId, DEFAULT_ORGANIZATION_ID));
+    if (agents > 0) return;
+
+    const name = "Receptionist";
+    await db.insert(agent).values({
+      organizationId: DEFAULT_ORGANIZATION_ID,
+      slug: await uniqueSlug(name),
+      name,
+      config: agentConfigSchema.parse({
+        firstMessage: "Thanks for calling Acme. How can I help you today?",
+        model: {
+          provider: "speko",
+          systemPrompt:
+            "You are the receptionist for Acme, a small business. Greet callers warmly, find out why they're calling, and help with simple questions: opening hours (Monday to Friday, 9am to 5pm), where to find us, and booking or changing an appointment. For a booking, ask for their name, a phone number and a day and time that suits them, then read it back to confirm. If you don't know something, say so and offer to take a message instead of guessing. This is a phone call: keep replies to one or two short sentences, with no lists or markdown.",
+        },
+        transcriber: { provider: "speko" },
+        voice: { provider: "speko" },
+      }),
+    });
+  } catch (err) {
+    console.error("[local-login] could not create the first assistant", err);
+  }
+}
+
+/** The path of the install's first assistant, or null if it has none. */
+export async function firstLocalAgentPath() {
+  const [first] = await db
+    .select({ slug: agent.slug })
+    .from(agent)
+    .where(eq(agent.organizationId, DEFAULT_ORGANIZATION_ID))
+    .orderBy(asc(agent.createdAt))
+    .limit(1);
+  return first ? `/assistants/${first.slug}` : null;
+}
+
+/**
  * Sign in as the local account, creating it on a fresh install. Returns the
  * response headers (carrying the session cookies), or null if it can't: local
  * login is off, or the account's password was changed.
@@ -102,6 +153,7 @@ export async function signInLocal(): Promise<Headers | null> {
       .catch(() => null);
     const { headers } = created ?? (await signIn());
     await seedLocalKeys();
+    if (created) await seedLocalAgent();
     return headers;
   } catch (err) {
     console.error("[local-login] could not sign in", err);

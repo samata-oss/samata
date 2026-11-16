@@ -164,3 +164,12 @@ test("isUdpPortFree sees a bound UDP port", async () => {
   await new Promise((resolve) => socket.close(resolve));
   assert.equal(await isUdpPortFree(port), true);
 });
+
+test("isPortFree sees a listener bound to loopback only", async () => {
+  const server = net.createServer();
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address();
+  assert.equal(await isPortFree(port), false);
+  await new Promise((resolve) => server.close(resolve));
+  assert.equal(await isPortFree(port), true);
+});

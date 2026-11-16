@@ -131,14 +131,32 @@ export function versionAtLeast(actual, minimum) {
   return true;
 }
 
-/** True when nothing is listening on `port` on this machine. */
-export function isPortFree(port) {
-  return new Promise((resolve) => {
+/**
+ * True when nothing is listening on `port` on this machine.
+ *
+ * Binding the port isn't enough: on macOS a wildcard bind succeeds next to a
+ * listener on 127.0.0.1 only, which is exactly how Docker publishes the
+ * dashboard. So also try to connect on loopback; if anything answers, it's taken.
+ */
+export async function isPortFree(port) {
+  const canBind = await new Promise((resolve) => {
     const server = net.createServer();
     server.once("error", () => resolve(false));
     server.once("listening", () => server.close(() => resolve(true)));
     server.listen(port);
   });
+  if (!canBind) return false;
+  for (const host of ["127.0.0.1", "::1"]) {
+    const answered = await new Promise((resolve) => {
+      const socket = net.connect({ port, host });
+      socket.setTimeout(500);
+      socket.once("connect", () => resolve(true));
+      socket.once("timeout", () => resolve(false));
+      socket.once("error", () => resolve(false));
+    });
+    if (answered) return false;
+  }
+  return true;
 }
 
 /** True when no UDP socket is bound to `port` on this machine. */

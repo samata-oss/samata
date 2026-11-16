@@ -341,13 +341,15 @@ ${green("✔")} ${bold("Samata is running")}
 ${bold("Next")}
   1. Open the dashboard. You're signed in automatically as ${bold(LOCAL_EMAIL)}
      ${dim(`(password ${LOCAL_PASSWORD}, for this machine only)`)}
+     and land on ${bold("Receptionist")}, an assistant that's already set up.
 ${
   hasKey
-    ? `  2. Create an assistant and talk to it from its Test tab. It runs on your Speko
-     key (speech-to-text, model and voice), already saved under Provider Keys.`
+    ? `  2. Open its Test tab and talk to it. It runs on your Speko key (speech-to-text,
+     model and voice), already saved under Provider Keys.`
     : `  2. Provider Keys: add your Speko key (${SPEKO_KEYS_URL}). One key covers
-     speech-to-text, the model and the voice. Or bring OpenAI, or Deepgram + Cartesia.
-  3. Create an assistant and talk to it from its Test tab.`
+     speech-to-text, the model and the voice. Or bring OpenAI, or Deepgram + Cartesia
+     and switch the assistant's providers.
+  3. Open its Test tab and talk to it.`
 }
 
 ${bold("Manage")}

@@ -37,7 +37,7 @@ dashboard at <http://localhost:4747>, already signed in as `admin@samata.local`
 (password `12345678`; the dashboard only listens on your machine). It asks for one
 [Speko](https://speko.ai) API key, which covers speech-to-text, the model and
 text-to-speech ($10 free credit on a new account; press Enter to skip and add keys
-on the dashboard instead). Then talk to an assistant from
+on the dashboard instead). It opens on a ready-made assistant: talk to it from
 its Test tab. Browser calls work out of the box; phone calls need a server (below). See `npx @samata-oss/cli --help`
 for options.
 
