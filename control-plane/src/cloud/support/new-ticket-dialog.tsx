@@ -70,7 +70,7 @@ export function NewTicketDialog() {
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               maxLength={LIMITS.subject}
-              placeholder="Outbound calls drop after 30 seconds"
+              placeholder="My assistant doesn't pick up inbound calls"
               autoComplete="off"
               required
             />
@@ -98,7 +98,7 @@ export function NewTicketDialog() {
               onChange={(e) => setDetails(e.target.value)}
               maxLength={LIMITS.body}
               className="min-h-24"
-              placeholder="What happened, what you expected, and any session or call ids."
+              placeholder="Which assistant or number, what you saw, and the call ID from Logs if you have one."
               required
             />
           </div>

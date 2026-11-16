@@ -4,6 +4,7 @@ import { AutoRefresh } from "@/components/auto-refresh";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { staffReplyAction, replyAction } from "./actions";
+import { CopyId } from "./copy-id";
 import { Messages } from "./messages";
 import { ReplyBox } from "./reply-box";
 import {
@@ -107,7 +108,7 @@ export function Inbox({
                   : "border-transparent text-muted-foreground hover:text-foreground",
               )}
             >
-              {t === "active" ? (admin ? "Open" : "Active") : "Resolved"}{" "}
+              {t === "active" ? (admin ? "Open" : "Active") : "Closed"}{" "}
               <span className="text-muted-foreground tabular-nums">
                 {counts[t]}
               </span>
@@ -117,7 +118,7 @@ export function Inbox({
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
           {tickets.length === 0 ? (
             <p className="p-4 text-center text-sm text-muted-foreground">
-              {tab === "resolved" ? "Nothing resolved yet." : "No tickets."}
+              {tab === "resolved" ? "Nothing closed yet." : "No tickets."}
             </p>
           ) : (
             <ul className="space-y-1">
@@ -204,6 +205,7 @@ function Thread({
             <h2 className="truncate font-semibold">{ticket.subject}</h2>
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
               <span className="font-mono">#{ticket.number}</span>
+              <CopyId value={ticket.id} />
               <Badge variant="outline">{ticket.category}</Badge>
               <span>Opened {timeAgo(ticket.createdAt)}</span>
             </div>
@@ -226,6 +228,7 @@ function Thread({
       <Messages messages={ticket.messages} me={admin ? "staff" : "user"} />
       <ReplyBox
         ticketId={ticket.id}
+        closed={ticket.status === "resolved"}
         action={admin ? staffReplyAction : replyAction}
       />
     </>

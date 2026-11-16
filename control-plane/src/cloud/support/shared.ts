@@ -4,8 +4,8 @@
  */
 
 export const TICKET_CATEGORIES = [
-  "Calls",
   "Assistants",
+  "Calls",
   "Phone numbers",
   "Billing",
   "Account",
@@ -27,10 +27,10 @@ export const TICKET_STATUSES = [
 export type TicketStatus = (typeof TICKET_STATUSES)[number];
 
 export const STATUS_LABEL: Record<TicketStatus, string> = {
-  sent: "Sent",
-  in_review: "In review",
+  sent: "Received",
+  in_review: "Looking into it",
   replied: "Replied",
-  resolved: "Resolved",
+  resolved: "Closed",
 };
 
 export const isTicketStatus = (s: string): s is TicketStatus =>

@@ -13,9 +13,12 @@ import { LIMITS } from "./shared";
  */
 export function ReplyBox({
   ticketId,
+  closed,
   action,
 }: {
   ticketId: string;
+  /** The ticket is closed: writing here reopens it, and the button says so. */
+  closed: boolean;
   action: (
     ticketId: string,
     body: string,
@@ -55,9 +58,11 @@ export function ReplyBox({
         className="max-h-48 min-h-16"
       />
       <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">⌘↵ to send</span>
+        <span className="text-xs text-muted-foreground">
+          {closed ? "This ticket is closed. Sending reopens it." : "⌘↵ to send"}
+        </span>
         <Button size="sm" disabled={empty || pending} onClick={send}>
-          {pending ? "Sending…" : "Send"}
+          {pending ? "Sending…" : closed ? "Reopen ticket and send" : "Send"}
         </Button>
       </div>
     </div>

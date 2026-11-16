@@ -38,7 +38,7 @@ export async function SupportPage({
   return (
     <PageShell
       title="Support"
-      description="Ask us anything about Samata. We reply here and by email."
+      description="Ask us anything about Samata - we will reply within one business day."
       actions={session.viewingAs ? null : <NewTicketDialog />}
     >
       <Inbox

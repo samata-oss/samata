@@ -38,7 +38,7 @@ export function StatusActions({
           disabled={pending}
           onClick={() => set("in_review")}
         >
-          Mark in review
+          Mark as looking into it
         </Button>
       )}
       {status === "resolved" ? (
@@ -52,7 +52,7 @@ export function StatusActions({
         </Button>
       ) : (
         <Button size="sm" disabled={pending} onClick={() => set("resolved")}>
-          Resolve
+          Close ticket
         </Button>
       )}
     </div>

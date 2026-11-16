@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { and, asc, count, desc, eq, gt, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { supportMessage, supportTicket } from "../schema";
@@ -96,7 +96,8 @@ export async function createTicket(
   const body = cleanBody(input.details);
   await assertUnderRateLimit(who.id);
 
-  const id = randomUUID();
+  // Short and recognisable, so it can be read out or pasted into an email.
+  const id = `tkt_${randomBytes(8).toString("hex")}`;
   const [ticket] = await db.transaction(async (tx) => {
     const created = await tx
       .insert(supportTicket)
