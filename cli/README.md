@@ -10,3 +10,5 @@ SAMATA_IMAGE_PREFIX=samata-local SAMATA_VERSION=dev \
 node /Users/gauravvarma/Repositories/samata/cli/bin/samata.mjs init try-it --test \
   --compose /Users/gauravvarma/Repositories/samata/deploy/docker-compose.local.yml
 ```
+
+With the --test flag, none of the ports conflict with samata local dev set up or usual samata local quickstart setup
