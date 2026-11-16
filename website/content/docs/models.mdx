@@ -21,14 +21,25 @@ front, with the reason in Logs and in the Test tab.
 
 | Layer       | Providers                                                                                                      |
 | ----------- | -------------------------------------------------------------------------------------------------------------- |
-| Model       | OpenAI, [OpenRouter](https://openrouter.ai), Vercel AI Gateway, Groq, or any custom OpenAI-compatible endpoint |
-| Transcriber | Deepgram, AssemblyAI, ElevenLabs, OpenAI                                                                       |
-| Voice       | Cartesia, ElevenLabs, Deepgram, OpenAI                                                                         |
+| Model       | [Speko](https://speko.ai), OpenAI, [OpenRouter](https://openrouter.ai), Vercel AI Gateway, Groq, or any custom OpenAI-compatible endpoint |
+| Transcriber | Speko, Deepgram, AssemblyAI, ElevenLabs, OpenAI                                                                                          |
+| Voice       | Speko, Cartesia, ElevenLabs, Deepgram, OpenAI                                                                                            |
 
-One OpenAI key covers all three layers. For the model, OpenRouter and Vercel AI
-Gateway give one key for many vendors' models (name them `vendor/model`, like
-`anthropic/claude-sonnet-4.5`); call a provider directly when latency matters
-most. Speech has no equivalent gateway, so each speech provider needs its own key.
+One key can cover all three layers, with either of two providers:
+
+- **Speko** is a gateway for voice models, like OpenRouter is for LLMs: one
+  `sk_live_...` key reaches speech-to-text, LLMs and text-to-speech from many
+  vendors, and new accounts get $10 of credit. Name a model `provider/model`
+  (`meta/muse-voice-transcribe-1.0`, `baseten/deepseek-ai/DeepSeek-V4.1-Flash`,
+  `inworld/inworld-tts-2`), or `auto` / `auto:latency` / `auto:quality` /
+  `auto:cost` to let Speko pick. The [laptop quickstart](/docs/quickstart) uses
+  these three models.
+- **OpenAI** has its own model, transcriber and voice.
+
+For the model alone, OpenRouter and Vercel AI Gateway also give one key for many
+vendors' models (name them `vendor/model`, like `anthropic/claude-sonnet-4.5`);
+call a provider directly when latency matters most. The other speech providers
+each need their own key.
 
 ## Choosing providers in a config
 

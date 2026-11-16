@@ -10,11 +10,15 @@
 # server for those.
 #
 # Only the dashboard (4747) and the LiveKit ports below are published; Postgres
-# stays inside the compose network.
+# stays inside the compose network. Every published port can be moved from .env
+# (SAMATA_PORT, SAMATA_LIVEKIT_PORT, SAMATA_LIVEKIT_TCP_PORT,
+# SAMATA_LIVEKIT_UDP_PORT): `npx @samata-oss/cli init --test` does that for you
+# so a throwaway copy runs next to one you already have.
 
 # Pinned so containers and the database volume have the same names whichever
-# folder you run this from. The CLI looks the volume up by this name.
-name: samata-local
+# folder you run this from. The CLI looks the volume up by this name. `--test`
+# sets COMPOSE_PROJECT_NAME in .env so a test copy gets a stack of its own.
+name: ${COMPOSE_PROJECT_NAME:-samata-local}
 
 services:
   control-plane:
@@ -36,10 +40,13 @@ services:
       # 12345678) instead of asking you to sign up. Laptop only: never set this
       # on a server.
       SAMATA_LOCAL_LOGIN: "true"
+      # Optional. The Speko key the CLI asked for: saved as the workspace's key
+      # on first sign-in, and covers the model, transcriber and voice.
+      SAMATA_LOCAL_SPEKO_API_KEY: ${SPEKO_API_KEY:-}
       # The control plane reaches LiveKit over the compose network, but hands
       # browsers a URL that works from your machine.
       LIVEKIT_URL: ws://livekit:7880
-      LIVEKIT_PUBLIC_URL: ws://localhost:7880
+      LIVEKIT_PUBLIC_URL: ws://localhost:${SAMATA_LIVEKIT_PORT:-7880}
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:?set LIVEKIT_API_KEY}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?set LIVEKIT_API_SECRET}
 
@@ -62,15 +69,17 @@ services:
     image: livekit/livekit-server:v1.13
     restart: unless-stopped
     ports:
-      - "7880:7880" # HTTP / WebSocket signalling
-      - "7881:7881" # WebRTC over TCP (fallback)
-      - "7882:7882/udp" # WebRTC over UDP
+      - "${SAMATA_LIVEKIT_PORT:-7880}:7880" # HTTP / WebSocket signalling
+      # WebRTC: the port inside must equal the one outside, because LiveKit
+      # tells the browser which port to connect to.
+      - "${SAMATA_LIVEKIT_TCP_PORT:-7881}:${SAMATA_LIVEKIT_TCP_PORT:-7881}" # TCP (fallback)
+      - "${SAMATA_LIVEKIT_UDP_PORT:-7882}:${SAMATA_LIVEKIT_UDP_PORT:-7882}/udp" # UDP
     environment:
       LIVEKIT_CONFIG: |
         port: 7880
         rtc:
-          tcp_port: 7881
-          udp_port: 7882
+          tcp_port: ${SAMATA_LIVEKIT_TCP_PORT:-7881}
+          udp_port: ${SAMATA_LIVEKIT_UDP_PORT:-7882}
           use_external_ip: false
           node_ip: 127.0.0.1
         keys:

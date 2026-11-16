@@ -34,8 +34,11 @@ npx @samata-oss/cli
 This downloads `deploy/docker-compose.local.yml` into `./samata`, generates the
 secrets in `.env`, starts the whole stack from prebuilt images, and opens the
 dashboard at <http://localhost:4747>, already signed in as `admin@samata.local`
-(password `12345678`; the dashboard only listens on your machine). Add a provider key, and talk to an assistant from its Test tab. Browser calls
-work out of the box; phone calls need a server (below). See `npx @samata-oss/cli --help`
+(password `12345678`; the dashboard only listens on your machine). It asks for one
+[Speko](https://speko.ai) API key, which covers speech-to-text, the model and
+text-to-speech ($10 free credit on a new account; press Enter to skip and add keys
+on the dashboard instead). Then talk to an assistant from
+its Test tab. Browser calls work out of the box; phone calls need a server (below). See `npx @samata-oss/cli --help`
 for options.
 
 ## Deploying Samata
@@ -191,14 +194,16 @@ key for is refused up front, with the reason in Logs and in the Test tab.
 
 | Layer       | Providers                                                                                  |
 | ----------- | ------------------------------------------------------------------------------------------ |
-| Model       | OpenAI, [OpenRouter](https://openrouter.ai), Vercel AI Gateway, Groq, or any custom OpenAI-compatible endpoint |
-| Transcriber | Deepgram, AssemblyAI, ElevenLabs, OpenAI                                                   |
-| Voice       | Cartesia, ElevenLabs, Deepgram, OpenAI                                                     |
+| Model       | [Speko](https://speko.ai), OpenAI, [OpenRouter](https://openrouter.ai), Vercel AI Gateway, Groq, or any custom OpenAI-compatible endpoint |
+| Transcriber | Speko, Deepgram, AssemblyAI, ElevenLabs, OpenAI                                            |
+| Voice       | Speko, Cartesia, ElevenLabs, Deepgram, OpenAI                                              |
 
-One OpenAI key covers all three layers. For the model, OpenRouter and Vercel AI
-Gateway give one key for many vendors' models (name them `vendor/model`, like
-`anthropic/claude-sonnet-4.5`); call a provider directly when latency matters
-most. Speech has no equivalent gateway, so each speech provider needs its own key.
+One Speko key covers all three layers: it is a gateway for voice models, like
+OpenRouter is for LLMs (name a model `provider/model`, like
+`meta/muse-voice-transcribe-1.0`, or `auto`). So does one OpenAI key. For the model
+alone, OpenRouter and Vercel AI Gateway give one key for many vendors' models (name
+them `vendor/model`, like `anthropic/claude-sonnet-4.5`); call a provider directly
+when latency matters most. The other speech providers each need their own key.
 
 In an assistant's config, set `provider` (and the provider's own `model` /
 `voiceId`) on `model`, `transcriber` and `voice`. Omitted fields take that

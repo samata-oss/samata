@@ -17,16 +17,29 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LLM_PRESETS, STT_PRESETS, TTS_PRESETS } from "@/lib/providers";
+import {
+  type LlmProvider,
+  LLM_PRESETS,
+  STT_PRESETS,
+  type SttProvider,
+  TTS_PRESETS,
+  type TtsProvider,
+} from "@/lib/providers";
 
-/** What a new assistant starts with. Keep in sync with the defaults in `agentConfigSchema`. */
-const DEFAULT_PIPELINE = [
-  STT_PRESETS.deepgram.label,
-  LLM_PRESETS.openai.label,
-  TTS_PRESETS.cartesia.label,
-];
-
-export function CreateAssistantDialog() {
+/**
+ * What a new assistant starts with: the providers follow the workspace's keys
+ * (`defaultProviders`, applied in `createAgentAction`).
+ */
+export function CreateAssistantDialog({
+  defaults,
+}: {
+  defaults: { llm: LlmProvider; stt: SttProvider; tts: TtsProvider };
+}) {
+  const pipeline = [
+    STT_PRESETS[defaults.stt].label,
+    LLM_PRESETS[defaults.llm].label,
+    TTS_PRESETS[defaults.tts].label,
+  ];
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -79,7 +92,7 @@ export function CreateAssistantDialog() {
           </div>
           <DialogFooter className="items-center sm:justify-between">
             <span className="flex flex-wrap items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
-              {DEFAULT_PIPELINE.map((label, i) => (
+              {pipeline.map((label, i) => (
                 <span key={label} className="contents">
                   {i > 0 && <span className="text-primary">→</span>}
                   {label}

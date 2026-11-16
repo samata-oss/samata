@@ -13,7 +13,14 @@ else. No clone, no Node project, no Python.
 npx @samata-oss/cli
 ```
 
-This downloads the stack's compose file into `./samata`, generates secrets in
+It asks for **one Speko API key**, which covers speech-to-text, the model and
+text-to-speech, so there are no three separate accounts to set up.
+[Speko](https://speko.ai) is a gateway for voice models, and new accounts get $10
+of free credit. Create a key on [platform.speko.ai](https://platform.speko.ai/gateway/keys),
+paste it (or press Enter to skip and add it later). The key is checked with Speko
+and saved in `.env`.
+
+It then downloads the stack's compose file into `./samata`, generates secrets in
 `.env`, starts everything from prebuilt images (control plane, worker, LiveKit and
 Postgres), and opens the dashboard at [localhost:4747](http://localhost:4747). The
 first run takes a few minutes while the images download.
@@ -23,8 +30,11 @@ Then:
 1. **You're already signed in.** The quickstart creates a local `admin@samata.local`
    account (password `12345678`) and signs you in, so there's no sign-up step. The
    dashboard is bound to `127.0.0.1`, so only your machine can reach it.
-2. **Add a model provider key** on **Provider Keys**. One OpenAI key covers the
-   model, the transcriber and the voice. See [Bring your own models](/docs/models).
+2. **Your Speko key is already saved** on **Provider Keys**, and new assistants
+   run on it: Meta Muse Voice Transcribe 1.0 for speech-to-text, DeepSeek V4.1
+   Flash (on Baseten) for the model, and Inworld TTS 2 for the voice. If you
+   skipped the prompt, add the key there. Want other providers (OpenAI, Deepgram,
+   Cartesia, ...)? See [Bring your own models](/docs/models).
 3. **Create an assistant** and talk to it from its **Test** tab.
 
 ```bash
@@ -43,9 +53,15 @@ stack again. Options:
 | `--port <n>`           | Dashboard port, if `4747` is taken.                               |
 | `--no-start`           | Only write `docker-compose.yml` and `.env`.                       |
 | `--no-open`            | Don't open the browser.                                           |
+| `--speko-key <key>`    | Give the Speko key up front instead of being asked.               |
 | `--force`              | Download `docker-compose.yml` again.                              |
 | `--ref <ref>`          | Download from a branch, tag or commit of the repo.                |
 | `--compose <file>`     | Use your own compose file (a URL or a path).                      |
+
+The prompt is skipped when there's no terminal (CI, a pipe). If `SPEKO_API_KEY` is
+set in your shell, the CLI offers to use it. The key is saved to the dashboard the
+first time you sign in, and only into a workspace that has no keys yet, so keys you
+change on **Provider Keys** later are never overwritten.
 
 Browser test calls work out of the box. Real phone calls need a public address, so
 set up a [server](/docs/self-host) for those.

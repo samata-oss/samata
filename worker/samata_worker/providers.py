@@ -20,6 +20,7 @@ from typing import Any
 from livekit.agents import NOT_GIVEN, llm, stt, tts
 from livekit.plugins import assemblyai, cartesia, deepgram, elevenlabs, openai
 
+from samata_worker import speko
 from samata_worker.config import ModelConfig, TranscriberConfig, VoiceConfig
 
 
@@ -45,8 +46,11 @@ def _drop_none(**kwargs: Any) -> dict[str, Any]:
 # --- LLM ---------------------------------------------------------------------
 
 # Every one of these speaks the OpenAI chat API; the control plane supplies the
-# endpoint (`base_url`) for each. `custom` is any other such endpoint.
-LLM_PROVIDERS = frozenset({"openai", "openrouter", "vercel-ai-gateway", "groq", "custom"})
+# endpoint (`base_url`) for each. `custom` is any other such endpoint. `speko`
+# is the Speko Router's chat endpoint: its one key also serves the STT and TTS.
+LLM_PROVIDERS = frozenset(
+    {"openai", "openrouter", "vercel-ai-gateway", "groq", "speko", "custom"}
+)
 
 
 def build_llm(cfg: ModelConfig) -> llm.LLM:
@@ -122,7 +126,17 @@ def _stt_openai(c: TranscriberConfig) -> stt.STT:
     return openai.STT(**kwargs)
 
 
+def _stt_speko(c: TranscriberConfig) -> stt.STT:
+    # Keyterms aren't sent: not every route behind the Router supports them, and
+    # one that doesn't would refuse the whole session.
+    try:
+        return speko.STT(api_key=_key("speko", c.api_key), model=c.model, language=c.language)
+    except ValueError as e:
+        raise ProviderError(str(e)) from e
+
+
 STT_PROVIDERS: dict[str, Callable[[TranscriberConfig], stt.STT]] = {
+    "speko": _stt_speko,
     "deepgram": _stt_deepgram,
     "assemblyai": _stt_assemblyai,
     "elevenlabs": _stt_elevenlabs,
@@ -184,7 +198,22 @@ def _tts_openai(c: VoiceConfig) -> tts.TTS:
     )
 
 
+def _tts_speko(c: VoiceConfig) -> tts.TTS:
+    # No speed: the Router has no provider-neutral speed setting. The voice is
+    # optional, and each route has a default.
+    try:
+        return speko.TTS(
+            api_key=_key("speko", c.api_key),
+            model=c.model,
+            voice=c.voice_id,
+            language=c.language,
+        )
+    except ValueError as e:
+        raise ProviderError(str(e)) from e
+
+
 TTS_PROVIDERS: dict[str, Callable[[VoiceConfig], tts.TTS]] = {
+    "speko": _tts_speko,
     "cartesia": _tts_cartesia,
     "elevenlabs": _tts_elevenlabs,
     "deepgram": _tts_deepgram,

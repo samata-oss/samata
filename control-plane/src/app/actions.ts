@@ -13,7 +13,11 @@ import {
   toolServer,
 } from "@/db/schema";
 import { agentConfigSchema } from "@/lib/agent-config";
-import { isKeyProvider, KEY_PROVIDERS } from "@/lib/providers";
+import {
+  defaultProviders,
+  isKeyProvider,
+  KEY_PROVIDERS,
+} from "@/lib/providers";
 import { canManageTeam } from "@/lib/workspace";
 import { setAgentNumbers } from "@/server/agent-numbers";
 import { isUniqueViolation, restoreSecrets, uniqueSlug } from "@/server/agents";
@@ -23,7 +27,11 @@ import {
   disconnectNumber,
   removeOutbound,
 } from "@/server/numbers";
-import { deleteProviderKey, saveProviderKey } from "@/server/provider-keys";
+import {
+  deleteProviderKey,
+  listProviderKeys,
+  saveProviderKey,
+} from "@/server/provider-keys";
 import { loadSavedCredentials } from "@/server/saved-credentials";
 import { encryptSecret } from "@/server/secrets";
 import { lookupTelnyxNumber } from "@/server/telnyx";
@@ -82,9 +90,14 @@ export async function createAgentAction(
     };
   }
   const slug = await uniqueSlug(trimmed);
+  const { llm, stt, tts } = defaultProviders(
+    (await listProviderKeys(organizationId)).map((k) => k.provider),
+  );
   const config = agentConfigSchema.parse({
     firstMessage: "Hello! How can I help you today?",
-    model: { systemPrompt: "You are a helpful voice assistant." },
+    model: { provider: llm, systemPrompt: "You are a helpful voice assistant." },
+    transcriber: { provider: stt },
+    voice: { provider: tts },
   });
   await db
     .insert(agent)

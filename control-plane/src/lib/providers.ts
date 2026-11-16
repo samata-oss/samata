@@ -6,13 +6,14 @@
  * The worker maps the same provider ids to LiveKit plugins in
  * `worker/samata_worker/providers.py`. Keep the two in sync.
  *
- * A provider id is also the id of its API key, so one `openai` key serves the
- * model, the transcriber and the voice.
+ * A provider id is also the id of its API key, so one `speko` (or `openai`) key
+ * serves the model, the transcriber and the voice.
  */
 
 export type ProviderKind = "llm" | "stt" | "tts";
 
 export const LLM_PROVIDERS = [
+  "speko",
   "openai",
   "openrouter",
   "vercel-ai-gateway",
@@ -20,12 +21,14 @@ export const LLM_PROVIDERS = [
   "custom",
 ] as const;
 export const STT_PROVIDERS = [
+  "speko",
   "deepgram",
   "assemblyai",
   "elevenlabs",
   "openai",
 ] as const;
 export const TTS_PROVIDERS = [
+  "speko",
   "cartesia",
   "elevenlabs",
   "deepgram",
@@ -38,6 +41,7 @@ export type TtsProvider = (typeof TTS_PROVIDERS)[number];
 
 /** Everything a workspace can store a key for, in the order the UI lists them. */
 export const KEY_PROVIDERS = [
+  "speko",
   "openai",
   "openrouter",
   "vercel-ai-gateway",
@@ -67,6 +71,15 @@ export type ProviderInfo = {
 };
 
 export const PROVIDER_INFO: Record<KeyProvider, ProviderInfo> = {
+  speko: {
+    label: "Speko",
+    placeholder: "sk_live_...",
+    keysUrl: "https://platform.speko.ai/gateway/keys",
+    description:
+      "One key for the model, transcriber and voice, routed across providers. $10 free credit.",
+    keyRequired: true,
+    kinds: ["llm", "stt", "tts"],
+  },
   openai: {
     label: "OpenAI",
     placeholder: "sk-...",
@@ -160,6 +173,20 @@ export type LlmPreset = {
 };
 
 export const LLM_PRESETS: Record<LlmProvider, LlmPreset> = {
+  speko: {
+    label: "Speko",
+    baseUrl: "https://router.speko.dev/v1",
+    model: "baseten/deepseek-ai/DeepSeek-V4.1-Flash",
+    modelPlaceholder: "openai/gpt-4.1-mini",
+    // `auto` lets Speko pick; `vendor/model` pins one (the Router's names).
+    models: [
+      "baseten/deepseek-ai/DeepSeek-V4.1-Flash",
+      "auto",
+      "auto:latency",
+      "auto:quality",
+      "auto:cost",
+    ],
+  },
   openai: {
     label: "OpenAI",
     baseUrl: "https://api.openai.com/v1",
@@ -230,6 +257,19 @@ export type SttPreset = {
 };
 
 export const STT_PRESETS: Record<SttProvider, SttPreset> = {
+  speko: {
+    label: "Speko",
+    model: "meta/muse-voice-transcribe-1.0",
+    language: "en",
+    modelPlaceholder: "provider/model",
+    models: [
+      "meta/muse-voice-transcribe-1.0",
+      "auto",
+      "auto:latency",
+      "auto:quality",
+      "auto:cost",
+    ],
+  },
   deepgram: {
     label: "Deepgram",
     model: "nova-3",
@@ -283,6 +323,26 @@ export type TtsPreset = {
 };
 
 export const TTS_PRESETS: Record<TtsProvider, TtsPreset> = {
+  speko: {
+    label: "Speko",
+    model: "inworld/inworld-tts-2",
+    // Empty: each route speaks in its own default voice.
+    voiceId: "",
+    language: "en",
+    modelPlaceholder: "provider/model",
+    models: [
+      "inworld/inworld-tts-2",
+      "auto",
+      "auto:latency",
+      "auto:quality",
+      "auto:cost",
+    ],
+    voiceLabel: "Voice ID (optional)",
+    hasLanguage: true,
+    // The Router has no provider-neutral speed setting.
+    speed: null,
+    voiceHint: "Leave the voice empty to use the model's default.",
+  },
   cartesia: {
     label: "Cartesia",
     model: "sonic-3",
@@ -382,6 +442,27 @@ export const TTS_PRESETS: Record<TtsProvider, TtsPreset> = {
     speed: { min: 0.25, max: 4 },
   },
 };
+
+/**
+ * The model, transcriber and voice a new assistant starts with: OpenAI,
+ * Deepgram and Cartesia, which takes three keys. A workspace that has one
+ * all-in-one key instead (the laptop quickstart asks for just a Speko key) gets
+ * that provider for each stage whose usual default it has no key for, so its
+ * first assistant works without a second and third key.
+ */
+export function defaultProviders(have: readonly KeyProvider[]): {
+  llm: LlmProvider;
+  stt: SttProvider;
+  tts: TtsProvider;
+} {
+  const has = new Set<KeyProvider>(have);
+  const allInOne = (["speko", "openai"] as const).find((p) => has.has(p));
+  return {
+    llm: !has.has("openai") && has.has("speko") ? "speko" : "openai",
+    stt: !has.has("deepgram") && allInOne ? allInOne : "deepgram",
+    tts: !has.has("cartesia") && allInOne ? allInOne : "cartesia",
+  };
+}
 
 /** The providers an agent config uses, and which of them need a key. */
 export function providersInUse(config: {

@@ -396,7 +396,9 @@ export function AssistantTab({
                   config.model.provider === "openrouter" ||
                   config.model.provider === "vercel-ai-gateway"
                     ? "A gateway: one key for many models. Name models as vendor/model."
-                    : undefined
+                    : config.model.provider === "speko"
+                      ? "One key for the model, transcriber and voice. Name models as provider/model, or use auto."
+                      : undefined
                 }
               >
                 <ProviderSelect

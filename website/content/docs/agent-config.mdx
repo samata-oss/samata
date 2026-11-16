@@ -50,7 +50,7 @@ work alongside OpenAI itself. The API key is the workspace's key for `provider`
 
 | Field          | Type   | Default                                    | Description                                      |
 | -------------- | ------ | ------------------------------------------ | ------------------------------------------------ |
-| `provider`     | enum   | `openai`                                   | `openai`, `openrouter`, `vercel-ai-gateway`, `groq`, `custom`. |
+| `provider`     | enum   | `openai`                                   | `speko`, `openai`, `openrouter`, `vercel-ai-gateway`, `groq`, `custom`. |
 | `model`        | string | the provider's default                     | Model name. Gateways use `vendor/model`.         |
 | `systemPrompt` | string | `You are a helpful voice assistant.`       | The system prompt. Required if `model` is given. |
 | `temperature`  | number | provider default                           | `0` to `2`.                                      |
@@ -60,7 +60,7 @@ work alongside OpenAI itself. The API key is the workspace's key for `provider`
 
 | Field      | Type   | Default                | Description                                                                                  |
 | ---------- | ------ | ---------------------- | -------------------------------------------------------------------------------------------- |
-| `provider` | enum   | `cartesia`             | `cartesia`, `elevenlabs`, `deepgram`, `openai`.                                              |
+| `provider` | enum   | `cartesia`             | `speko`, `cartesia`, `elevenlabs`, `deepgram`, `openai`.                                     |
 | `voiceId`  | string | the provider's default | The provider's own identifier (Cartesia or ElevenLabs voice id, OpenAI voice name). Deepgram ignores it because its voice is part of `model`. |
 | `model`    | string | the provider's default | Provider model.                                                                              |
 | `language` | string | the provider's default | Language code.                                                                               |
@@ -70,7 +70,7 @@ work alongside OpenAI itself. The API key is the workspace's key for `provider`
 
 | Field      | Type     | Default                | Description                                  |
 | ---------- | -------- | ---------------------- | -------------------------------------------- |
-| `provider` | enum     | `deepgram`             | `deepgram`, `assemblyai`, `elevenlabs`, `openai`. |
+| `provider` | enum     | `deepgram`             | `speko`, `deepgram`, `assemblyai`, `elevenlabs`, `openai`. |
 | `model`    | string   | the provider's default | Provider model.                              |
 | `language` | string   | the provider's default | Language code.                               |
 | `keyterms` | string[] | `[]`                   | Words to bias recognition toward, like product names. |

@@ -316,6 +316,9 @@ function providerFromHost(host: string): LlmProvider | undefined {
   if (host.includes("openrouter")) return "openrouter";
   if (host.includes("vercel")) return "vercel-ai-gateway";
   if (host.includes("groq")) return "groq";
+  // Speko resells many providers' models at their list price plus a margin, so
+  // there is no single price to show.
+  if (host.includes("speko")) return "speko";
   return undefined;
 }
 

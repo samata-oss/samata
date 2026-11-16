@@ -15,13 +15,15 @@ import {
 import { db } from "@/db";
 import { agent, callLog } from "@/db/schema";
 import { agentConfigSchema } from "@/lib/agent-config";
+import { defaultProviders } from "@/lib/providers";
 import { numbersByAgent } from "@/server/agent-numbers";
+import { listProviderKeys } from "@/server/provider-keys";
 import { fmtDateTime } from "@/lib/format";
 import { requireWorkspaceSession } from "@/server/workspace";
 
 export default async function AssistantsIndex() {
   const { organizationId } = await requireWorkspaceSession();
-  const [rows, stats] = await Promise.all([
+  const [rows, stats, keys] = await Promise.all([
     db
       .select()
       .from(agent)
@@ -36,6 +38,7 @@ export default async function AssistantsIndex() {
       .from(callLog)
       .where(eq(callLog.organizationId, organizationId))
       .groupBy(callLog.agentId),
+    listProviderKeys(organizationId),
   ]);
   const byAgent = new Map(stats.map((s) => [s.agentId, s]));
   const numbers = await numbersByAgent(rows.map((r) => r.id));
@@ -44,7 +47,11 @@ export default async function AssistantsIndex() {
     <PageShell
       title="Assistants"
       description="Each assistant is a speech-to-text, LLM and text-to-speech pipeline you can call."
-      actions={<CreateAssistantDialog />}
+      actions={
+        <CreateAssistantDialog
+          defaults={defaultProviders(keys.map((k) => k.provider))}
+        />
+      }
     >
       {rows.length === 0 ? (
         <EmptyState title="No assistants yet">

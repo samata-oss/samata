@@ -1,7 +1,9 @@
 import { count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { user } from "@/db/schema";
+import { DEFAULT_ORGANIZATION_ID } from "@/lib/workspace";
 import { auth } from "@/server/auth";
+import { listProviderKeys, saveProviderKey } from "@/server/provider-keys";
 
 /**
  * Zero-friction sign-in for the laptop quickstart (`npx @samata-oss/cli init`).
@@ -40,6 +42,27 @@ export async function localLoginAvailable() {
 }
 
 /**
+ * The quickstart CLI asks for one Speko key (it covers the model, the
+ * transcriber and the voice) and passes it in `SAMATA_LOCAL_SPEKO_API_KEY`.
+ * Store it as the workspace's Speko key so the first assistant can take a call
+ * without a trip to Provider Keys.
+ *
+ * Only into a workspace with no keys at all: after that the dashboard is the
+ * source of truth, so a key you changed or added there isn't overwritten.
+ * Never throws: a failure here shouldn't stop you getting in.
+ */
+async function seedLocalKeys() {
+  const key = process.env.SAMATA_LOCAL_SPEKO_API_KEY?.trim();
+  if (!key) return;
+  try {
+    if ((await listProviderKeys(DEFAULT_ORGANIZATION_ID)).length > 0) return;
+    await saveProviderKey(DEFAULT_ORGANIZATION_ID, "speko", key);
+  } catch (err) {
+    console.error("[local-login] could not save the Speko key", err);
+  }
+}
+
+/**
  * Sign in as the local account, creating it on a fresh install. Returns the
  * response headers (carrying the session cookies), or null if it can't: local
  * login is off, or the account's password was changed.
@@ -59,7 +82,11 @@ export async function signInLocal(): Promise<Headers | null> {
       .from(user)
       .where(eq(user.email, LOCAL_EMAIL))
       .limit(1);
-    if (existing) return (await signIn()).headers;
+    if (existing) {
+      const { headers } = await signIn();
+      await seedLocalKeys();
+      return headers;
+    }
 
     // Signing up also signs in, so this already carries the session cookies.
     const created = await auth.api
@@ -73,7 +100,9 @@ export async function signInLocal(): Promise<Headers | null> {
       })
       // Two tabs opened at once: the other request made the account first.
       .catch(() => null);
-    return (created ?? (await signIn())).headers;
+    const { headers } = created ?? (await signIn());
+    await seedLocalKeys();
+    return headers;
   } catch (err) {
     console.error("[local-login] could not sign in", err);
     return null;
