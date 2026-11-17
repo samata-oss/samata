@@ -10,6 +10,7 @@ import {
   type ProviderKind,
   providersInUse,
 } from "@/lib/providers";
+import { demoUrl, isDemoKey } from "@/server/demo";
 import { decryptSecret, encryptSecret } from "@/server/secrets";
 
 /** How many trailing characters of a key the dashboard may show. */
@@ -154,10 +155,18 @@ export type LlmCredentials = { baseUrl?: string; apiKey?: string };
 const llmEndpoint = (
   model: AgentConfig["model"],
   keys: Map<KeyProvider, string>,
-): LlmCredentials => ({
-  baseUrl: LLM_PRESETS[model.provider].baseUrl ?? model.baseUrl,
-  apiKey: keys.get(model.provider),
-});
+): LlmCredentials => {
+  const apiKey = keys.get(model.provider);
+  return {
+    // A demo key (the quickstart's free trial) is for the demo proxy, which
+    // speaks OpenRouter's chat API.
+    baseUrl:
+      model.provider === "openrouter" && isDemoKey(apiKey)
+        ? `${demoUrl()}/v1`
+        : (LLM_PRESETS[model.provider].baseUrl ?? model.baseUrl),
+    apiKey,
+  };
+};
 
 /** The LLM endpoint and key for an assistant's model. */
 export async function resolveLlmCredentials(

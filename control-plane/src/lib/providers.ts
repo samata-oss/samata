@@ -203,9 +203,10 @@ export const LLM_PRESETS: Record<LlmProvider, LlmPreset> = {
   openrouter: {
     label: "OpenRouter",
     baseUrl: "https://openrouter.ai/api/v1",
-    model: "openai/gpt-4.1-mini",
+    model: "deepseek/deepseek-v4.1-flash",
     modelPlaceholder: "anthropic/claude-sonnet-4.5",
     models: [
+      "deepseek/deepseek-v4.1-flash",
       "openai/gpt-4.1-mini",
       "openai/gpt-4.1",
       "anthropic/claude-sonnet-4.5",
@@ -217,9 +218,10 @@ export const LLM_PRESETS: Record<LlmProvider, LlmPreset> = {
   "vercel-ai-gateway": {
     label: "Vercel AI Gateway",
     baseUrl: "https://ai-gateway.vercel.sh/v1",
-    model: "openai/gpt-4.1-mini",
+    model: "deepseek/deepseek-v4.1-flash",
     modelPlaceholder: "anthropic/claude-sonnet-4.5",
     models: [
+      "deepseek/deepseek-v4.1-flash",
       "openai/gpt-4.1-mini",
       "openai/gpt-4.1",
       "anthropic/claude-sonnet-4.5",
@@ -445,10 +447,11 @@ export const TTS_PRESETS: Record<TtsProvider, TtsPreset> = {
 
 /**
  * The model, transcriber and voice a new assistant starts with: OpenAI,
- * Deepgram and Cartesia, which takes three keys. A workspace that has one
- * all-in-one key instead (the laptop quickstart asks for just a Speko key) gets
- * that provider for each stage whose usual default it has no key for, so its
- * first assistant works without a second and third key.
+ * Deepgram and Cartesia, which takes three keys. A workspace that has fewer
+ * keys gets what it can run: one all-in-one key (Speko, or OpenAI) covers each
+ * stage whose usual default it has no key for, and the quickstart's free demo
+ * (an OpenRouter key and a Deepgram key) gets OpenRouter for the model and
+ * Deepgram for the voice, so a new assistant works without more keys.
  */
 export function defaultProviders(have: readonly KeyProvider[]): {
   llm: LlmProvider;
@@ -457,10 +460,24 @@ export function defaultProviders(have: readonly KeyProvider[]): {
 } {
   const has = new Set<KeyProvider>(have);
   const allInOne = (["speko", "openai"] as const).find((p) => has.has(p));
+  const llm: LlmProvider = has.has("openai")
+    ? "openai"
+    : has.has("speko")
+      ? "speko"
+      : has.has("openrouter")
+        ? "openrouter"
+        : "openai";
+  const tts: TtsProvider = has.has("cartesia")
+    ? "cartesia"
+    : allInOne
+      ? allInOne
+      : has.has("deepgram")
+        ? "deepgram"
+        : "cartesia";
   return {
-    llm: !has.has("openai") && has.has("speko") ? "speko" : "openai",
+    llm,
     stt: !has.has("deepgram") && allInOne ? allInOne : "deepgram",
-    tts: !has.has("cartesia") && allInOne ? allInOne : "cartesia",
+    tts,
   };
 }
 

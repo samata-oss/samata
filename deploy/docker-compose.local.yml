@@ -40,15 +40,23 @@ services:
       # 12345678) instead of asking you to sign up. Laptop only: never set this
       # on a server.
       SAMATA_LOCAL_LOGIN: "true"
-      # Optional. The Speko key the CLI asked for: saved as the workspace's key
-      # on first sign-in, and covers the model, transcriber and voice.
+      # Optional. The key the CLI got: a Speko key (covers the model, transcriber
+      # and voice) or a free-demo token (sk_demo_...). Saved as the workspace's
+      # key(s) on first sign-in: Speko for the former, Deepgram and OpenRouter
+      # for the latter.
       SAMATA_LOCAL_SPEKO_API_KEY: ${SPEKO_API_KEY:-}
+      # Where a free-demo key (sk_demo_..., from skipping the key prompt) sends
+      # its requests. Empty: Samata's hosted demo. For testing a proxy of your own.
+      SAMATA_DEMO_URL: ${SAMATA_DEMO_URL:-}
       # The control plane reaches LiveKit over the compose network, but hands
       # browsers a URL that works from your machine.
       LIVEKIT_URL: ws://livekit:7880
       LIVEKIT_PUBLIC_URL: ws://localhost:${SAMATA_LIVEKIT_PORT:-7880}
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:?set LIVEKIT_API_KEY}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?set LIVEKIT_API_SECRET}
+    # Only for trying a demo proxy running on this machine (SAMATA_DEMO_URL).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   worker:
     image: ${SAMATA_IMAGE_PREFIX:-ghcr.io/samata-oss}/samata-worker:${SAMATA_VERSION:-edge}
@@ -62,8 +70,11 @@ services:
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
       SAMATA_CONTROL_PLANE_URL: http://control-plane:3000
       SAMATA_WEBHOOK_SECRET: ${SAMATA_WEBHOOK_SECRET}
+      SAMATA_DEMO_URL: ${SAMATA_DEMO_URL:-}
       # No model provider keys: the control plane sends the workspace's keys
       # with each call (dashboard -> Provider Keys).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   livekit:
     image: livekit/livekit-server:v1.13

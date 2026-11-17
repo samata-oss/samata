@@ -5,6 +5,10 @@ import { test } from "node:test";
 import {
   COMPOSE_PROJECT,
   checkSpekoKey,
+  claimDemoKey,
+  containerUrl,
+  demoUrl,
+  isDemoKey,
   composeUrl,
   findFreePort,
   generateEnv,
@@ -104,14 +108,13 @@ test("findFreePort skips ports in use", async () => {
 test("generateEnv keeps the Speko key out unless one is given", () => {
   assert.equal(getEnvVar(generateEnv(), "SPEKO_API_KEY"), undefined);
   const key = "sk_speko_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG";
-  assert.equal(
-    getEnvVar(generateEnv({ spekoKey: key }), "SPEKO_API_KEY"),
-    key,
-  );
+  assert.equal(getEnvVar(generateEnv({ spekoKey: key }), "SPEKO_API_KEY"), key);
 });
 
 test("looksLikeSpekoKey catches mis-pastes", () => {
-  assert.ok(looksLikeSpekoKey("sk_speko_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG"));
+  assert.ok(
+    looksLikeSpekoKey("sk_speko_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG"),
+  );
   assert.ok(looksLikeSpekoKey("sk_live_92a21d9a7fc1sgdfsdfg"));
   assert.ok(looksLikeSpekoKey("  sk_speko_abcdefghijklmnopqrstuvwxyz_-0123  "));
   assert.ok(!looksLikeSpekoKey(""));
@@ -144,13 +147,19 @@ test("pickTestStack picks distinct free ports and a project of its own", async (
     env.SAMATA_LIVEKIT_UDP_PORT,
   ];
   assert.equal(new Set(ports).size, 4);
-  for (const port of ports) assert.ok(port > 10000, `${port} is far from the defaults`);
+  for (const port of ports)
+    assert.ok(port > 10000, `${port} is far from the defaults`);
   assert.match(env.COMPOSE_PROJECT_NAME, /^samata-test-[0-9a-f]{6}$/);
   assert.notEqual(env.COMPOSE_PROJECT_NAME, COMPOSE_PROJECT);
 });
 
 test("generateEnv writes the extra test-stack settings", () => {
-  const env = generateEnv({ extra: { COMPOSE_PROJECT_NAME: "samata-test-abc123", SAMATA_LIVEKIT_PORT: 17880 } });
+  const env = generateEnv({
+    extra: {
+      COMPOSE_PROJECT_NAME: "samata-test-abc123",
+      SAMATA_LIVEKIT_PORT: 17880,
+    },
+  });
   assert.equal(getEnvVar(env, "COMPOSE_PROJECT_NAME"), "samata-test-abc123");
   assert.equal(getEnvVar(env, "SAMATA_LIVEKIT_PORT"), "17880");
   assert.equal(getEnvVar(generateEnv(), "COMPOSE_PROJECT_NAME"), undefined);
@@ -172,4 +181,85 @@ test("isPortFree sees a listener bound to loopback only", async () => {
   assert.equal(await isPortFree(port), false);
   await new Promise((resolve) => server.close(resolve));
   assert.equal(await isPortFree(port), true);
+});
+
+test("claimDemoKey returns the token, or says why not, and never throws", async () => {
+  const reply = (status, body) => async () =>
+    new Response(JSON.stringify(body), { status });
+  const claim = (fetchImpl) =>
+    claimDemoKey({ url: "http://demo.test", fetchImpl });
+
+  assert.deepEqual(await claim(reply(200, { token: "sk_demo_abc.def" })), {
+    status: "ok",
+    token: "sk_demo_abc.def",
+  });
+  // A 200 that isn't a demo token is not trusted.
+  assert.equal(
+    (await claim(reply(200, { token: "sk_live_abc" }))).status,
+    "unavailable",
+  );
+  assert.equal((await claim(reply(200, {}))).status, "unavailable");
+  assert.equal((await claim(reply(429, {}))).status, "limit");
+  assert.equal((await claim(reply(503, {}))).status, "full");
+  assert.equal((await claim(reply(500, {}))).status, "unavailable");
+  assert.equal(
+    (
+      await claim(async () => {
+        throw new Error("offline");
+      })
+    ).status,
+    "unavailable",
+  );
+
+  let asked;
+  await claimDemoKey({
+    url: "http://demo.test",
+    fetchImpl: async (url, init) => {
+      asked = { url, method: init.method };
+      return new Response("{}", { status: 500 });
+    },
+  });
+  assert.deepEqual(asked, { url: "http://demo.test/claim", method: "POST" });
+});
+
+test("demoUrl defaults to Samata's and can be pointed elsewhere", () => {
+  assert.equal(demoUrl({}), "https://demo.samata.dev");
+  assert.equal(
+    demoUrl({ SAMATA_DEMO_URL: "http://localhost:8787/" }),
+    "http://localhost:8787",
+  );
+  assert.equal(demoUrl({ SAMATA_DEMO_URL: "  " }), "https://demo.samata.dev");
+});
+
+test("a demo key is recognised, and generateEnv records a custom demo proxy", () => {
+  assert.ok(isDemoKey("sk_demo_abc.def"));
+  assert.ok(!isDemoKey("sk_live_abcdefghijkl"));
+  assert.ok(!isDemoKey(undefined));
+  assert.equal(
+    getEnvVar(generateEnv({ spekoKey: "sk_demo_a.b" }), "SAMATA_DEMO_URL"),
+    undefined,
+  );
+  assert.equal(
+    getEnvVar(
+      generateEnv({ spekoKey: "sk_demo_a.b", demoUrl: "http://x:1" }),
+      "SAMATA_DEMO_URL",
+    ),
+    "http://x:1",
+  );
+});
+
+test("containerUrl points a loopback proxy at the host, for the containers", () => {
+  assert.equal(
+    containerUrl("http://localhost:8787"),
+    "http://host.docker.internal:8787",
+  );
+  assert.equal(
+    containerUrl("http://127.0.0.1:8787/"),
+    "http://host.docker.internal:8787",
+  );
+  assert.equal(
+    containerUrl("https://demo.samata.dev"),
+    "https://demo.samata.dev",
+  );
+  assert.equal(containerUrl("not a url"), "not a url");
 });

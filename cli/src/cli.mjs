@@ -11,10 +11,14 @@ import {
   LOCAL_PASSWORD,
   SPEKO_KEYS_URL,
   checkSpekoKey,
+  claimDemoKey,
   composeUrl,
+  containerUrl,
   findFreePort,
   generateEnv,
+  demoUrl,
   getEnvVar,
+  isDemoKey,
   isPortFree,
   pickTestStack,
   looksLikeSpekoKey,
@@ -61,6 +65,9 @@ ${bold("Options for init")}
   --no-open                    Don't open the dashboard in your browser
   --speko-key <key>            Your Speko key, instead of being asked for it. One key covers
                                speech-to-text, the model and text-to-speech
+  --demo                       No key: try the free demo (a few minutes of conversation on
+                               Samata's own Deepgram and OpenRouter accounts). This is also
+                               what pressing Enter at the key prompt does
   --force                      Re-download docker-compose.yml even if it already exists
 
 ${bold("Options for deploy")}
@@ -112,6 +119,7 @@ export async function main(argv) {
         "no-start": { type: "boolean", default: false },
         "no-open": { type: "boolean", default: false },
         "speko-key": { type: "string" },
+        demo: { type: "boolean", default: false },
         force: { type: "boolean", default: false },
         ref: { type: "string" },
         compose: { type: "string" },
@@ -203,6 +211,7 @@ export async function main(argv) {
     start: !values["no-start"],
     open: !values["no-open"],
     spekoKey: values["speko-key"]?.trim(),
+    demo: values.demo,
     force: values.force,
     compose:
       values.compose ??
@@ -213,7 +222,17 @@ export async function main(argv) {
   });
 }
 
-async function init({ dir, port, test, start, open, spekoKey, force, compose }) {
+async function init({
+  dir,
+  port,
+  test,
+  start,
+  open,
+  spekoKey,
+  demo,
+  force,
+  compose,
+}) {
   console.log(`\n${bold("Samata")} quickstart\n`);
 
   if (spekoKey !== undefined) await checkGivenSpekoKey(spekoKey);
@@ -265,11 +284,21 @@ async function init({ dir, port, test, start, open, spekoKey, force, compose }) 
     if (port !== undefined) current = setEnvVar(current, "SAMATA_PORT", port);
     if (spekoKey) current = setEnvVar(current, "SPEKO_API_KEY", spekoKey);
     if (current !== before) await writeFile(envPath, current);
-    if (test) note("--test only applies to a new folder: using the ports already in .env.");
+    if (test)
+      note(
+        "--test only applies to a new folder: using the ports already in .env.",
+      );
   } else {
     // Ask before writing, so there's one .env write and the key is never
     // left in a file with looser permissions.
-    const key = spekoKey || (await askForSpekoKey());
+    let key = spekoKey;
+    if (!key && !demo) {
+      const asked = canPrompt();
+      key = await askForSpekoKey();
+      // Enter at the prompt means "let me try it first".
+      if (!key && asked) demo = true;
+    }
+    if (!key && demo) key = await claimDemo();
     const stack = test ? await pickTestStack() : undefined;
     step(`Generating secrets in ${bold(".env")}`);
     await writeFile(
@@ -278,13 +307,22 @@ async function init({ dir, port, test, start, open, spekoKey, force, compose }) 
         port: port ?? stack?.dashboard,
         spekoKey: key,
         extra: stack?.env,
+        // Only written when it's been changed, e.g. to try a proxy of your own.
+        // The containers can't reach this machine's "localhost".
+        demoUrl:
+          isDemoKey(key) && process.env.SAMATA_DEMO_URL?.trim()
+            ? containerUrl(process.env.SAMATA_DEMO_URL.trim())
+            : undefined,
       }),
       { mode: 0o600 },
     );
   }
   const envText = await readFile(envPath, "utf8");
   const hasKey = Boolean(getEnvVar(envText, "SPEKO_API_KEY"));
-  const dashboardPort = Number(getEnvVar(envText, "SAMATA_PORT") ?? DEFAULT_PORT);
+  const onDemo = isDemoKey(getEnvVar(envText, "SPEKO_API_KEY"));
+  const dashboardPort = Number(
+    getEnvVar(envText, "SAMATA_PORT") ?? DEFAULT_PORT,
+  );
   const livekitPorts = [
     Number(getEnvVar(envText, "SAMATA_LIVEKIT_PORT") ?? LIVEKIT_PORTS[0]),
     Number(getEnvVar(envText, "SAMATA_LIVEKIT_TCP_PORT") ?? LIVEKIT_PORTS[1]),
@@ -343,10 +381,15 @@ ${bold("Next")}
      ${dim(`(password ${LOCAL_PASSWORD}, for this machine only)`)}
      and land on ${bold("Receptionist")}, an assistant that's already set up.
 ${
-  hasKey
-    ? `  2. Open its Test tab and talk to it. It runs on your Speko key (speech-to-text,
+  onDemo
+    ? `  2. Open its Test tab and talk to it. You're on the free demo, which runs on
+     Samata's own Deepgram and OpenRouter accounts for a few minutes of conversation.
+     To keep going, add your own keys under Provider Keys: a Speko key
+     (${SPEKO_KEYS_URL}) covers everything, with $10 of credit on a new account.`
+    : hasKey
+      ? `  2. Open its Test tab and talk to it. It runs on your Speko key (speech-to-text,
      model and voice), already saved under Provider Keys.`
-    : `  2. Provider Keys: add your Speko key (${SPEKO_KEYS_URL}). One key covers
+      : `  2. Provider Keys: add your Speko key (${SPEKO_KEYS_URL}). One key covers
      speech-to-text, the model and the voice. Or bring OpenAI, or Deepgram + Cartesia
      and switch the assistant's providers.
   3. Open its Test tab and talk to it.`
@@ -373,7 +416,8 @@ async function askForSpekoKey() {
   console.log(
     `${bold("One API key")} is all Samata needs to hold a conversation. A Speko key covers
 speech-to-text, the model and text-to-speech, and new accounts get $10 of free credit.
-${dim(`Create one at ${SPEKO_KEYS_URL}. Press Enter to skip and add keys in the dashboard later.`)}
+${dim(`Create one at ${SPEKO_KEYS_URL}.`)}
+${dim("No key yet? Press Enter to try a free demo first.")}
 `,
   );
 
@@ -408,7 +452,28 @@ ${dim(`Create one at ${SPEKO_KEYS_URL}. Press Enter to skip and add keys in the 
     return key;
   }
   console.log("");
-  note("Skipped. Add a key on the dashboard's Provider Keys page.");
+  return undefined;
+}
+
+/**
+ * A token for the free demo, or undefined if it can't be had: the person gets
+ * the install either way, and adds a key on the Provider Keys page.
+ */
+async function claimDemo() {
+  step("Getting a free demo key");
+  const claimed = await claimDemoKey();
+  if (claimed.status === "ok") {
+    note(
+      "Your conversation passes through Samata's demo server on its way to Deepgram and OpenRouter, and the demo covers a few minutes.",
+    );
+    return claimed.token;
+  }
+  const why = {
+    limit: "This address has already claimed the demo a few times today.",
+    full: "The free demo is full for today.",
+    unavailable: `Couldn't reach the demo server (${demoUrl()}).`,
+  }[claimed.status];
+  warn(`${why} Add a Speko key on the dashboard's Provider Keys page instead.`);
   return undefined;
 }
 

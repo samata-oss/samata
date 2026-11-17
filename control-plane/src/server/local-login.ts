@@ -5,6 +5,7 @@ import { agentConfigSchema } from "@/lib/agent-config";
 import { DEFAULT_ORGANIZATION_ID } from "@/lib/workspace";
 import { uniqueSlug } from "@/server/agents";
 import { auth } from "@/server/auth";
+import { isDemoKey } from "@/server/demo";
 import { listProviderKeys, saveProviderKey } from "@/server/provider-keys";
 
 /**
@@ -44,31 +45,40 @@ export async function localLoginAvailable() {
 }
 
 /**
- * The quickstart CLI asks for one Speko key (it covers the model, the
- * transcriber and the voice) and passes it in `SAMATA_LOCAL_SPEKO_API_KEY`.
- * Store it as the workspace's Speko key so the first assistant can take a call
- * without a trip to Provider Keys.
+ * The quickstart CLI passes in one key, `SAMATA_LOCAL_SPEKO_API_KEY`: either
+ * the person's Speko key (it covers the model, the transcriber and the voice) or,
+ * when they skipped it, a free-demo token (`sk_demo_...`) from Samata's demo
+ * proxy. A demo token is saved as both the OpenRouter and the Deepgram key,
+ * since the demo proxy stands in for those two accounts.
  *
  * Only into a workspace with no keys at all: after that the dashboard is the
  * source of truth, so a key you changed or added there isn't overwritten.
  * Never throws: a failure here shouldn't stop you getting in.
  */
 async function seedLocalKeys() {
-  const key = process.env.SAMATA_LOCAL_SPEKO_API_KEY?.trim();
+  const key = localKey();
   if (!key) return;
   try {
     if ((await listProviderKeys(DEFAULT_ORGANIZATION_ID)).length > 0) return;
-    await saveProviderKey(DEFAULT_ORGANIZATION_ID, "speko", key);
+    for (const provider of isDemoKey(key)
+      ? (["openrouter", "deepgram"] as const)
+      : (["speko"] as const)) {
+      await saveProviderKey(DEFAULT_ORGANIZATION_ID, provider, key);
+    }
   } catch (err) {
-    console.error("[local-login] could not save the Speko key", err);
+    console.error("[local-login] could not save the key", err);
   }
 }
 
+const localKey = () =>
+  process.env.SAMATA_LOCAL_SPEKO_API_KEY?.trim() || undefined;
+
 /**
  * A receptionist that's ready to talk to, so the quickstart doesn't open on an
- * empty list. It runs on Speko whether or not a key has been added yet: the
- * Speko presets are the quickstart's models (Muse Voice Transcribe, DeepSeek
- * V4.1 Flash, Inworld TTS 2), and without a key the Test tab says so.
+ * empty list. With a Speko key it runs on Speko (Muse Voice Transcribe,
+ * DeepSeek V4.1 Flash, Inworld TTS 2). Otherwise it runs on what the free demo
+ * covers: Deepgram Nova-3 and Aura-2 for speech, DeepSeek V4.1 Flash through
+ * OpenRouter for the model. Without any key the Test tab says what's missing.
  *
  * Called when the local account is first created, i.e. once per install, so
  * deleting the assistant doesn't bring it back. Never throws.
@@ -81,6 +91,8 @@ async function seedLocalAgent() {
       .where(eq(agent.organizationId, DEFAULT_ORGANIZATION_ID));
     if (agents > 0) return;
 
+    const key = localKey();
+    const onSpeko = Boolean(key) && !isDemoKey(key);
     const name = "Receptionist";
     await db.insert(agent).values({
       organizationId: DEFAULT_ORGANIZATION_ID,
@@ -89,12 +101,12 @@ async function seedLocalAgent() {
       config: agentConfigSchema.parse({
         firstMessage: "Thanks for calling Acme. How can I help you today?",
         model: {
-          provider: "speko",
+          provider: onSpeko ? "speko" : "openrouter",
           systemPrompt:
             "You are the receptionist for Acme, a small business. Greet callers warmly, find out why they're calling, and help with simple questions: opening hours (Monday to Friday, 9am to 5pm), where to find us, and booking or changing an appointment. For a booking, ask for their name, a phone number and a day and time that suits them, then read it back to confirm. If you don't know something, say so and offer to take a message instead of guessing. This is a phone call: keep replies to one or two short sentences, with no lists or markdown.",
         },
-        transcriber: { provider: "speko" },
-        voice: { provider: "speko" },
+        transcriber: { provider: onSpeko ? "speko" : "deepgram" },
+        voice: { provider: onSpeko ? "speko" : "deepgram" },
       }),
     });
   } catch (err) {

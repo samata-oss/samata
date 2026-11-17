@@ -1,6 +1,6 @@
 name: Images
 
-# Builds both images on every PR (no push) and publishes them to GHCR:
+# Builds the images on every PR (no push) and publishes them to GHCR:
 #   main      -> :edge, :sha-<short>
 #   v1.2.3    -> :1.2.3, :1.2, :latest
 on:
@@ -30,6 +30,9 @@ jobs:
           - name: samata-worker
             context: worker
             file: worker/Dockerfile
+          - name: samata-demo-proxy
+            context: demo-proxy
+            file: demo-proxy/Dockerfile
     steps:
       - uses: actions/checkout@v4
 

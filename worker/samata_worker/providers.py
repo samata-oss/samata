@@ -22,6 +22,7 @@ from livekit.plugins import assemblyai, cartesia, deepgram, elevenlabs, openai
 
 from samata_worker import speko
 from samata_worker.config import ModelConfig, TranscriberConfig, VoiceConfig
+from samata_worker.demo import deepgram_endpoint, is_demo_key
 
 
 class ProviderError(Exception):
@@ -80,11 +81,15 @@ def build_llm(cfg: ModelConfig) -> llm.LLM:
 
 
 def _stt_deepgram(c: TranscriberConfig) -> stt.STT:
+    api_key = _key("deepgram", c.api_key)
     kwargs: dict[str, Any] = {
-        "api_key": _key("deepgram", c.api_key),
+        "api_key": api_key,
         "model": c.model,
         "language": c.language,
     }
+    if is_demo_key(api_key):
+        # The quickstart's free demo: Deepgram's own API, through Samata's proxy.
+        kwargs["base_url"] = deepgram_endpoint(api_key, "listen")
     if c.keyterms:
         kwargs["keyterm"] = list(c.keyterms)
     return deepgram.STT(**kwargs)
@@ -182,11 +187,15 @@ def _tts_elevenlabs(c: VoiceConfig) -> tts.TTS:
 
 def _tts_deepgram(c: VoiceConfig) -> tts.TTS:
     # The voice is part of the model name (e.g. aura-2-andromeda-en).
-    return deepgram.TTS(
-        api_key=_key("deepgram", c.api_key),
-        model=c.model,
-        speed=_clamp(c.speed, 0.7, 1.5),
-    )
+    api_key = _key("deepgram", c.api_key)
+    kwargs: dict[str, Any] = {
+        "api_key": api_key,
+        "model": c.model,
+        "speed": _clamp(c.speed, 0.7, 1.5),
+    }
+    if is_demo_key(api_key):
+        kwargs["base_url"] = deepgram_endpoint(api_key, "speak")
+    return deepgram.TTS(**kwargs)
 
 
 def _tts_openai(c: VoiceConfig) -> tts.TTS:

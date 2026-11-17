@@ -17,8 +17,15 @@ It asks for **one Speko API key**, which covers speech-to-text, the model and
 text-to-speech, so there are no three separate accounts to set up.
 [Speko](https://speko.ai) is a gateway for voice models, and new accounts get $10
 of free credit. Create a key on [platform.speko.ai](https://platform.speko.ai/gateway/keys),
-paste it (or press Enter to skip and add it later). The key is checked with Speko
-and saved in `.env`.
+paste it. The key is checked with Speko and saved in `.env`.
+
+**No key yet?** Press Enter to try the free demo first. The CLI gets a demo key from
+Samata's demo server, which runs your first few minutes of conversation on Samata's
+own Deepgram (speech) and OpenRouter (the model) accounts, so you can hear an agent
+right away. Your conversation passes through that server on its way to them. When
+the demo is used up, the assistant says so: add your own keys on **Provider Keys**
+to keep going. If the demo server can't be reached, is busy or is full for the day,
+you get the install without a key and add one the same way.
 
 It then downloads the stack's compose file into `./samata`, generates secrets in
 `.env`, starts everything from prebuilt images (control plane, worker, LiveKit and
@@ -30,14 +37,16 @@ Then:
 1. **You're already signed in.** The quickstart creates a local `admin@samata.local`
    account (password `12345678`) and signs you in, so there's no sign-up step. The
    dashboard is bound to `127.0.0.1`, so only your machine can reach it.
-2. **Your Speko key is already saved** on **Provider Keys**, and new assistants
-   run on it: Meta Muse Voice Transcribe 1.0 for speech-to-text, DeepSeek V4.1
-   Flash (on Baseten) for the model, and Inworld TTS 2 for the voice. If you
-   skipped the prompt, add the key there. Want other providers (OpenAI, Deepgram,
-   Cartesia, ...)? See [Bring your own models](/docs/models).
+2. **Your key is already saved** on **Provider Keys**. A Speko key runs the
+   whole assistant: Meta Muse Voice Transcribe 1.0 for speech-to-text, DeepSeek
+   V4.1 Flash (on Baseten) for the model, and Inworld TTS 2 for the voice. The
+   free demo is saved as your Deepgram and OpenRouter key, and runs Deepgram
+   Nova-3 and Aura-2 with DeepSeek V4.1 Flash; replace those two keys with your
+   own when it runs out. If you skipped the prompt, add keys there. Want other
+   providers (OpenAI, Cartesia, ...)? See [Bring your own models](/docs/models).
 3. **You land on an assistant that's already set up**, a receptionist for a
-   made-up business called Acme, running on the models above. Open its **Test** tab and talk to it. Edit
-   it, or create more from **Assistants**.
+   made-up business called Acme, running on the models above. Open its **Test** tab
+   and talk to it. Edit it, or create more from **Assistants**.
 
 ```bash
 cd samata
@@ -56,6 +65,8 @@ stack again. Options:
 | `--no-start`           | Only write `docker-compose.yml` and `.env`.                       |
 | `--no-open`            | Don't open the browser.                                           |
 | `--speko-key <key>`    | Give the Speko key up front instead of being asked.               |
+| `--demo`               | No key: use the free demo (what Enter at the prompt does).        |
+| `--test`               | A separate copy on free ports, to run beside one you already have. |
 | `--force`              | Download `docker-compose.yml` again.                              |
 | `--ref <ref>`          | Download from a branch, tag or commit of the repo.                |
 | `--compose <file>`     | Use your own compose file (a URL or a path).                      |

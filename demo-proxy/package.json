@@ -1,0 +1,20 @@
+{
+  "name": "samata-demo-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Metered Deepgram and OpenRouter pass-through so a fresh quickstart can hold a conversation without its own API key.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "main": "src/index.mjs",
+  "scripts": {
+    "start": "node src/index.mjs",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "redis": "^5.0.0",
+    "ws": "^8.18.0"
+  }
+}

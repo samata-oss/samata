@@ -125,7 +125,7 @@ class STT(stt.STT):
         api_key: str,
         model: str,
         language: str = "en",
-        base_url: str = ROUTER_URL,
+        base_url: str | None = None,
         http_session: aiohttp.ClientSession | None = None,
     ) -> None:
         super().__init__(
@@ -144,7 +144,7 @@ class STT(stt.STT):
         self._model = model
         self._routing = routing_for(model)
         self._language = language
-        self._base_url = base_url
+        self._base_url = base_url or ROUTER_URL
         self._session = http_session
 
     @property
@@ -389,7 +389,7 @@ class TTS(tts.TTS):
         model: str,
         voice: str = "",
         language: str = "en",
-        base_url: str = ROUTER_URL,
+        base_url: str | None = None,
         sample_rate: int = TTS_SAMPLE_RATE,
         http_session: aiohttp.ClientSession | None = None,
     ) -> None:
@@ -405,7 +405,7 @@ class TTS(tts.TTS):
         self._routing = routing_for(model)
         self._voice = voice
         self._language = language
-        self._base_url = base_url
+        self._base_url = base_url or ROUTER_URL
         self._session = http_session
 
     @property

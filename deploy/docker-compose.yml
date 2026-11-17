@@ -26,6 +26,12 @@ services:
         ${LIVEKIT_DOMAIN:?set LIVEKIT_DOMAIN} {
           reverse_proxy livekit:7880
         }
+        # The free-demo proxy (below). Without SAMATA_DEMO_DOMAIN this is a
+        # plain-HTTP site on a port nothing publishes: no certificate is
+        # requested and nothing outside can reach it.
+        ${SAMATA_DEMO_DOMAIN:-http://:8081} {
+          reverse_proxy demo-proxy:8787
+        }
     entrypoint: ["/bin/sh", "-c"]
     command:
       - printf '%s' "$$CADDYFILE" > /etc/caddy/Caddyfile && exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
@@ -135,6 +141,50 @@ services:
         use_external_ip: true
         logging:
           level: info
+
+  # Samata Cloud's free demo for `npx @samata-oss/cli`: a metered pass-through to
+  # Deepgram (speech) and OpenRouter (the model), so a quickstart with no API
+  # keys of its own can still hold a conversation. Self-hosters don't need it.
+  # Off unless the "demo" profile is on: put these in the server's .env (e.g.
+  # with `samata deploy --env-file`) and point an A record for
+  # SAMATA_DEMO_DOMAIN at the server.
+  #
+  #   COMPOSE_PROFILES=demo
+  #   SAMATA_DEMO_DOMAIN=demo.example.com
+  #   DEMO_DEEPGRAM_API_KEY=...               the Deepgram key the demo runs on
+  #   DEMO_OPENROUTER_API_KEY=sk-or-v1-...    the OpenRouter key it runs on
+  #   DEMO_TOKEN_SECRET=<openssl rand -hex 32>
+  #
+  # Spending is capped per install, per day and by those accounts' own balances,
+  # and simultaneous conversations by DEMO_MAX_CONVERSATIONS, which has to stay
+  # under Deepgram's connection limit for the account (see demo-proxy/src/config.mjs
+  # for it and the other optional DEMO_* settings). Run one proxy: it counts
+  # open connections in memory.
+  demo-proxy:
+    image: ${SAMATA_IMAGE_PREFIX}/samata-demo-proxy:${SAMATA_VERSION:-edge}
+    profiles: ["demo"]
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://redis:6379
+      # Empty here is fine until the profile is on; the proxy then refuses to
+      # start without them, with a message saying which is missing.
+      DEEPGRAM_API_KEY: ${DEMO_DEEPGRAM_API_KEY:-}
+      OPENROUTER_API_KEY: ${DEMO_OPENROUTER_API_KEY:-}
+      DEMO_TOKEN_SECRET: ${DEMO_TOKEN_SECRET:-}
+      DEMO_INSTALL_BUDGET_USD: ${DEMO_INSTALL_BUDGET_USD:-}
+      DEMO_DAILY_BUDGET_USD: ${DEMO_DAILY_BUDGET_USD:-}
+      DEMO_CLAIMS_PER_IP_PER_DAY: ${DEMO_CLAIMS_PER_IP_PER_DAY:-}
+      DEMO_DAILY_CLAIMS: ${DEMO_DAILY_CLAIMS:-}
+      DEMO_MAX_CONVERSATIONS: ${DEMO_MAX_CONVERSATIONS:-}
+      DEMO_MAX_TTS_STREAMS: ${DEMO_MAX_TTS_STREAMS:-}
+      DEMO_LLM_PROVIDERS: ${DEMO_LLM_PROVIDERS:-}
+      DEMO_STT_USD_PER_MIN: ${DEMO_STT_USD_PER_MIN:-}
+      DEMO_TTS_USD_PER_1K_CHARS: ${DEMO_TTS_USD_PER_1K_CHARS:-}
+      DEMO_LLM_USD_PER_1M_IN: ${DEMO_LLM_USD_PER_1M_IN:-}
+      DEMO_LLM_USD_PER_1M_OUT: ${DEMO_LLM_USD_PER_1M_OUT:-}
 
   redis:
     image: redis:7-alpine

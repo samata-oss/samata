@@ -36,8 +36,9 @@ secrets in `.env`, starts the whole stack from prebuilt images, and opens the
 dashboard at <http://localhost:4747>, already signed in as `admin@samata.local`
 (password `12345678`; the dashboard only listens on your machine). It asks for one
 [Speko](https://speko.ai) API key, which covers speech-to-text, the model and
-text-to-speech ($10 free credit on a new account; press Enter to skip and add keys
-on the dashboard instead). It opens on a ready-made assistant: talk to it from
+text-to-speech ($10 free credit on a new account). Press Enter instead to try the
+free demo: a few minutes of conversation on Samata's own Deepgram and OpenRouter
+accounts, through the demo proxy (see below). It opens on a ready-made assistant: talk to it from
 its Test tab. Browser calls work out of the box; phone calls need a server (below). See `npx @samata-oss/cli --help`
 for options.
 
@@ -564,6 +565,55 @@ default workspace, which nobody owns there.
 The open-source app reaches this code through one file,
 `control-plane/src/server/cloud.ts`.
 
+## Free demo proxy
+
+Pressing Enter at the quickstart's key prompt claims a `sk_demo_...` key from the
+demo proxy, so a first run needs no account anywhere. `demo-proxy/` is a small
+Node service in front of two accounts of Samata's own: **Deepgram** for
+speech-to-text (Nova-3) and text-to-speech (Aura-2), and **OpenRouter** for the
+model (DeepSeek V4.1 Flash). It passes each provider's own API through untouched
+(`WS /v1/listen`, `WS` and `POST /v1/speak`, `POST /v1/chat/completions`), so the
+worker uses its ordinary Deepgram plugins and the control plane its ordinary
+OpenRouter client, with a demo token where the key would go. Samata Cloud runs it;
+self-hosters don't need it.
+
+- **Only the demo's models** (`DEMO_LLM_MODELS`, `DEMO_STT_MODELS`,
+  `DEMO_TTS_MODELS`), only the request fields and Deepgram options that cost
+  nothing extra (no redaction, diarization or keyterms), no other endpoint, and
+  short replies, so the keys can't be used for anything else.
+- **Budgets, counted in Redis:** a dollar budget per install
+  (`DEMO_INSTALL_BUDGET_USD`) and per UTC day for the whole demo
+  (`DEMO_DAILY_BUDGET_USD`), a few new tokens per address per day, and a request
+  rate. Chat is counted from the cost OpenRouter reports; speech-to-text by the
+  second a connection is open (what Deepgram bills) and text-to-speech by the
+  character, at the rates in `DEMO_*_USD_*` (Deepgram's pay-as-you-go prices to
+  start with). Both accounts' own balances, with auto top-up off, are the final
+  ceiling.
+- **Simultaneous conversations:** Deepgram caps concurrent connections per account
+  (pay as you go: 150 for speech-to-text, 45 for streaming text-to-speech, not
+  raisable) and every call holds one of each. The proxy keeps its own lower cap,
+  `DEMO_MAX_CONVERSATIONS` (30) with `DEMO_MAX_TTS_STREAMS` (40) behind it, and
+  past it a new call is refused with "busy, try again in a minute" instead of
+  dying partway through. An install may hold one conversation at a time. These are
+  counted in memory, so run a single proxy process; raise the caps only if the
+  Deepgram account's limit goes up (Growth plan: 225 and more).
+- **Control plane and worker** send a `sk_demo_` key to the proxy
+  (`SAMATA_DEMO_URL`, default `https://demo.samata.dev`) and any other key
+  straight to its provider, so adding real Deepgram and OpenRouter keys later
+  just works.
+- **Running it:** `deploy/docker-compose.yml` has a `demo-proxy` service behind the
+  `demo` profile, with its own hostname on Caddy. On the server's `.env`
+  (`samata deploy --env-file demo.env`) set `COMPOSE_PROFILES=demo`,
+  `SAMATA_DEMO_DOMAIN`, `DEMO_DEEPGRAM_API_KEY`, `DEMO_OPENROUTER_API_KEY` and
+  `DEMO_TOKEN_SECRET` (`openssl rand -hex 32`), and point a DNS A record for the
+  domain at the server. It shares the stack's Redis, and the image is published
+  like the others. To pin the model's host (say Baseten) set `DEMO_LLM_PROVIDERS`.
+- **Testing locally:** `cd demo-proxy && npm test` runs it against fake providers.
+  To try the whole path, run it with `REDIS_URL=memory` plus
+  `DEEPGRAM_API_KEY`, `OPENROUTER_API_KEY` and `DEMO_TOKEN_SECRET`, then
+  `SAMATA_DEMO_URL=http://localhost:8787 npx @samata-oss/cli init --test --demo`
+  (the stack's containers reach it at `http://host.docker.internal:8787`).
+
 ## Layout
 
 ```
@@ -575,6 +625,7 @@ infra/livekit/            Dev livekit.yaml, sip.yaml (dev keys: devkey / samata_
 control-plane/            Next.js 16, Hono under /api, Drizzle (agent, call_log), Dockerfile
                           (src/cloud/: managed-cloud billing, off unless SAMATA_CLOUD=1)
 worker/                   livekit-agents 1.8 worker, Dockerfile
+demo-proxy/               Metered Deepgram and OpenRouter pass-through behind the quickstart's free demo (Samata Cloud runs it)
 website/                  Landing page and docs (Next.js + Fumadocs): `pnpm site:dev`
 .github/workflows/        Multi-arch image builds, published to GHCR
 ```
