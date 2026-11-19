@@ -40,7 +40,7 @@ export const LIMITS = {
   subject: 120,
   body: 5000,
   /**
-   * Messages one person may write an hour, across every ticket. Each one
+   * Messages one person may write per hour, across every ticket. Each one
    * emails the operator, so this is what stops a flood.
    */
   messagesPerHour: 15,
