@@ -13,7 +13,7 @@ export const TICKET_CATEGORIES = [
 ] as const;
 
 /**
- * Where a ticket is, in the order the progress bar shows. A new ticket is
+ * Where a ticket is in its lifecycle, in the order the progress bar shows. A new ticket is
  * `sent`; the operator moves it to `in_review` and `resolved`, and writing a
  * reply makes it `replied`. A reply from the requester on a ticket that was
  * replied to or resolved puts it back to `in_review`.
@@ -55,7 +55,7 @@ export type TicketSummary = {
   /** There is something here the viewer hasn't read. */
   unread: boolean;
   lastMessageAt: Date;
-  /** Who wrote it: shown to the operator, who sees everyone's. */
+  /** Who wrote it. Shown to the operator, who sees everyone's tickets. */
   requesterName: string;
   requesterEmail: string;
 };
