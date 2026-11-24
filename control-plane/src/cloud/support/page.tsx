@@ -7,7 +7,7 @@ import { listTicketsForUser, openTicketForUser } from "./service";
 const first = (v: string | string[] | undefined) =>
   Array.isArray(v) ? v[0] : v;
 
-/** The Support page (`/support`). Mounted by `app/(dashboard)/support/page.tsx`. */
+/** The Support page (`/support`), mounted by `app/(dashboard)/support/page.tsx`. */
 export async function SupportPage({
   searchParams,
 }: {
@@ -16,8 +16,8 @@ export async function SupportPage({
   const session = await requireWorkspaceSession();
   const ticketId = first(searchParams.ticket);
 
-  // Opening a ticket marks it read, except while the superuser is only
-  // looking at it as that person.
+  // Opening a ticket marks it read, unless the superuser is only viewing it
+  // as that user.
   const selected = ticketId
     ? await openTicketForUser(session.user.id, ticketId, {
         markRead: session.viewingAs === null,
